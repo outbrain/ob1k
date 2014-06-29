@@ -1,80 +1,63 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.outbrain</groupId>
   <artifactId>Gruffalo</artifactId>
-  <packaging>${warProject.packaging}</packaging>
+  <packaging>jar</packaging>
   <name>Gruffalo</name>
-  <parent>
-    <groupId>com.outbrain</groupId>
-    <artifactId>outbrain</artifactId>
-    <version>trunk</version>
-  </parent>
+  <version>trunk</version>
+
   <properties>
-    <ob1k.main.class>com.outbrain.gruffalo.GruffaloServer</ob1k.main.class>
+    <org.springframework.version>3.2.9.RELEASE</org.springframework.version>
+    <metrics.version>2.1.2</metrics.version>
   </properties>
-  <build>
-    <plugins>
-      <!-- enable the RPM plugin for web projects -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>rpm-maven-plugin</artifactId>
-        <version>2.1-alpha-1</version>
-        <executions>
-          <execution>
-            <id>package-rpm</id>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
+
   <dependencies>
+
     <dependency>
-      <groupId>${project.parent.groupId}</groupId>
-      <artifactId>JettyLib</artifactId>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>4.0.20.Final</version>
     </dependency>
-    <dependency>
-      <groupId>${project.parent.groupId}</groupId>
-      <artifactId>WebLib</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.parent.groupId}</groupId>
-      <artifactId>ZooKeeperLib</artifactId>
-    </dependency>
+
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId>
+      <version>${org.springframework.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.amqp</groupId>
       <artifactId>spring-rabbit</artifactId>
+      <version>1.1.4.RELEASE</version>
     </dependency>
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
+      <version>3.0.4</version>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>OBLog4J</artifactId>
-      <scope>runtime</scope>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>16.0.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>${metrics.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>compile</scope>
+      <version>1.2.17</version>
     </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
+      <scope>test</scope>
+      <version>1.9.5</version>
     </dependency>    
-    <dependency>
-      <groupId>${project.parent.groupId}</groupId>
-      <artifactId>RPCLib</artifactId>
-      <type>test-jar</type>
-    </dependency>
   </dependencies>
 </project>
