@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+    xsi:schemaLocation="http://www.springframework.org/schema/rabbit
+                           http://www.springframework.org/schema/rabbit/spring-rabbit-1.0.xsd
+                           http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+  <bean id="amqpConnectionFactory" class="org.springframework.amqp.rabbit.connection.CachingConnectionFactory">
+    <constructor-arg value="${com.outbrain.gruffalo.rabbitmq.host}"/>
+    <property name="virtualHost" value="${com.outbrain.gruffalo.rabbitmq.virtual.host}"/>
+  </bean>
+  
+  <bean id="amqpAdmin" class="org.springframework.amqp.rabbit.core.RabbitAdmin">
+    <constructor-arg ref="amqpConnectionFactory"/>
+  </bean>
+  
+  <bean id="rabbitTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
+    <constructor-arg ref="amqpConnectionFactory"/>
+    <property name="exchange" value="${com.outbrain.gruffalo.amqp.exchange.name}"/>
+  </bean>
+  
+  <rabbit:queue id="gruffalo-q" name="${com.outbrain.gruffalo.amqp.q.name}" durable="${com.outbrain.gruffalo.amqp.q.durable}" auto-delete="${com.outbrain.gruffalo.amqp.q.auto-delete}">
+    <!--
+    <rabbit:queue-arguments>
+      <entry key="x-message-ttl">
+        <value type="java.lang.Long">${com.outbrain.gruffalo.amqp.q.ttl}</value>
+      </entry>
+    </rabbit:queue-arguments>
+    -->
+  </rabbit:queue>
+  
+  <rabbit:fanout-exchange id="gruffalo-exchange" name="${com.outbrain.gruffalo.amqp.exchange.name}" durable="false" auto-delete="true">
+    <rabbit:bindings>
+      <rabbit:binding queue="${com.outbrain.gruffalo.amqp.q.name}" />
+    </rabbit:bindings>
+  </rabbit:fanout-exchange>
+
+  <!-- TEMP!!!! this dude is here so that I don't kill RabbitMQ when I bombard it. REMOVE ME!!!!! -->
+  <bean id="consumer" class="org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer">
+    <constructor-arg ref="amqpConnectionFactory"/>
+    <property name="queueNames" value="${com.outbrain.gruffalo.amqp.q.name}"/>
+    <property name="messageListener">
+      <bean class="org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter">
+        <constructor-arg>
+          <bean class="com.outbrain.gruffalo.TempConsumer"/>
+        </constructor-arg>
+      </bean>
+    </property>
+    <property name="concurrentConsumers" value="8"/>
+    <property name="autoStartup" value="${com.outbrain.gruffalo.tempconsumer.start}"/>
+    <property name="prefetchCount" value="1000"/>
+  </bean>
+
+</beans>

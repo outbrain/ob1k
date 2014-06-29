@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+  xmlns:util="http://www.springframework.org/schema/util" xmlns:p="http://www.springframework.org/schema/p"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd"
+>
+
+  <bean id="gruffaloProxy" class="com.outbrain.gruffalo.netty.GruffaloProxy" destroy-method="shutdown">
+    <constructor-arg ref="eventLoopGroup"/>
+    <constructor-arg ref="tcpServerPipelineFactory"/>
+    <constructor-arg ref="udpServerPipelineFactory"/>
+    <constructor-arg value="${com.outbrain.gruffalo.tcp.port}"/>
+    <constructor-arg value="${com.outbrain.gruffalo.udp.port}"/>
+  </bean>
+
+  <bean id="eventLoopGroup" class="io.netty.channel.nio.NioEventLoopGroup"/>
+  <alias name="eventLoopGroup" alias="publishExecutor"/>
+  <!-- TODO - It seems like it performs slightly better if I have a single executor for everything. Makes sense really :P
+            It is also hard to pick a good value for the thread pool size. It should be somehow related to the number of cores
+            Remove this after testing in prod env shows good results.
+  <bean id="publishExecutor" class="io.netty.channel.DefaultEventExecutorGroup">
+    <constructor-arg value="8"/>
+  </bean>
+  -->
+
+  <bean id="tcpServerPipelineFactory" class="com.outbrain.gruffalo.netty.TcpServerPipelineFactory">
+    <constructor-arg value="${com.outbrain.gruffalo.netty.readerIdleTimeSeconds}"/>
+    <constructor-arg ref="lineFramerFactory"/>
+    <constructor-arg ref="stringDecoder"/>
+    <constructor-arg ref="metricBatcherFactory"/>
+    <constructor-arg ref="publishHandler"/>
+    <constructor-arg ref="publishExecutor"/>
+  </bean>
+  
+  <bean id="udpServerPipelineFactory" class="com.outbrain.gruffalo.netty.UdpServerPipelineFactory">
+    <constructor-arg value="${com.outbrain.gruffalo.netty.readerIdleTimeSeconds}"/>
+    <constructor-arg ref="datagramPacketToStringDecoder"/>
+    <constructor-arg ref="metricBatcherFactory"/>
+    <constructor-arg ref="publishHandler"/>
+    <constructor-arg ref="publishExecutor"/>
+  </bean>
+  
+  <bean id="gruffaloRequestHandler" class="com.outbrain.gruffalo.netty.MetricBatcher" scope="prototype">
+    <constructor-arg ref="metricFactory"/>
+    <constructor-arg value="${com.outbrain.gruffalo.netty.MetricBatcher.batchBufferCapacity}"/>
+    <constructor-arg ref="allServerChannels"/>
+  </bean>
+  <bean id="metricBatcherFactory" class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
+    <property name="serviceLocatorInterface" value="com.outbrain.gruffalo.netty.MetricBatcherFactory"/>
+  </bean>
+  
+  <bean id="publishHandler" class="com.outbrain.gruffalo.netty.MetricPublishHandler">
+    <constructor-arg ref="metricsPublisher"/>
+    <constructor-arg ref="metricFactory"/>  
+  </bean>
+      
+  <bean id="lineFramer" class="io.netty.handler.codec.LineBasedFrameDecoder" scope="prototype">
+    <constructor-arg value="${com.outbrain.gruffalo.netty.maxMetricLength}"/><!-- Maximum length of a frame we're willing to decode. -->
+    <constructor-arg value="false"/><!-- strip delimeter -->
+    <constructor-arg value="true"/><!-- fail fast -->
+  </bean>
+  <bean id="lineFramerFactory" class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
+    <property name="serviceLocatorInterface" value="com.outbrain.gruffalo.netty.LineBasedFrameDecoderFactory"/>  
+  </bean>
+
+  <util:constant id="metricsCharset" static-field="io.netty.util.CharsetUtil.UTF_8"/>
+  
+  <bean id="stringDecoder" class="io.netty.handler.codec.string.StringDecoder">
+    <constructor-arg ref="metricsCharset"/>
+  </bean>
+  <bean id="stringEncoder" class="io.netty.handler.codec.string.StringEncoder">
+    <constructor-arg ref="metricsCharset"/>
+  </bean>
+
+  <bean id="datagramPacketToStringDecoder" class="com.outbrain.gruffalo.netty.DatagramPacketToStringDecoder"/>
+
+  <bean id="allServerChannels" class="io.netty.channel.group.DefaultChannelGroup">
+    <constructor-arg>
+      <util:constant static-field="io.netty.util.concurrent.GlobalEventExecutor.INSTANCE"/>
+    </constructor-arg>
+  </bean>
+
+  <!-- ============================================ -->
+  <!--                graphite client               -->
+  <!-- ============================================ -->
+
+  <bean id="graphiteClientTemplate" class="com.outbrain.gruffalo.netty.GraphiteClientPool" init-method="connect" abstract="true">
+    <constructor-arg ref="eventLoopGroup"/>
+    <constructor-arg ref="stringDecoder"/>
+    <constructor-arg ref="stringEncoder"/>
+    <constructor-arg ref="allServerChannels"/>
+    <constructor-arg ref="metricFactory"/>
+  </bean>
+
+  <bean id="mainGraphiteClient" parent="graphiteClientTemplate">
+    <constructor-arg value="${com.outbrain.metrics.graphite.relay.hosts}"/>
+  </bean>
+
+  <bean id="secondaryGraphiteClient" parent="graphiteClientTemplate" lazy-init="true">
+    <constructor-arg value="${com.outbrain.metrics.graphite.relay.secondary.hosts}"/>
+  </bean>
+
+</beans>
