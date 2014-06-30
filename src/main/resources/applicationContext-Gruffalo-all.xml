@@ -6,12 +6,7 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd"
 >
   <import resource="classpath:com/outbrain/properties/applicationContext-properties.xml"/>
-  <import resource="classpath:com/outbrain/jmx/applicationContext-jmx.xml" />
-  <import resource="classpath:com/outbrain/zookeeper/applicationContext-zooKeeper.xml" />
-  <import resource="classpath:com/outbrain/zookeeper/applicationContext-zooKeeper-presence-import.xml" />
   <import resource="applicationContext-Gruffalo-domain.xml" />
   <import resource="applicationContext-Gruffalo-netty.xml" />
-  <!-- import resource="applicationContext-Gruffalo-amqp.xml" / -->
-  <import resource="applicationContext-Gruffalo-jmx.xml" />
 
 </beans>
