@@ -1,10 +1,11 @@
 package com.outbrain.gruffalo.netty;
 
+import com.outbrain.swinfra.metrics.MetricFactory;
 import com.yammer.metrics.core.Counter;
 import org.springframework.util.Assert;
 
 import com.outbrain.gruffalo.publish.MetricsPublisher;
-import com.outbrain.metrics.MetricFactory;
+import com.outbrain.swinfra.metrics.MetricFactory;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 

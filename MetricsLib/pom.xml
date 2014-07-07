@@ -10,4 +10,13 @@
   <artifactId>MetricsLib</artifactId>
   <name>MetricsLib</name>
   <packaging>jar</packaging>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+
+  </dependencies>
 </project>

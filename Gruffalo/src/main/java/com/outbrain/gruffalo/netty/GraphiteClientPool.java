@@ -3,7 +3,7 @@ package com.outbrain.gruffalo.netty;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.base.Preconditions;
-import com.outbrain.metrics.MetricFactory;
+import com.outbrain.swinfra.metrics.MetricFactory;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;

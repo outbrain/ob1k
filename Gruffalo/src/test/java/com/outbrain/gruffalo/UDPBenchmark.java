@@ -8,16 +8,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.lang3.time.StopWatch;
 import org.joda.time.DateTime;
 
 public class UDPBenchmark {
 
-  /**
-   * @param args
-   * @throws IOException 
-   * @throws InterruptedException 
-   */
   public static void main(final String[] args) throws IOException, InterruptedException {
     final int nThreads = 8;
     final ExecutorService executor = Executors.newFixedThreadPool(nThreads);

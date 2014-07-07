@@ -88,6 +88,11 @@
         <artifactId>Gruffalo</artifactId>
         <version>${Gruffalo.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.outbrain.swinfra</groupId>
+        <artifactId>MetricsLib</artifactId>
+        <version>trunk</version>
+      </dependency>
 
       <dependency>
         <groupId>io.netty</groupId>
@@ -119,6 +124,17 @@
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>${metrics.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>2.2</version>
       </dependency>
 
       <dependency>
