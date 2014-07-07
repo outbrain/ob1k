@@ -12,57 +12,42 @@
     <version>trunk</version>
   </parent>
 
-  <properties>
-    <org.springframework.version>3.2.9.RELEASE</org.springframework.version>
-    <metrics.version>2.1.2</metrics.version>
-  </properties>
-
   <dependencies>
 
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
-      <version>4.0.20.Final</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-core</artifactId>
-      <version>${org.springframework.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.amqp</groupId>
       <artifactId>spring-rabbit</artifactId>
-      <version>1.1.4.RELEASE</version>
     </dependency>
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
-      <version>3.0.4</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>16.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-core</artifactId>
-      <version>${metrics.version}</version>
     </dependency>
 
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <scope>compile</scope>
-      <version>1.2.17</version>
     </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-      <version>1.9.5</version>
-    </dependency>    
+    </dependency>
   </dependencies>
 </project>

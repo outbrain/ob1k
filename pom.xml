@@ -14,11 +14,18 @@
   </organization>
 
   <modules>
-    <module>Gruffalo</module>  
+    <module>Gruffalo</module>
+    <module>MetricsLib</module>
   </modules>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.compiler.source>1.7</java.compiler.source>
+    <java.compiler.target>1.7</java.compiler.target>
+
+
+    <org.springframework.version>3.2.9.RELEASE</org.springframework.version>
+    <metrics.version>2.1.2</metrics.version>
 
     <!--
         =================================================
@@ -30,7 +37,6 @@
   </properties>
   <build>
     <plugins>
-      <!-- Set Java version to 1.6 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -76,11 +82,59 @@
   
   <dependencyManagement>
     <dependencies>
+
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>Gruffalo</artifactId>
         <version>${Gruffalo.version}</version>
       </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>4.0.20.Final</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-core</artifactId>
+        <version>${org.springframework.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.amqp</groupId>
+        <artifactId>spring-rabbit</artifactId>
+        <version>1.1.4.RELEASE</version>
+      </dependency>
+      <dependency>
+        <groupId>com.rabbitmq</groupId>
+        <artifactId>amqp-client</artifactId>
+        <version>3.0.4</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>16.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.yammer.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>${metrics.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <scope>compile</scope>
+        <version>1.2.17</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <scope>test</scope>
+        <version>1.9.5</version>
+      </dependency>
     </dependencies>
+
   </dependencyManagement>
 </project>
