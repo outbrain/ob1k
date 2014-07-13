@@ -4,22 +4,6 @@
     http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 
-  <!-- I'm leaving this here as an example how to restore AMQP metrics publishing ;)
-
-  <bean id="metricsPublisher" class="org.springframework.aop.framework.ProxyFactoryBean">
-    <property name="interceptorNames">
-      <list>
-        <value>metricsPublisherInterceptor</value>
-      </list>
-    </property>  
-    <property name="target">
-      <bean id="metricsPublisher_internal" class="com.outbrain.gruffalo.publish.AmqpMetricsPublisher">
-        <constructor-arg ref="rabbitTemplate"/>
-      </bean>
-    </property>
-  </bean>
-  -->
-
   <!-- feature flag for activating different metrics publishers strategies -->
   <alias name="${com.outbrain.metrics.publisher.bean.name}" alias="metricsPublisher"/>
 

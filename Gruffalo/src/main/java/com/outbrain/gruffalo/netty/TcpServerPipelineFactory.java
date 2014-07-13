@@ -41,8 +41,7 @@ class TcpServerPipelineFactory extends ChannelInitializer<Channel> {
     pipeline.addLast("framer", framerFactory.getLineFramer());
     pipeline.addLast("decoder", decoder);
     pipeline.addLast("batchHandler", metricBatcherFactory.getMetricBatcher());
-    // TODO if we restore AMQP we need to restore the async execution
-    pipeline.addLast(/*publishExecutor, */"publishHandler", publishHandler);
+    pipeline.addLast("publishHandler", publishHandler);
   }
 
 }

@@ -36,8 +36,7 @@ class UdpServerPipelineFactory extends ChannelInitializer<Channel> {
     pipeline.addLast("idleStateHandler", new IdleStateHandler(readerIdleTimeSeconds, 0, 0));
     pipeline.addLast("decoder", datagramPacketDecoder);
     pipeline.addLast("batchHandler", metricBatcherFactory.getMetricBatcher());
-    // TODO if we restore AMQP we need to restore the async execution
-    pipeline.addLast(/*publishExecutor, */"publishHandler", publishHandler);
+    pipeline.addLast("publishHandler", publishHandler);
   }
 
 }

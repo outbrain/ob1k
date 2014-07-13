@@ -5,7 +5,7 @@
     http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd"
 >
-  <import resource="classpath:com/outbrain/properties/applicationContext-properties.xml"/>
+  <import resource="applicationContext-Gruffalo-configuration.xml" />
   <import resource="applicationContext-Gruffalo-domain.xml" />
   <import resource="applicationContext-Gruffalo-netty.xml" />
 

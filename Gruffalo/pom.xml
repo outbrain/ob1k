@@ -18,6 +18,10 @@
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>MetricsLib</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>ConfigAPI</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>io.netty</groupId>
@@ -33,12 +37,8 @@
       <artifactId>spring-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.amqp</groupId>
-      <artifactId>spring-rabbit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.rabbitmq</groupId>
-      <artifactId>amqp-client</artifactId>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
