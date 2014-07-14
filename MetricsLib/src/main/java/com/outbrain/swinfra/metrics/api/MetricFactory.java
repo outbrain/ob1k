@@ -1,10 +1,4 @@
-package com.outbrain.swinfra.metrics;
-
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.core.Timer;
+package com.outbrain.swinfra.metrics.api;
 
 /**
  * Interface for abstracting the creation of well-formed Metrics-based objects. The consumer needs only to specify the "allowable" fields (i.e., component and method) so that 
@@ -15,11 +9,7 @@ import com.yammer.metrics.core.Timer;
  */
 public interface MetricFactory {
 
-  // TODO the commented out methods were removed because they are slightly OB related, and will make the transition to metrics 3 harder
-
   Timer createTimer(final String component, final String methodName);
-
-//  Timer createTimer(String component, String methodName, MetricsVerbosityLevel metricsVerbosityLevel);
 
   Counter createCounter(final String component, final String methodName);
 
@@ -29,6 +19,10 @@ public interface MetricFactory {
 
   Histogram createHistogram(String component, String methodName, boolean biased);
 
+// TODO the commented out methods were removed because they are slightly OB related, and will make the transition to metrics 3 harder
+
+//  Timer createTimer(String component, String methodName, MetricsVerbosityLevel metricsVerbosityLevel);
+//
 //  Histogram createHistogram(String component, String methodName, boolean biased, MetricsVerbosityLevel metricsVerbosityLevel);
 //
 //  void createStatefulGauge(String component, String methodName, GaugeStateHolder monitoredObject);

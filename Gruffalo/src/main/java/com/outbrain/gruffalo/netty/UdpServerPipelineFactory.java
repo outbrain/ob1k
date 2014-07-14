@@ -1,12 +1,12 @@
 package com.outbrain.gruffalo.netty;
 
+import org.springframework.util.Assert;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.EventExecutorGroup;
-
-import org.springframework.util.Assert;
 
 class UdpServerPipelineFactory extends ChannelInitializer<Channel> {
 
@@ -14,7 +14,7 @@ class UdpServerPipelineFactory extends ChannelInitializer<Channel> {
   private final MetricBatcherFactory metricBatcherFactory;
   private final DatagramPacketToStringDecoder datagramPacketDecoder;
   private final MetricPublishHandler publishHandler;
-  private final EventExecutorGroup publishExecutor;
+  private final EventExecutorGroup publishExecutor; // TODO remove - unused
 
   public UdpServerPipelineFactory(final int readerIdleTimeSeconds, final DatagramPacketToStringDecoder datagramPacketDecoder,
       final MetricBatcherFactory metricBatcherFactory, final MetricPublishHandler publishHandler, final EventExecutorGroup publishExecutor) {

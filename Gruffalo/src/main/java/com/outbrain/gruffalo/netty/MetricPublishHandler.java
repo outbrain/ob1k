@@ -1,13 +1,11 @@
 package com.outbrain.gruffalo.netty;
 
-import com.outbrain.swinfra.metrics.MetricFactory;
-import com.yammer.metrics.core.Counter;
 import org.springframework.util.Assert;
 
 import com.outbrain.gruffalo.publish.MetricsPublisher;
-import com.outbrain.swinfra.metrics.MetricFactory;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
+import com.outbrain.swinfra.metrics.api.Counter;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Timer;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,7 +29,7 @@ class MetricPublishHandler extends SimpleChannelInboundHandler<Batch> {
 
   @Override
   public void channelRead0(final ChannelHandlerContext ctx, final Batch msg) throws Exception {
-    TimerContext timerContext = publishTimer.time();
+    Timer.Context timerContext = publishTimer.time();
     try {
       publisher.publishMetrics(msg.payload.toString());
       metricsCounter.inc(msg.batchSize);

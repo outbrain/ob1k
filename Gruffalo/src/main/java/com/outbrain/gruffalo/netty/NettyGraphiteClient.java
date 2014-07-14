@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.outbrain.gruffalo.util.HostName2MetricName;
-import com.outbrain.swinfra.metrics.MetricFactory;
-import com.yammer.metrics.core.Counter;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Counter;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

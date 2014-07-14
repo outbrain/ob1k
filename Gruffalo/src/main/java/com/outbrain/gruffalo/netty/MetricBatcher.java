@@ -6,9 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-import com.outbrain.swinfra.metrics.MetricFactory;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
+import com.outbrain.swinfra.metrics.api.Counter;
+import com.outbrain.swinfra.metrics.api.Gauge;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -38,7 +38,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     metricsCounter = metricFactory.createCounter(component, "metricsReceived");
     metricFactory.createGauge(component, "batchSize", new Gauge<Integer>() {
       @Override
-      public Integer value() {
+      public Integer getValue() {
         return lastBatchSize.get();
       }
     });
