@@ -1,5 +1,6 @@
 package com.outbrain.gruffalo.netty;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -23,6 +24,8 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   private final int batchBufferCapacity;
   private final Counter connectionCounter;
   private final Counter metricsCounter;
+  private final Counter unexpectedErrorCounter;
+  private final Counter ioErrorCounter;
   private final ChannelGroup activeChannels;
   private StringBuilder batch;
   private int currBatchSize;
@@ -36,6 +39,8 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     String component = getClass().getSimpleName();
     connectionCounter = metricFactory.createCounter(component, "connections");
     metricsCounter = metricFactory.createCounter(component, "metricsReceived");
+    unexpectedErrorCounter = metricFactory.createCounter(component, "unexpectedErrors");
+    ioErrorCounter = metricFactory.createCounter(component, "ioErrors");
     metricFactory.createGauge(component, "batchSize", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
@@ -92,5 +97,17 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     } catch (final RuntimeException e) {
       log.warn("failed to send last batch when closing channel " + ctx.channel().remoteAddress());
     }
+  }
+
+  @Override
+  public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
+    if (cause instanceof IOException) {
+      ioErrorCounter.inc();
+      log.error("IOException while handling metrics. Remote host =" + ctx.channel().remoteAddress(), cause);
+    } else {
+      unexpectedErrorCounter.inc();
+      log.error("Unexpected exception while handling metrics. Remote host =" + ctx.channel().remoteAddress(), cause);
+    }
+    ctx.close();
   }
 }
