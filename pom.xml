@@ -2,7 +2,7 @@
 <!--suppress ALL --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>trunk</version>
+  <version>0.1</version>
   <artifactId>outbrain-sw-infra</artifactId>
   <name>SW Infra Root Project</name>
   <packaging>pom</packaging>
@@ -34,7 +34,7 @@
         All version numbers should be defined here.
         =================================================
     -->
-    <Gruffalo.version>trunk</Gruffalo.version>
+
   </properties>
   <build>
     <plugins>
@@ -78,27 +78,26 @@
           </archive>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
   
   <dependencyManagement>
     <dependencies>
-
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>Gruffalo</artifactId>
-        <version>${Gruffalo.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.outbrain.swinfra</groupId>
-        <artifactId>MetricsLib</artifactId>
-        <version>trunk</version>
-      </dependency>
-      <dependency>
-        <groupId>com.outbrain.swinfra</groupId>
-        <artifactId>ConfigAPI</artifactId>
-        <version>trunk</version>
-      </dependency>
 
       <dependency>
         <groupId>io.netty</groupId>
@@ -116,11 +115,13 @@
         <artifactId>spring-context</artifactId>
         <version>${org.springframework.version}</version>
       </dependency>
+
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>16.0.1</version>
       </dependency>
+
       <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
@@ -132,6 +133,7 @@
         <artifactId>commons-lang3</artifactId>
         <version>3.1</version>
       </dependency>
+
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>

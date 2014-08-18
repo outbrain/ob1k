@@ -5,13 +5,14 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>trunk</version>
+    <version>0.1</version>
   </parent>
+
   <artifactId>ConfigAPI</artifactId>
   <name>ConfigAPI</name>
+  <version>0.1</version>
 
   <dependencies>
-
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>

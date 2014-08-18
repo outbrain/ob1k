@@ -1,15 +1,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.outbrain.swinfra</groupId>
   <artifactId>Gruffalo</artifactId>
   <packaging>jar</packaging>
   <name>Gruffalo</name>
+  <version>0.1</version>
 
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>trunk</version>
+    <version>0.1</version>
   </parent>
 
   <dependencies>
@@ -17,10 +17,13 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>MetricsLib</artifactId>
+      <version>0.1</version>
     </dependency>
+
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ConfigAPI</artifactId>
+      <version>0.1</version>
     </dependency>
 
     <dependency>

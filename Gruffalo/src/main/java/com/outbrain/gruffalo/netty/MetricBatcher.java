@@ -41,7 +41,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     metricsCounter = metricFactory.createCounter(component, "metricsReceived");
     unexpectedErrorCounter = metricFactory.createCounter(component, "unexpectedErrors");
     ioErrorCounter = metricFactory.createCounter(component, "ioErrors");
-    metricFactory.createGauge(component, "batchSize", new Gauge<Integer>() {
+    metricFactory.registerGauge(component, "batchSize", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
         return lastBatchSize.get();
