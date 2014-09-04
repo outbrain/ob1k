@@ -13,6 +13,17 @@
     <url>http://www.outbrain.com</url>
   </organization>
 
+  <developers>
+    <developer>
+      <name>Eran Harel</name>
+      <url>http://il.linkedin.com/pub/eran-harel/4/4a3/234/</url>
+    </developer>
+    <developer>
+      <name>Asy Ronen</name>
+      <url>http://il.linkedin.com/in/asyronen</url>
+    </developer>
+  </developers>
+
   <modules>
     <module>Gruffalo</module>
     <module>MetricsLib</module>
