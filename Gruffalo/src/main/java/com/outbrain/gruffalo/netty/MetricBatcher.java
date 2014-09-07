@@ -95,6 +95,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
             log.warn("Closing suspected leaked connection: {}", remoteAddress);
             idleChannelsClosed.inc();
             ctx.close();
+            lastRead = DateTime.now();
           }
         }
       }
