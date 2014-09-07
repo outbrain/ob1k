@@ -1,8 +1,10 @@
 package com.outbrain.gruffalo.netty;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,21 +28,27 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   private final Counter metricsCounter;
   private final Counter unexpectedErrorCounter;
   private final Counter ioErrorCounter;
+  private final Counter idleChannelsClosed;
   private final ChannelGroup activeChannels;
   private StringBuilder batch;
   private int currBatchSize;
+  private DateTime lastRead = DateTime.now();
+  private final int maxChannelIdleTime;
 
-  public MetricBatcher(final MetricFactory metricFactory, final int batchBufferCapacity, ChannelGroup activeChannels) {
+  public MetricBatcher(final MetricFactory metricFactory, final int batchBufferCapacity, final ChannelGroup activeChannels, final int maxChannelIdleTime) {
+    Preconditions.checkArgument(maxChannelIdleTime > 0, "maxChannelIdleTime must be greater than 0");
+    this.maxChannelIdleTime = maxChannelIdleTime;
     Preconditions.checkNotNull(metricFactory, "metricFactory may not be null");
     this.batchBufferCapacity = batchBufferCapacity;
     this.activeChannels = Preconditions.checkNotNull(activeChannels, "activeChannels must not be null");
     prepareNewBatch();
 
-    String component = getClass().getSimpleName();
+    final String component = getClass().getSimpleName();
     connectionCounter = metricFactory.createCounter(component, "connections");
     metricsCounter = metricFactory.createCounter(component, "metricsReceived");
     unexpectedErrorCounter = metricFactory.createCounter(component, "unexpectedErrors");
     ioErrorCounter = metricFactory.createCounter(component, "ioErrors");
+    idleChannelsClosed = metricFactory.createCounter(component, "idleChannelsClosed");
     metricFactory.registerGauge(component, "batchSize", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
@@ -51,6 +59,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
 
   @Override
   public void channelRead0(final ChannelHandlerContext ctx, final String msg) throws Exception {
+    lastRead = DateTime.now();
     currBatchSize++;
     if (batch.capacity() < batch.length() + msg.length()) {
       sendBatch(ctx);
@@ -75,8 +84,19 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
     if (evt instanceof IdleStateEvent) {
       final IdleStateEvent e = (IdleStateEvent) evt;
-      if (e.state() == IdleState.READER_IDLE && 0 < batch.length()) {
-        sendBatch(ctx);
+      if (e.state() == IdleState.READER_IDLE) {
+        if (0 < batch.length()) {
+          sendBatch(ctx);
+        }
+
+        final SocketAddress remoteAddress = ctx.channel().remoteAddress();
+        if (remoteAddress != null) {
+          if (lastRead.plusSeconds(maxChannelIdleTime).isBefore(System.currentTimeMillis())) {
+            log.warn("Closing suspected leaked connection: {}", remoteAddress);
+            idleChannelsClosed.inc();
+            ctx.close();
+          }
+        }
       }
     }
   }

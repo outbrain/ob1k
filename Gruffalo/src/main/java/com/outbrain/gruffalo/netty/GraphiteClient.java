@@ -10,7 +10,7 @@ public interface GraphiteClient {
    */
   public void connect();
 
-  public void publishMetrics(String metrics);
+  public boolean publishMetrics(String metrics);
 
   /**
    * Notifies the client that the incoming requests are suspended due to slow writes

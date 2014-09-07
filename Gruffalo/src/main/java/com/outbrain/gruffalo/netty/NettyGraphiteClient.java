@@ -21,11 +21,15 @@ public class NettyGraphiteClient implements GraphiteClient {
   private final Counter errorCounter;
   private final Counter pushBackCounter;
   private final Counter reconnectCounter;
+  private final Counter rejectedCounter;
+  private final Counter publishedCounter;
   private final String host;
-  private final ChannelFutureListener errorListener = new ChannelFutureListener() {
+  private final ChannelFutureListener opListener = new ChannelFutureListener() {
     @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
-      if (!future.isSuccess()) {
+    public void operationComplete(final ChannelFuture future) throws Exception {
+      if (future.isSuccess()) {
+        publishedCounter.inc();
+      } else {
         errorCounter.inc();
         // Under high load this is spam. Maybe add later...
         // log.error("Failed to write to {}: {}", host, future.cause().toString());
@@ -35,16 +39,18 @@ public class NettyGraphiteClient implements GraphiteClient {
   private GraphiteClientChannelInitializer channelInitializer;
   private volatile ChannelFuture channelFuture;
 
-  public NettyGraphiteClient(final MetricFactory metricFactory, String host) {
+  public NettyGraphiteClient(final MetricFactory metricFactory, final String host) {
     this.host = host;
-    String graphiteCompatibleHostName = HostName2MetricName.graphiteCompatibleHostPortName(host);
+    final String graphiteCompatibleHostName = HostName2MetricName.graphiteCompatibleHostPortName(host);
     errorCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".errors");
     pushBackCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".pushBack");
     reconnectCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".reconnect");
+    rejectedCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".rejected");
+    publishedCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".published");
     log.info("Client for [{}] initialized", host);
   }
 
-  public void setChannelInitializer(GraphiteClientChannelInitializer channelInitializer) {
+  public void setChannelInitializer(final GraphiteClientChannelInitializer channelInitializer) {
     this.channelInitializer = channelInitializer;
   }
 
@@ -56,16 +62,13 @@ public class NettyGraphiteClient implements GraphiteClient {
   }
 
   @Override
-  public void publishMetrics(final String metrics) {
+  public boolean publishMetrics(final String metrics) {
     if (channelFuture.isDone()) {
-      channelFuture.channel().writeAndFlush(metrics).addListener(errorListener);
+      channelFuture.channel().writeAndFlush(metrics).addListener(opListener);
+      return true;
     } else {
-      channelFuture.addListener(new ChannelFutureListener() {
-        @Override
-        public void operationComplete(final ChannelFuture future) throws Exception {
-          future.channel().writeAndFlush(metrics).addListener(errorListener);
-        }
-      });
+      rejectedCounter.inc();
+      return false;
     }
   }
 

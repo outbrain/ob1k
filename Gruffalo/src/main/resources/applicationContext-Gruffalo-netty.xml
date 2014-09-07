@@ -45,6 +45,7 @@
     <constructor-arg ref="metricFactory"/>
     <constructor-arg value="${com.outbrain.gruffalo.netty.MetricBatcher.batchBufferCapacity}"/>
     <constructor-arg ref="allServerChannels"/>
+    <constructor-arg value="${com.outbrain.gruffalo.maxChannelIdleTimeSec}"/>
   </bean>
   <bean id="metricBatcherFactory" class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
     <property name="serviceLocatorInterface" value="com.outbrain.gruffalo.netty.MetricBatcherFactory"/>

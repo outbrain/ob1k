@@ -18,11 +18,11 @@ import org.slf4j.LoggerFactory;
  *
  * @author Eran Harel
  */
-public class GraphiteClientPool implements GraphiteClient {
+class GraphiteClientPool implements GraphiteClient {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphiteClientPool.class);
   private final GraphiteClient[] pool;
-  private AtomicInteger nextIndex = new AtomicInteger();
+  private final AtomicInteger nextIndex = new AtomicInteger();
 
   public GraphiteClientPool(final String graphiteRelayHosts, final EventLoopGroup eventLoopGroup, final StringDecoder decoder,
       final StringEncoder encoder, final ChannelGroup activeServerChannels, final MetricFactory metricFactory) {
@@ -32,21 +32,21 @@ public class GraphiteClientPool implements GraphiteClient {
     Preconditions.checkNotNull(eventLoopGroup, "eventLoopGroup must not be null");
 
     logger.info("Creating a client pool for [{}]", graphiteRelayHosts);
-    String[] hosts = graphiteRelayHosts.trim().split(",");
+    final String[] hosts = graphiteRelayHosts.trim().split(",");
     pool = new GraphiteClient[hosts.length];
     initClients(hosts, eventLoopGroup, decoder, encoder, activeServerChannels, metricFactory);
   }
 
-  private void initClients(String[] hosts, EventLoopGroup eventLoopGroup, StringDecoder decoder, StringEncoder encoder,
-      ChannelGroup activeServerChannels, MetricFactory metricFactory) {
+  private void initClients(final String[] hosts, final EventLoopGroup eventLoopGroup, final StringDecoder decoder, final StringEncoder encoder,
+      final ChannelGroup activeServerChannels, final MetricFactory metricFactory) {
     for (int i = 0; i < hosts.length; i++) {
-      String[] hostAndPort = hosts[i].split(":");
-      String host = hostAndPort[0];
-      int port = Integer.parseInt(hostAndPort[1]);
+      final String[] hostAndPort = hosts[i].split(":");
+      final String host = hostAndPort[0];
+      final int port = Integer.parseInt(hostAndPort[1]);
 
       final NettyGraphiteClient client = new NettyGraphiteClient(metricFactory, hosts[i]);
       pool[i] = client;
-      ChannelHandler graphiteChannelHandler = new GraphiteChannelInboundHandler(client, hosts[i], activeServerChannels);
+      final ChannelHandler graphiteChannelHandler = new GraphiteChannelInboundHandler(client, hosts[i], activeServerChannels);
       final GraphiteClientChannelInitializer channelInitializer = new GraphiteClientChannelInitializer(host, port, eventLoopGroup, decoder, encoder,
           graphiteChannelHandler);
       client.setChannelInitializer(channelInitializer);
@@ -55,15 +55,23 @@ public class GraphiteClientPool implements GraphiteClient {
 
   @Override
   public void connect() {
-    for (GraphiteClient client : pool) {
+    for (final GraphiteClient client : pool) {
       client.connect();
     }
   }
 
   @Override
-  public void publishMetrics(String metrics) {
-    final int currIndex = nextIndex.getAndIncrement() % pool.length;
-    pool[currIndex].publishMetrics(metrics);
+  public boolean publishMetrics(final String metrics) {
+    final int currIndex = nextIndex.getAndIncrement();
+
+    for(int i = 0; i < pool.length; i++) {
+      final int currClientIndex = (i + currIndex) % pool.length;
+      if (pool[currClientIndex].publishMetrics(metrics)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Override

@@ -12,13 +12,13 @@ class CompoundMetricsPublisher implements MetricsPublisher {
 
   private final List<MetricsPublisher> publishers = new LinkedList<MetricsPublisher>();
 
-  public CompoundMetricsPublisher(List<MetricsPublisher> publishers) {
+  public CompoundMetricsPublisher(final List<MetricsPublisher> publishers) {
     this.publishers.addAll(publishers);
   }
 
   @Override
   public void publishMetrics(final String payload) {
-    for (MetricsPublisher publisher : publishers) {
+    for (final MetricsPublisher publisher : publishers) {
       publisher.publishMetrics(payload);
     }
   }

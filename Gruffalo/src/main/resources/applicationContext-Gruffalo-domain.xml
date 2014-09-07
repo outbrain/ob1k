@@ -10,16 +10,28 @@
   <bean id="compoundMetricsPublisher" class="com.outbrain.gruffalo.publish.CompoundMetricsPublisher" lazy-init="true">
     <constructor-arg>
       <list>
-        <ref local="mainGraphiteMetricsPublisher"/>
-        <ref local="secondaryGraphiteMetricsPublisher"/>
+        <ref bean="mainGraphiteMetricsPublisher"/>
+        <ref bean="secondaryGraphiteMetricsPublisher"/>
       </list>
     </constructor-arg>
   </bean>
-  <bean id="mainGraphiteMetricsPublisher" class="com.outbrain.gruffalo.publish.GraphiteMetricsPublisher" lazy-init="true">
-    <constructor-arg ref="mainGraphiteClient"/>
+  <bean id="mainGraphiteMetricsPublisher" class="com.outbrain.gruffalo.publish.TimedMetricsPublisher" lazy-init="true">
+    <constructor-arg>
+      <bean class="com.outbrain.gruffalo.publish.GraphiteMetricsPublisher">
+        <constructor-arg ref="mainGraphiteClient"/>
+      </bean>
+    </constructor-arg>
+    <constructor-arg ref="metricFactory"/>
+    <constructor-arg value="main"/>
   </bean>
-  <bean id="secondaryGraphiteMetricsPublisher" class="com.outbrain.gruffalo.publish.GraphiteMetricsPublisher" lazy-init="true">
-    <constructor-arg ref="secondaryGraphiteClient"/>
+  <bean id="secondaryGraphiteMetricsPublisher" class="com.outbrain.gruffalo.publish.TimedMetricsPublisher" lazy-init="true">
+    <constructor-arg>
+      <bean class="com.outbrain.gruffalo.publish.GraphiteMetricsPublisher">
+        <constructor-arg ref="secondaryGraphiteClient"/>
+      </bean>
+    </constructor-arg>
+    <constructor-arg ref="metricFactory"/>
+    <constructor-arg value="secondary"/>
   </bean>
 
 </beans>
