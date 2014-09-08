@@ -93,6 +93,17 @@
             </manifest>
           </archive>
         </configuration>
+
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>jar</goal>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+
       </plugin>
 
       <plugin>
