@@ -31,6 +31,8 @@
     <module>ConcurrentLib</module>
     <module>Ob1k</module>
     <module>JettyLib</module>
+    <module>CacheLib</module>
+    <module>DBLib</module>
   </modules>
 
   <properties>

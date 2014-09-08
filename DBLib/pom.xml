@@ -8,34 +8,29 @@
     <version>0.2</version>
   </parent>
 
-  <artifactId>ConcurrentLib</artifactId>
-  <name>ConcurrentLib</name>
+  <artifactId>DBLib</artifactId>
+  <name>DBLib</name>
   <version>0.1</version>
   <packaging>jar</packaging>
 
   <dependencies>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>16.0.1</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.netflix.rxjava</groupId>
-        <artifactId>rxjava-core</artifactId>
-        <version>0.19.4</version>
-      </dependency>
 
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.5</version>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>MetricsLib</artifactId>
+      <version>0.1</version>
     </dependency>
+
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.5</version>
-      <scope>provided</scope>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>ConcurrentLib</artifactId>
+      <version>0.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.mauricio</groupId>
+      <artifactId>mysql-async_2.10</artifactId>
+      <version>0.2.12</version>
     </dependency>
 
     <dependency>

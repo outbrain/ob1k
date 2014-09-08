@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
@@ -8,23 +8,29 @@
     <version>0.2</version>
   </parent>
 
-  <artifactId>ConfigAPI</artifactId>
-  <name>ConfigAPI</name>
+  <artifactId>CacheLib</artifactId>
+  <name>CacheLib</name>
   <version>0.1</version>
+  <packaging>jar</packaging>
 
   <dependencies>
+
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>MetricsLib</artifactId>
+      <version>0.1</version>
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>net.spy</groupId>
+      <artifactId>spymemcached</artifactId>
+      <version>2.10.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>16.0.1</version>
     </dependency>
 
   </dependencies>
