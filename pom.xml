@@ -28,6 +28,9 @@
     <module>Gruffalo</module>
     <module>MetricsLib</module>
     <module>ConfigAPI</module>
+    <module>ConcurrentLib</module>
+    <module>Ob1k</module>
+    <module>JettyLib</module>
   </modules>
 
   <properties>

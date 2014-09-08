@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.outbrain.swinfra</groupId>
+    <artifactId>outbrain-sw-infra</artifactId>
+    <version>0.1</version>
+  </parent>
+
+  <artifactId>JettyLib</artifactId>
+  <name>JettyLib</name>
+  <version>0.1</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <org.eclipse.jetty.version>9.1.4.v20140401</org.eclipse.jetty.version>
+    <jetty.servlet-api.version>3.1.0</jetty.servlet-api.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>Ob1k</artifactId>
+      <version>0.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>MetricsLib</artifactId>
+      <version>0.1</version>
+    </dependency>
+
+    <!-- Jetty for newer (OB1K) services -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${org.eclipse.jetty.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <version>${org.eclipse.jetty.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlets</artifactId>
+      <version>${org.eclipse.jetty.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-jsp</artifactId>
+      <version>${org.eclipse.jetty.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-jmx</artifactId>
+      <version>${org.eclipse.jetty.version}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>${jetty.servlet-api.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>2.2</version>
+    </dependency>
+
+  </dependencies>
+</project>
