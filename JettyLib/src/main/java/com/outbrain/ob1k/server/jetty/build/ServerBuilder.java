@@ -24,7 +24,7 @@ public class ServerBuilder {
   protected String applicationName;
   protected String logDirectory;
 
-  public ServerBuilder configurationPorts(final int httpPort, final int securePort) {
+  public ServerBuilder configurationPorts(final int httpPort, final Integer securePort) {
     this.port = httpPort;
     this.securePort = securePort;
 
