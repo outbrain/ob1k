@@ -1,3 +1,3 @@
-Ob1k - The RPC Frameworko
+Ob1k - The RPC Framework
 ========
 More details soon...
