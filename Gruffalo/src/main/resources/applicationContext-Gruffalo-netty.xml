@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
   xmlns:util="http://www.springframework.org/schema/util" xmlns:p="http://www.springframework.org/schema/p"
-  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
-    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
-    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd"
 >
 
   <bean id="gruffaloProxy" class="com.outbrain.gruffalo.netty.GruffaloProxy" destroy-method="shutdown">
@@ -42,7 +42,7 @@
   </bean>
   
   <bean id="gruffaloRequestHandler" class="com.outbrain.gruffalo.netty.MetricBatcher" scope="prototype">
-    <constructor-arg ref="metricFactory"/>
+    <constructor-arg ref="osMetricFactory"/>
     <constructor-arg value="${com.outbrain.gruffalo.netty.MetricBatcher.batchBufferCapacity}"/>
     <constructor-arg ref="allServerChannels"/>
     <constructor-arg value="${com.outbrain.gruffalo.maxChannelIdleTimeSec}"/>
@@ -53,7 +53,7 @@
   
   <bean id="publishHandler" class="com.outbrain.gruffalo.netty.MetricPublishHandler">
     <constructor-arg ref="metricsPublisher"/>
-    <constructor-arg ref="metricFactory"/>  
+    <constructor-arg ref="osMetricFactory"/>  
   </bean>
       
   <bean id="lineFramer" class="io.netty.handler.codec.LineBasedFrameDecoder" scope="prototype">
@@ -91,7 +91,7 @@
     <constructor-arg ref="stringDecoder"/>
     <constructor-arg ref="stringEncoder"/>
     <constructor-arg ref="allServerChannels"/>
-    <constructor-arg ref="metricFactory"/>
+    <constructor-arg ref="osMetricFactory"/>
   </bean>
 
   <bean id="mainGraphiteClient" parent="graphiteClientTemplate">
