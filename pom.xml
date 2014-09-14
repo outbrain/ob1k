@@ -41,7 +41,7 @@
     <java.compiler.target>1.7</java.compiler.target>
 
 
-    <org.springframework.version>3.2.9.RELEASE</org.springframework.version>
+    <org.springframework.version>4.0.6.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
 
     <!--
