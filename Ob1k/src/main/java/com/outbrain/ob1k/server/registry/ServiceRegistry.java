@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.registry;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
@@ -62,7 +63,7 @@ public class ServiceRegistry {
       throw new RuntimeException("can't add service before context path is set.");
     }
 
-    final Map<Method, String[]> methodsParams;
+    final Map<Method, List<String>> methodsParams;
     try {
       methodsParams = MethodParamNamesExtractor.extract(service.getClass(), methodBinds.values());
     } catch (final Exception e) {
@@ -93,7 +94,7 @@ public class ServiceRegistry {
       }
 
       final Method method = methodBinds.get(methodBind);
-      final String[] params = methodsParams.get(method);
+      final String[] params = methodsParams.get(method).toArray(new String[methodsParams.get(method).size()]);
       final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
           new AsyncServerEndpoint(service, asyncFilters, method, params) :
           isStreamingMethod(method) ?

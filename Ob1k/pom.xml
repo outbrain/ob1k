@@ -11,7 +11,7 @@
   <artifactId>Ob1k</artifactId>
   <name>Ob1k</name>
   <packaging>jar</packaging>
-  <version>0.1</version>
+  <version>0.2</version>
 
   <dependencies>
     <dependency>
