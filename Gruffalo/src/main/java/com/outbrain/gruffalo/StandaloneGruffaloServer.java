@@ -18,7 +18,7 @@ public class StandaloneGruffaloServer {
   }
 
   public void start() {
-    new ClassPathXmlApplicationContext("applicationContext-Gruffalo-all.xml");
+    new ClassPathXmlApplicationContext("applicationContext-GruffaloLib-all.xml");
   }
 
 }

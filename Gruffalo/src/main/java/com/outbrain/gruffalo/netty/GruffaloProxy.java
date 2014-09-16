@@ -27,7 +27,7 @@ class GruffaloProxy {
   }
 
   public static void main(final String[] args) {
-    new ClassPathXmlApplicationContext("classpath:applicationContext-Gruffalo-all.xml");
+    new ClassPathXmlApplicationContext("classpath:applicationContext-GruffaloLib-all.xml");
   }
 
   private ChannelFuture createUdpBootstrap(final UdpServerPipelineFactory udpServerPipelineFactory, final int udpPort) throws InterruptedException {

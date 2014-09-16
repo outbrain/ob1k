@@ -5,8 +5,8 @@
     http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd"
 >
-  <import resource="applicationContext-Gruffalo-configuration.xml" />
-  <import resource="applicationContext-Gruffalo-domain.xml" />
-  <import resource="applicationContext-Gruffalo-netty.xml" />
+  <import resource="applicationContext-GruffaloLib-configuration.xml" />
+  <import resource="applicationContext-GruffaloLib-domain.xml" />
+  <import resource="applicationContext-GruffaloLib-netty.xml" />
 
 </beans>
