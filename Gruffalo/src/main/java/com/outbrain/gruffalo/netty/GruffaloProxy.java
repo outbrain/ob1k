@@ -1,5 +1,7 @@
 package com.outbrain.gruffalo.netty;
 
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -46,6 +48,7 @@ class GruffaloProxy {
     tcpBootstrap.group(eventLoopGroup);
     tcpBootstrap.channel(NioServerSocketChannel.class);
     tcpBootstrap.childHandler(tcpServerPipelineFactory);
+    tcpBootstrap.option(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT);
 
     final ChannelFuture channelFuture = tcpBootstrap.bind(tcpPort);
     log.info("Binding to TCP port {}", tcpPort);

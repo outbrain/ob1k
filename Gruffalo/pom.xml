@@ -4,7 +4,7 @@
   <artifactId>Gruffalo</artifactId>
   <packaging>jar</packaging>
   <name>Gruffalo</name>
-  <version>0.5</version>
+  <version>0.6</version>
 
   <parent>
     <groupId>com.outbrain.swinfra</groupId>

@@ -3,6 +3,7 @@ package com.outbrain.gruffalo.netty;
 import com.google.common.base.Preconditions;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -50,6 +51,7 @@ public class GraphiteClientChannelInitializer extends ChannelInitializer<Channel
     bootstrap.channel(NioSocketChannel.class);
     bootstrap.handler(this);
     bootstrap.option(ChannelOption.SO_LINGER, 0);
+    bootstrap.option(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT);
 
     return bootstrap;
   }
