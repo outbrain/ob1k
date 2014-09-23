@@ -9,7 +9,7 @@ import java.util.concurrent.ExecutionException;
  *
  * the default client side sync request context.
  */
-public class DefaultSyncClientRequestContext extends AbstractClientRequestContext implements SyncClientRequestContext {
+public class DefaultSyncClientRequestContext extends AbstractClientRequestContext<SyncClientEndpoint> implements SyncClientRequestContext {
   public DefaultSyncClientRequestContext(final String remoteTarget, final Object[] params, final SyncClientEndpoint endpoint) {
     super(remoteTarget, params, endpoint);
   }
@@ -20,12 +20,12 @@ public class DefaultSyncClientRequestContext extends AbstractClientRequestContex
 
   @Override
   public SyncClientRequestContext nextPhase() {
-    return new DefaultSyncClientRequestContext(remoteTarget, params, (SyncClientEndpoint) endpoint, executionIndex + 1);
+    return new DefaultSyncClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
   }
 
   @Override
   public <T> T invokeSync() throws ExecutionException {
-    return ((SyncClientEndpoint)endpoint).invokeSync(this);
+    return endpoint.invokeSync(this);
   }
 
 

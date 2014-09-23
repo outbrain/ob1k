@@ -9,7 +9,7 @@ import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
  *
  * the actual async context for the server side call chain.
  */
-public class DefaultAsyncServerRequestContext extends AbstractServerRequestContext implements AsyncServerRequestContext {
+public class DefaultAsyncServerRequestContext extends AbstractServerRequestContext<AsyncServerEndpoint> implements AsyncServerRequestContext {
   public DefaultAsyncServerRequestContext(final Request request, final AsyncServerEndpoint endpoint, final Object[] params) {
     super(request, endpoint, params);
   }
@@ -20,12 +20,12 @@ public class DefaultAsyncServerRequestContext extends AbstractServerRequestConte
 
   @Override
   public AsyncServerRequestContext nextPhase() {
-    return new DefaultAsyncServerRequestContext(request, (AsyncServerEndpoint) endpoint, params, executionIndex + 1);
+    return new DefaultAsyncServerRequestContext(request, endpoint, params, executionIndex + 1);
   }
 
   @Override
   public <T> ComposableFuture<T> invokeAsync() {
-    return ((AsyncServerEndpoint)endpoint).invokeAsync(this);
+    return endpoint.invokeAsync(this);
   }
 
 }
