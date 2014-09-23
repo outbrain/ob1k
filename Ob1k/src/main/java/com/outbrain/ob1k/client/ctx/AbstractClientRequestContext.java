@@ -7,18 +7,18 @@ import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
  *
  * represent a single call on the client side.
  */
-public abstract class AbstractClientRequestContext implements ClientRequestContext {
+public abstract class AbstractClientRequestContext<Endpoint extends AbstractClientEndpoint> implements ClientRequestContext {
   protected final String remoteTarget;
   protected final Object[] params;
-  protected final AbstractClientEndpoint endpoint;
+  protected final Endpoint endpoint;
   protected final int executionIndex;
   protected final String url;
 
-  public AbstractClientRequestContext(final String remoteTarget, final Object[] params, final AbstractClientEndpoint endpoint) {
+  public AbstractClientRequestContext(final String remoteTarget, final Object[] params, final Endpoint endpoint) {
     this(remoteTarget, params, endpoint, 0);
   }
 
-  protected AbstractClientRequestContext(final String remoteTarget, final Object[] params, final AbstractClientEndpoint endpoint, final int executionIndex) {
+  protected AbstractClientRequestContext(final String remoteTarget, final Object[] params, final Endpoint endpoint, final int executionIndex) {
     this.remoteTarget = remoteTarget;
     this.params = params;
     this.endpoint = endpoint;

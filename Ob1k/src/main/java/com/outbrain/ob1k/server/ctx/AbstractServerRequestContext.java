@@ -8,17 +8,17 @@ import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
  * Date: 7/29/13
  * Time: 2:08 PM
  */
-public abstract class AbstractServerRequestContext implements ServerRequestContext {
+public abstract class AbstractServerRequestContext<Endpoint extends AbstractServerEndpoint> implements ServerRequestContext {
   protected final Request request;
-  protected final AbstractServerEndpoint endpoint;
+  protected final Endpoint endpoint;
   protected final Object[] params;
   protected final int executionIndex;
 
-  public AbstractServerRequestContext(final Request request, final AbstractServerEndpoint endpoint, final Object[] params) {
+  public AbstractServerRequestContext(final Request request, final Endpoint endpoint, final Object[] params) {
     this(request, endpoint, params, 0);
   }
 
-  protected AbstractServerRequestContext(final Request request, final AbstractServerEndpoint endpoint, final Object[] params, final int executionIndex) {
+  protected AbstractServerRequestContext(final Request request, final Endpoint endpoint, final Object[] params, final int executionIndex) {
     this.request = request;
     this.endpoint = endpoint;
     this.params = params;

@@ -9,7 +9,7 @@ import rx.Observable;
  *
  * the actual stream context for the server side call chain.
  */
-public class DefaultStreamServerRequestContext extends AbstractServerRequestContext implements StreamServerRequestContext {
+public class DefaultStreamServerRequestContext extends AbstractServerRequestContext<StreamServerEndpoint> implements StreamServerRequestContext {
   public DefaultStreamServerRequestContext(final Request request, final StreamServerEndpoint endpoint, final Object[] params) {
     super(request, endpoint, params);
   }
@@ -20,11 +20,11 @@ public class DefaultStreamServerRequestContext extends AbstractServerRequestCont
 
   @Override
   public StreamServerRequestContext nextPhase() {
-    return new DefaultStreamServerRequestContext(request, (StreamServerEndpoint) endpoint, params, executionIndex + 1);
+    return new DefaultStreamServerRequestContext(request, endpoint, params, executionIndex + 1);
   }
 
   @Override
   public <T> Observable<T> invokeStream() {
-    return ((StreamServerEndpoint)endpoint).invokeStream(this);
+    return endpoint.invokeStream(this);
   }
 }

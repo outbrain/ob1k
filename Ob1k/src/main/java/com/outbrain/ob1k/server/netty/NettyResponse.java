@@ -37,7 +37,10 @@ public class NettyResponse implements Response {
       return new DefaultFullHttpResponse(HTTP_1_1, status);
     }
 
-    final FullHttpResponse response = rawContent == null ? marshaller.marshallResponse(message, status) : new DefaultFullHttpResponse(HTTP_1_1, status, rawContent);
+    final FullHttpResponse response = rawContent == null ?
+        marshaller.marshallResponse(message, status) :
+        new DefaultFullHttpResponse(HTTP_1_1, status, rawContent);
+
     if (headers != null) {
       response.headers().add(headers);
     }

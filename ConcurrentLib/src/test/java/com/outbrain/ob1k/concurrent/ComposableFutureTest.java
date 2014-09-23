@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.concurrent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -24,7 +25,6 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
  * Date: 7/2/13
  * Time: 10:20 AM
  */
-@Ignore
 public class ComposableFutureTest {
 
   public static final int ITERATIONS = 100000;
@@ -254,14 +254,16 @@ public class ComposableFutureTest {
             System.out.println("got: " + result + " throwing exception.");
             throw new ExecutionException(new RuntimeException("booo"));
           }
-        }).
-        onSuccess(new OnSuccessHandler<String>() {
+        });
+
+        res.onSuccess(new OnSuccessHandler<String>() {
           @Override
           public void handle(final String element) {
             System.out.println("should be here !!!!");
           }
-        }).
-        onError(new OnErrorHandler() {
+        });
+
+        res.onError(new OnErrorHandler() {
           @Override
           public void handle(final Throwable error) {
             System.out.println("got exception of type: " + error.getClass().getName());
@@ -319,6 +321,65 @@ public class ComposableFutureTest {
       Assert.assertEquals(result.weight, weight);
     } catch (InterruptedException | ExecutionException e) {
       e.printStackTrace();
+    }
+
+  }
+
+  @Test
+  public void testSlowFuture() {
+    final ScheduledComposableFuture<String> f1 = schedule(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        return "slow";
+      }
+    }, 1, TimeUnit.SECONDS);
+
+    final ComposableFuture<String> f2 = fromValue("fast1");
+    final ComposableFuture<String> f3 = fromValue("fast2");
+
+    final ComposableFuture<List<String>> res = all(Arrays.asList(f1, f2, f3));
+    long t1 = System.currentTimeMillis();
+    try {
+      final List<String> results = res.get();
+      long t2 = System.currentTimeMillis();
+      Assert.assertTrue("time is: " + (t2 - t1), (t2 - t1) > 900); // not
+    } catch (InterruptedException | ExecutionException e) {
+      Assert.fail(e.getMessage());
+    }
+
+    final ScheduledComposableFuture<String> f4 = schedule(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        return "slow";
+      }
+    }, 1, TimeUnit.SECONDS);
+    final ComposableFuture<String> f5 = fromError(new RuntimeException("oops"));
+    final ComposableFuture<List<String>> res2 = all(true, Arrays.asList(f4, f5));
+    long t3 = System.currentTimeMillis();
+    try {
+      final List<String> results = res2.get();
+      Assert.fail("should get error.");
+    } catch (InterruptedException | ExecutionException e) {
+      long t4 = System.currentTimeMillis();
+      Assert.assertTrue((t4 - t3) < 100);
+    }
+
+    final ScheduledComposableFuture<String> f6 = schedule(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        return "slow";
+      }
+    }, 1, TimeUnit.SECONDS);
+    final ComposableFuture<String> f7 = fromError(new RuntimeException("oops"));
+    final ComposableFuture<List<String>> res3 = all(true, Arrays.asList(f6, f7));
+    long t5 = System.currentTimeMillis();
+    try {
+      final List<String> results = res3.get();
+      Assert.fail("should get error.");
+    } catch (InterruptedException | ExecutionException e) {
+      long t6 = System.currentTimeMillis();
+      System.out.println("time took to fail: " + (t6 - t5));
+      Assert.assertTrue((t6 - t5) < 100);
     }
 
   }

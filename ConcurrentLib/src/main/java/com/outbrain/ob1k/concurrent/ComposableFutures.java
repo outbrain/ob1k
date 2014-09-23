@@ -61,11 +61,11 @@ public class ComposableFutures {
     return all(false, Arrays.asList(f1, f2, f3, f4));
   }
 
-  public static <T> ComposableFuture<List<T>> all(final List<ComposableFuture<T>> futures) {
+  public static <T> ComposableFuture<List<T>> all(final Iterable<ComposableFuture<T>> futures) {
     return all(false, futures);
   }
 
-  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final List<ComposableFuture<T>> futures) {
+  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> futures) {
     return Combiner.all(failOnError, futures);
   }
 

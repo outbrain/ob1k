@@ -8,7 +8,7 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
  *
  * the default client side async request context.
  */
-public class DefaultAsyncClientRequestContext extends AbstractClientRequestContext implements AsyncClientRequestContext {
+public class DefaultAsyncClientRequestContext extends AbstractClientRequestContext<AsyncClientEndpoint> implements AsyncClientRequestContext {
   public DefaultAsyncClientRequestContext(final String remoteTarget, final Object[] params, final AsyncClientEndpoint endpoint) {
     super(remoteTarget, params, endpoint);
   }
@@ -19,12 +19,12 @@ public class DefaultAsyncClientRequestContext extends AbstractClientRequestConte
 
   @Override
   public AsyncClientRequestContext nextPhase() {
-    return new DefaultAsyncClientRequestContext(remoteTarget, params, (AsyncClientEndpoint) endpoint, executionIndex + 1);
+    return new DefaultAsyncClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
   }
 
   @Override
   public <T> ComposableFuture<T> invokeAsync() {
-    return ((AsyncClientEndpoint)endpoint).invokeAsync(this);
+    return endpoint.invokeAsync(this);
   }
 
 

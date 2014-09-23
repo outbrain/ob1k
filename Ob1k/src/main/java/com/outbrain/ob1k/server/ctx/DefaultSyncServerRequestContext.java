@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutionException;
  *
  * the actual sync context for the server side call chain.
  */
-public class DefaultSyncServerRequestContext extends AbstractServerRequestContext implements SyncServerRequestContext {
+public class DefaultSyncServerRequestContext extends AbstractServerRequestContext<SyncServerEndpoint> implements SyncServerRequestContext {
   public DefaultSyncServerRequestContext(final Request request, final SyncServerEndpoint endpoint, final Object[] params) {
     super(request, endpoint, params);
   }
@@ -21,12 +21,12 @@ public class DefaultSyncServerRequestContext extends AbstractServerRequestContex
 
   @Override
   public SyncServerRequestContext nextPhase() {
-    return new DefaultSyncServerRequestContext(request, (SyncServerEndpoint) endpoint, params, executionIndex + 1);
+    return new DefaultSyncServerRequestContext(request, endpoint, params, executionIndex + 1);
   }
 
   @Override
   public <T> T invokeSync() throws ExecutionException {
-    return ((SyncServerEndpoint)endpoint).invokeSync(this);
+    return endpoint.invokeSync(this);
   }
 
 }

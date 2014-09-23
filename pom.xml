@@ -33,6 +33,7 @@
     <module>JettyLib</module>
     <module>CacheLib</module>
     <module>DBLib</module>
+    <module>CqlLib</module>
   </modules>
 
   <properties>

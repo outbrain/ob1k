@@ -22,8 +22,8 @@ public interface ComposableFuture<T> extends Future<T> {
   ComposableFuture<T> continueOnError(final ErrorHandler<? extends T> handler);
 
   void onResult(OnResultHandler<T> handler);
-  ComposableFuture<T> onSuccess(OnSuccessHandler<? super T> handler);
-  ComposableFuture<T> onError(OnErrorHandler handler);
+  void onSuccess(OnSuccessHandler<? super T> handler);
+  void onError(OnErrorHandler handler);
 
   ComposableFuture<T> withTimeout(long duration, final TimeUnit unit);
   <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function);

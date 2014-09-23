@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.client.ctx;
 
-import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import rx.Observable;
 
@@ -9,8 +8,8 @@ import rx.Observable;
  *
  * the default client side stream based request context.
  */
-public class DefaultStreamClientRequestContext extends AbstractClientRequestContext implements StreamClientRequestContext {
-  public DefaultStreamClientRequestContext(final String remoteTarget, final Object[] params, final AbstractClientEndpoint endpoint) {
+public class DefaultStreamClientRequestContext extends AbstractClientRequestContext<StreamClientEndpoint> implements StreamClientRequestContext {
+  public DefaultStreamClientRequestContext(final String remoteTarget, final Object[] params, final StreamClientEndpoint endpoint) {
     super(remoteTarget, params, endpoint);
   }
 
@@ -20,11 +19,11 @@ public class DefaultStreamClientRequestContext extends AbstractClientRequestCont
 
   @Override
   public StreamClientRequestContext nextPhase() {
-    return new DefaultStreamClientRequestContext(remoteTarget, params, (StreamClientEndpoint) endpoint, executionIndex + 1);
+    return new DefaultStreamClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
   }
 
   @Override
   public <T> Observable<T> invokeStream() {
-    return ((StreamClientEndpoint)endpoint).invokeStream(this);
+    return endpoint.invokeStream(this);
   }
 }

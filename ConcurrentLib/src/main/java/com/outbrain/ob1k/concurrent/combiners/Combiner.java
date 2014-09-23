@@ -1,10 +1,10 @@
 package com.outbrain.ob1k.concurrent.combiners;
 
-import com.outbrain.ob1k.concurrent.AggregatedException;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.ComposablePromise;
-import com.outbrain.ob1k.concurrent.handlers.OnResultHandler;
+import com.outbrain.ob1k.concurrent.handlers.OnErrorHandler;
+import com.outbrain.ob1k.concurrent.handlers.OnSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,98 +25,61 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Combiner {
   private static final Logger logger = LoggerFactory.getLogger(Combiner.class);
 
-  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final List<ComposableFuture<T>> futures) {
-    final int size = futures.size();
-    if (size == 0) {
-      final List<T> empty = new ArrayList<>();
-      return ComposableFutures.fromValue(empty);
+  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> elements) {
+    Map<Integer, ComposableFuture<T>> elementsMap = new HashMap<>();
+    int index = 0;
+    for(ComposableFuture<T> element : elements) {
+      elementsMap.put(index++, element);
     }
 
-    final AtomicInteger counter = new AtomicInteger();
-    final ComposablePromise<List<T>> res = ComposableFutures.newPromise();
-    final Queue<T> results = new ConcurrentLinkedQueue<>();
-    final Queue<Throwable> errors = new ConcurrentLinkedQueue<>();
+    return all(failOnError, elementsMap).continueOnSuccess(new SuccessHandler<Map<Integer, T>, List<T>>() {
+      @Override
+      public List<T> handle(Map<Integer, T> result) throws ExecutionException {
+        return new ArrayList<>(result.values());
+      }
+    });
+  }
 
-    for (final ComposableFuture<T> future : futures) {
-      future.onResult(new OnResultHandler<T>() {
+  public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> elements) {
+    final ComposablePromise<Map<K, T>> promise = ComposableFutures.newPromise();
+    final Map<K, T> result = new ConcurrentSkipListMap<>();
+    if (elements.isEmpty()) {
+      return ComposableFutures.fromValue(result);
+    }
+
+    final AtomicInteger counter = new AtomicInteger(elements.size());
+    for (Map.Entry<K, ComposableFuture<T>> element : elements.entrySet()) {
+      ComposableFuture<T> future = element.getValue();
+      final K key = element.getKey();
+
+      future.onSuccess(new OnSuccessHandler<T>() {
         @Override
-        public void handle(final ComposableFuture<T> result) {
-          try {
-            final T singleRes = result.get();
-            results.add(singleRes);
-          } catch (final ExecutionException e) {
-            errors.add(e.getCause() != null ? e.getCause() : e);
-          } catch (final Exception e) {
-            errors.add(e);
+        public void handle(T element) {
+          result.put(key, element);
+          final int count = counter.decrementAndGet();
+          if (count == 0) {
+            promise.set(result);
           }
+        }
+      });
 
-          if (counter.incrementAndGet() == size) {
-            if (errors.isEmpty() || !failOnError) {
-              if (logger.isDebugEnabled()) {
-                for (final Throwable e : errors) {
-                  logger.debug(e.getMessage());
-                }
-              }
-              res.set(new ArrayList<>(results));
-            } else {
-              res.setException(new AggregatedException(new ArrayList<>(errors)));
+      future.onError(new OnErrorHandler() {
+        @Override
+        public void handle(Throwable error) {
+          if (failOnError) {
+            promise.setException(error);
+          } else {
+            final int count = counter.decrementAndGet();
+            if (count == 0) {
+              promise.set(result);
             }
           }
         }
       });
     }
 
-    return res;
+    return promise;
   }
-
-  public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> futures) {
-    final int size = futures.size();
-    if (size == 0) {
-      final Map<K, T> empty = new HashMap<>();
-      return ComposableFutures.fromValue(empty);
-    }
-
-    final ComposablePromise<Map<K, T>> res = ComposableFutures.newPromise();
-    final Map<K, T> resultMap = new ConcurrentHashMap<>();
-    final AtomicInteger counter = new AtomicInteger();
-    final Queue<Throwable> errors = new ConcurrentLinkedQueue<>();
-
-    for (final K key : futures.keySet()) {
-      final ComposableFuture<T> future = futures.get(key);
-      future.onResult(new OnResultHandler<T>() {
-        @Override
-        public void handle(final ComposableFuture<T> result) {
-          try {
-            final T value = result.get();
-            if (value != null) {
-              resultMap.put(key, value);
-            }
-          } catch (final ExecutionException e) {
-            errors.add(e.getCause() != null ? e.getCause() : e);
-          } catch (final Exception e) {
-            errors.add(e);
-          }
-
-          if (counter.incrementAndGet() == size) {
-            if (errors.isEmpty() || (!failOnError && errors.size() < size)) {
-              if (logger.isDebugEnabled()) {
-                for (final Throwable e : errors) {
-                  logger.debug(e.getMessage());
-                }
-              }
-              res.set(resultMap);
-            } else {
-              res.setException(new AggregatedException(new ArrayList<>(errors)));
-            }
-          }
-
-        }
-      });
-    }
-
-    return res;
-  }
-
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right, final BiFunction<T1, T2, R> combiner) {
     final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.continueOnSuccess(new SuccessHandler<T1, BiContainer<T1, T2>>() {
