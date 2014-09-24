@@ -10,7 +10,7 @@
 
   <artifactId>ConcurrentLib</artifactId>
   <name>ConcurrentLib</name>
-  <version>0.2</version>
+  <version>${ob1k.version}</version>
   <packaging>jar</packaging>
 
   <dependencies>

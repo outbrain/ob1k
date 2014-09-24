@@ -267,17 +267,17 @@ public class SimpleComposableFuture<T> extends FutureTask<T> implements Composab
 
   @Override
   public void onResult(final OnResultHandler<T> handler) {
-    handlers.addHandler(new OnResultAction<>(handler, this));
+    handlers.addHandler(new OnResultAction<>(handler, this), threadPool);
   }
 
   @Override
   public void onSuccess(final OnSuccessHandler<? super T> handler) {
-    handlers.addHandler(new OnSuccessAction<>(handler, this));
+    handlers.addHandler(new OnSuccessAction<>(handler, this), threadPool);
   }
 
   @Override
   public void onError(final OnErrorHandler handler) {
-    handlers.addHandler(new OnErrorAction<>(handler, this));
+    handlers.addHandler(new OnErrorAction<>(handler, this), threadPool);
   }
 
   @Override

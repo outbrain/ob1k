@@ -17,11 +17,15 @@ public class HandlersList {
     this.handlers = new AtomicReference<List<Runnable>>(new ArrayList<Runnable>());
   }
 
-  public void addHandler(final Runnable handler) {
+  public void addHandler(final Runnable handler, final Executor executor) {
     while (true) {
       final List<Runnable> list = handlers.get();
       if (list == null) {
-        handler.run();
+        if (executor != null) {
+          executor.execute(handler);
+        } else {
+          handler.run();
+        }
         return;
       }
 

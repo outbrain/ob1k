@@ -55,7 +55,10 @@ public class Combiner {
       future.onSuccess(new OnSuccessHandler<T>() {
         @Override
         public void handle(T element) {
-          result.put(key, element);
+          if (element != null) {
+            result.put(key, element);
+          }
+
           final int count = counter.decrementAndGet();
           if (count == 0) {
             promise.set(result);

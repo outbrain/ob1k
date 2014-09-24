@@ -11,7 +11,7 @@
   <artifactId>Ob1k</artifactId>
   <name>Ob1k</name>
   <packaging>jar</packaging>
-  <version>0.3</version>
+  <version>${ob1k.version}</version>
 
   <dependencies>
     <dependency>
@@ -23,7 +23,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ConcurrentLib</artifactId>
-      <version>0.2</version>
+      <version>${ob1k.version}</version>
     </dependency>
 
     <dependency>

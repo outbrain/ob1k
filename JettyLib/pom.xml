@@ -10,7 +10,7 @@
 
   <artifactId>JettyLib</artifactId>
   <name>JettyLib</name>
-  <version>0.2</version>
+  <version>${ob1k.version}</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -22,7 +22,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>Ob1k</artifactId>
-      <version>0.1</version>
+      <version>${ob1k.version}</version>
     </dependency>
 
     <dependency>

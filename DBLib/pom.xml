@@ -10,7 +10,7 @@
 
   <artifactId>DBLib</artifactId>
   <name>DBLib</name>
-  <version>0.2</version>
+  <version>${ob1k.version}</version>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -24,7 +24,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ConcurrentLib</artifactId>
-      <version>0.2</version>
+      <version>${ob1k.version}</version>
     </dependency>
 
     <dependency>
