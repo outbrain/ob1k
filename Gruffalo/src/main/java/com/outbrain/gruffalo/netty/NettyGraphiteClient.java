@@ -52,7 +52,7 @@ public class NettyGraphiteClient implements GraphiteClient {
     reconnectCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".reconnect");
     rejectedCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".rejected");
     publishedCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".published");
-    metricFactory.registerGauge(getClass().getSimpleName(), graphiteCompatibleHostName + "inFlightBatches", new Gauge<Integer>() {
+    metricFactory.registerGauge(getClass().getSimpleName(), graphiteCompatibleHostName + ".inFlightBatches", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
         return inFlightBatches.get();
