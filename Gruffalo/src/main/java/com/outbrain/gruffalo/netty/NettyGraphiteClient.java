@@ -31,8 +31,8 @@ public class NettyGraphiteClient implements GraphiteClient {
   private final ChannelFutureListener opListener = new ChannelFutureListener() {
     @Override
     public void operationComplete(final ChannelFuture future) throws Exception {
+      inFlightBatches.decrementAndGet();
       if (future.isSuccess()) {
-        inFlightBatches.decrementAndGet();
         publishedCounter.inc();
       } else {
         errorCounter.inc();
