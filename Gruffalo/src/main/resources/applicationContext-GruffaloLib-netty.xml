@@ -90,7 +90,7 @@
     <constructor-arg ref="eventLoopGroup"/>
     <constructor-arg ref="stringDecoder"/>
     <constructor-arg ref="stringEncoder"/>
-    <constructor-arg ref="allServerChannels"/>
+    <constructor-arg ref="throttler"/>
     <constructor-arg ref="osMetricFactory"/>
   </bean>
 
@@ -100,6 +100,10 @@
 
   <bean id="secondaryGraphiteClient" parent="graphiteClientTemplate" lazy-init="true">
     <constructor-arg value="${com.outbrain.metrics.graphite.relay.secondary.hosts}"/>
+  </bean>
+
+  <bean id="throttler" class="com.outbrain.gruffalo.netty.Throttler">
+    <constructor-arg ref="allServerChannels"/>
   </bean>
 
 </beans>

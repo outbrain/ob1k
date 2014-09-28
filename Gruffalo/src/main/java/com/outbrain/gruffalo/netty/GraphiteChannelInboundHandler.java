@@ -2,21 +2,19 @@ package com.outbrain.gruffalo.netty;
 
 import java.util.concurrent.TimeUnit;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
-import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 
 @ChannelHandler.Sharable
 public class GraphiteChannelInboundHandler extends SimpleChannelInboundHandler<String> {
@@ -27,20 +25,20 @@ public class GraphiteChannelInboundHandler extends SimpleChannelInboundHandler<S
   private final GraphiteClient client;
 
   private final String graphiteTarget;
-  private final ChannelGroup activeServerChannels;
+  private final Throttler throttler;
   private boolean serverReadEnabled = true;
 
   private final ChannelFutureListener restoreServerReads = new ChannelFutureListener() {
     @Override
     public void operationComplete(final ChannelFuture future) throws Exception {
-      changeServerAutoRead(true);
+      throttler.restoreClientReads();
     }
   };
 
-  public GraphiteChannelInboundHandler(final GraphiteClient client, final String graphiteTarget, final ChannelGroup activeServerChannels) {
+  public GraphiteChannelInboundHandler(final GraphiteClient client, final String graphiteTarget, final Throttler throttler) {
     this.client = Preconditions.checkNotNull(client, "client may not be null");
     this.graphiteTarget = graphiteTarget;
-    this.activeServerChannels = Preconditions.checkNotNull(activeServerChannels, "activeServerChannels must not be null");
+    this.throttler = Preconditions.checkNotNull(throttler, "throttler must not be null");
   }
 
   @Override
@@ -90,19 +88,7 @@ public class GraphiteChannelInboundHandler extends SimpleChannelInboundHandler<S
       client.onPushBack();
     }
 
-    log.debug("Setting server autoread={}", autoread);
-    changeServerAutoRead(autoread);
-  }
-
-  private void changeServerAutoRead(final boolean autoread) {
-    boolean serverChannelChanged = false;
-    for (final Channel activeServerChannel : activeServerChannels) {
-      if (!serverChannelChanged) {
-        activeServerChannel.parent().config().setAutoRead(autoread);
-        serverChannelChanged = true;
-      }
-      activeServerChannel.config().setAutoRead(autoread);
-    }
+    throttler.changeServerAutoRead(autoread);
   }
 
   @Override
