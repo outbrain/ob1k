@@ -91,6 +91,7 @@
     <constructor-arg ref="stringDecoder"/>
     <constructor-arg ref="stringEncoder"/>
     <constructor-arg ref="throttler"/>
+    <constructor-arg value="${com.outbrain.gruffalo.inFlightBatchesHighThreshold}"/>
     <constructor-arg ref="osMetricFactory"/>
   </bean>
 

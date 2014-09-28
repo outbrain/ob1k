@@ -1,5 +1,6 @@
 package com.outbrain.gruffalo.netty;
 
+import com.google.common.base.Preconditions;
 import com.outbrain.swinfra.metrics.api.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class NettyGraphiteClient implements GraphiteClient {
 
   private static final Logger log = LoggerFactory.getLogger(NettyGraphiteClient.class);
+
+  private final int inFlightBatchesLowThreshold;
+  private final int inFlightBatchesHighThreshold;
+  private final Throttler throttler;
   private final AtomicInteger inFlightBatches = new AtomicInteger(0);
   private final Counter errorCounter;
   private final Counter pushBackCounter;
@@ -31,7 +36,11 @@ public class NettyGraphiteClient implements GraphiteClient {
   private final ChannelFutureListener opListener = new ChannelFutureListener() {
     @Override
     public void operationComplete(final ChannelFuture future) throws Exception {
-      inFlightBatches.decrementAndGet();
+      final int inFlightBaches = inFlightBatches.decrementAndGet();
+      if(inFlightBaches == inFlightBatchesLowThreshold) {
+        throttler.restoreClientReads();
+      }
+
       if (future.isSuccess()) {
         publishedCounter.inc();
       } else {
@@ -44,7 +53,12 @@ public class NettyGraphiteClient implements GraphiteClient {
   private GraphiteClientChannelInitializer channelInitializer;
   private volatile ChannelFuture channelFuture;
 
-  public NettyGraphiteClient(final MetricFactory metricFactory, final String host) {
+  public NettyGraphiteClient(final Throttler throttler, final int inFlightBatchesHighThreshold, final MetricFactory metricFactory, final String host) {
+    Preconditions.checkArgument(0 < inFlightBatchesHighThreshold);
+    this.inFlightBatchesHighThreshold = inFlightBatchesHighThreshold;
+    this.inFlightBatchesLowThreshold = inFlightBatchesHighThreshold / 5;
+    Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
+    this.throttler = Preconditions.checkNotNull(throttler, "throttler must not be null");
     this.host = host;
     final String graphiteCompatibleHostName = HostName2MetricName.graphiteCompatibleHostPortName(host);
     errorCounter = metricFactory.createCounter(getClass().getSimpleName(), graphiteCompatibleHostName + ".errors");
@@ -75,7 +89,11 @@ public class NettyGraphiteClient implements GraphiteClient {
   @Override
   public boolean publishMetrics(final String metrics) {
     if (channelFuture.isDone()) {
-      inFlightBatches.incrementAndGet();
+      final int numInFlight = inFlightBatches.incrementAndGet();
+      if(inFlightBatchesHighThreshold <= numInFlight) {
+        onPushBack();
+        throttler.pushBackClients();
+      }
       channelFuture.channel().writeAndFlush(metrics).addListener(opListener);
       return true;
     } else {
