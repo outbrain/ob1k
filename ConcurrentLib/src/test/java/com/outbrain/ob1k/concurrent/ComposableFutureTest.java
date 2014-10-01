@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.handlers.*;
 import junit.framework.Assert;
@@ -320,7 +321,25 @@ public class ComposableFutureTest {
       Assert.assertEquals(result.name, name);
       Assert.assertEquals(result.weight, weight);
     } catch (InterruptedException | ExecutionException e) {
-      e.printStackTrace();
+      Assert.fail(e.getMessage());
+    }
+
+    final ComposableFuture<String> first = fromValue("1");
+    final ComposableFuture<Integer> second = fromValue(2);
+    final ComposableFuture<Object> badRes = combine(first, second, new BiFunction<String, Integer, Object>() {
+      @Override
+      public Object apply(String left, Integer right) throws ExecutionException {
+        throw new ExecutionException(new RuntimeException("not the same..."));
+      }
+    });
+
+    try {
+      badRes.get();
+      Assert.fail("should get an error");
+    } catch (InterruptedException e) {
+      Assert.fail(e.getMessage());
+    } catch (ExecutionException e) {
+      Assert.assertTrue(e.getCause().getMessage().contains("not the same..."));
     }
 
   }
