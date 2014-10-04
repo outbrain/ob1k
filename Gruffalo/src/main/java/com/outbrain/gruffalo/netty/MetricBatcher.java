@@ -70,8 +70,10 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   }
 
   private void sendBatch(final ChannelHandlerContext ctx) {
-    ctx.fireChannelRead(new Batch(batch, currBatchSize));
-    prepareNewBatch();
+    if (0 < batch.length()) {
+      ctx.fireChannelRead(new Batch(batch, currBatchSize));
+      prepareNewBatch();
+    }
   }
 
   private void prepareNewBatch() {
@@ -85,9 +87,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     if (evt instanceof IdleStateEvent) {
       final IdleStateEvent e = (IdleStateEvent) evt;
       if (e.state() == IdleState.READER_IDLE) {
-        if (0 < batch.length()) {
-          sendBatch(ctx);
-        }
+        sendBatch(ctx);
 
         final SocketAddress remoteAddress = ctx.channel().remoteAddress();
         if (remoteAddress != null) {
