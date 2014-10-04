@@ -45,8 +45,9 @@ public class NettyGraphiteClient implements GraphiteClient {
         publishedCounter.inc();
       } else {
         errorCounter.inc();
-        // Under high load this is spam. Maybe add later...
-        // log.error("Failed to write to {}: {}", host, future.cause().toString());
+        if (log.isDebugEnabled()) {
+          log.debug("Failed to write to {}: {}", host, future.cause().toString());
+        }
       }
     }
   };
