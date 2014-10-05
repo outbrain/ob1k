@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.outbrain.swinfra.metrics.api.Histogram;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   private final Counter ioErrorCounter;
   private final Counter idleChannelsClosed;
   private final ChannelGroup activeChannels;
+  private final Histogram metricSize;
   private StringBuilder batch;
   private int currBatchSize;
   private DateTime lastRead = DateTime.now();
@@ -49,6 +51,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     unexpectedErrorCounter = metricFactory.createCounter(component, "unexpectedErrors");
     ioErrorCounter = metricFactory.createCounter(component, "ioErrors");
     idleChannelsClosed = metricFactory.createCounter(component, "idleChannelsClosed");
+    metricSize = metricFactory.createHistogram(component, "metricSize", false);
     metricFactory.registerGauge(component, "batchSize", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
@@ -67,6 +70,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
 
     batch.append(msg);
     metricsCounter.inc();
+    metricSize.update(msg.length());
   }
 
   private void sendBatch(final ChannelHandlerContext ctx) {
