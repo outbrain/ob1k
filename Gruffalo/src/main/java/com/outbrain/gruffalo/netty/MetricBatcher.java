@@ -26,6 +26,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
   private static final AtomicInteger lastBatchSize = new AtomicInteger(0);
   private final int batchBufferCapacity;
   private final Counter connectionCounter;
+  private final Counter metricsCounter;
   private final Counter unexpectedErrorCounter;
   private final Counter ioErrorCounter;
   private final Counter idleChannelsClosed;
@@ -46,6 +47,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
 
     final String component = getClass().getSimpleName();
     connectionCounter = metricFactory.createCounter(component, "connections");
+    metricsCounter = metricFactory.createCounter(component, "metricsReceived");
     unexpectedErrorCounter = metricFactory.createCounter(component, "unexpectedErrors");
     ioErrorCounter = metricFactory.createCounter(component, "ioErrors");
     idleChannelsClosed = metricFactory.createCounter(component, "idleChannelsClosed");
@@ -67,6 +69,7 @@ class MetricBatcher extends SimpleChannelInboundHandler<String> {
     }
 
     batch.append(msg);
+    metricsCounter.inc();
     metricSize.update(msg.length());
   }
 
