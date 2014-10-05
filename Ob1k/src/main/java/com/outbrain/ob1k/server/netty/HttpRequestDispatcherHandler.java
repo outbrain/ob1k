@@ -316,7 +316,10 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   }
 
   private void handleUnexpectedRequest(final Exception error, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
-    unexpectedErrors.inc();
+    if (unexpectedErrors != null) {
+      unexpectedErrors.inc();
+    }
+
     if (error instanceof IllegalArgumentException) {
       // stack-trace not interesting.
       logger.info("The requested URI isn't supported: " + request.getUri());
