@@ -36,6 +36,7 @@ public class NettyServer implements Server {
   private final RequestMarshallerRegistry marshallerRegistry;
   private final SyncRequestQueueObserver queueObserver;
   private final ChannelGroup activeChannels;
+  private final long requestTimeoutMs;
   private volatile Channel channel;
   private final StaticPathResolver staticResolver;
   private final ServiceDispatcher dispatcher;
@@ -50,7 +51,7 @@ public class NettyServer implements Server {
                      final StaticPathResolver staticResolver, final SyncRequestQueueObserver queueObserver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final boolean supportZip, final MetricFactory metricFactory,
-                     final int maxContentLength) {
+                     final int maxContentLength, final long requestTimeoutMs) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
     this.staticResolver = staticResolver;
@@ -65,6 +66,7 @@ public class NettyServer implements Server {
     this.supportZip = supportZip;
     this.metricFactory = metricFactory;
     this.maxContentLength = maxContentLength;
+    this.requestTimeoutMs = requestTimeoutMs;
     registry.logRegisteredEndpoints();
   }
 
@@ -157,7 +159,7 @@ public class NettyServer implements Server {
       }
 
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
-          marshallerRegistry, queueObserver, activeChannels, acceptKeepAlive, metricFactory));
+          marshallerRegistry, queueObserver, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
     }
 
   }

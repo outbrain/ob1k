@@ -13,8 +13,11 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.outbrain.ob1k.common.marshalling.ChunkHeader;
+import com.outbrain.ob1k.concurrent.ComposablePromise;
 import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.ob1k.server.util.QueueObserver;
 import com.outbrain.swinfra.metrics.api.Counter;
@@ -64,6 +67,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private final Counter internalErrors;
   private final Counter notFoundErrors;
   private final Counter unexpectedErrors;
+  private final long requestTimeoutMs;
 
   private io.netty.handler.codec.http.HttpRequest request;
   private Subscription subscription;
@@ -71,7 +75,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   public HttpRequestDispatcherHandler(final String contextPath, final ServiceDispatcher dispatcher,
                                       final StaticPathResolver staticResolver, final RequestMarshallerRegistry marshallerRegistry,
                                       final QueueObserver requestQueueObserver, final ChannelGroup activeChannels,
-                                      final boolean acceptKeepAlive, final MetricFactory metricFactory) {
+                                      final boolean acceptKeepAlive, final MetricFactory metricFactory, final long requestTimeoutMs) {
     this.dispatcher = dispatcher;
     this.staticResolver = staticResolver;
     this.contextPath = contextPath;
@@ -79,6 +83,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     this.requestQueueObserver = requestQueueObserver;
     this.activeChannels = activeChannels;
     this.acceptKeepAlive = acceptKeepAlive;
+    this.requestTimeoutMs = requestTimeoutMs;
 
     if (metricFactory != null) {
       this.internalErrors = metricFactory.createCounter("Ob1kDispatcher", "internalErrors");
@@ -173,6 +178,17 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
         }
       }
     });
+
+    if (requestTimeoutMs > 0) {
+      ctx.channel().eventLoop().schedule(new Runnable() {
+        @Override
+        public void run() {
+          if (!response.isDone()) {
+            ((ComposablePromise)response).setException(new TimeoutException("calculating response took too long."));
+          }
+        }
+      }, requestTimeoutMs, TimeUnit.MILLISECONDS);
+    }
   }
 
   public void handleStreamResponse(final ChannelHandlerContext ctx, final Observable<Object> response, final boolean rawStream) {

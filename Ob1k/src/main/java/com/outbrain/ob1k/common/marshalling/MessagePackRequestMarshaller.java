@@ -63,7 +63,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
         if (processed.contains(cls))
           continue;
 
-        if (!Modifier.isAbstract(cls.getModifiers())) {
+        if (!Modifier.isAbstract(cls.getModifiers()) || cls.isEnum()) {
           boolean found;
           try {
             found = (msgPack.lookup(cls) != null);
@@ -73,6 +73,8 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
           if (!found) {
             registerBean(processed, cls);
           }
+        } else if(cls.isArray()) {
+          registerTypes(processed, cls.getComponentType());
         }
 
       } else if (type instanceof ParameterizedType) {

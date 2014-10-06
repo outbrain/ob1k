@@ -54,6 +54,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   private boolean acceptKeepAlive = false;
   private boolean supportZip = true;
   private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
+  private long requestTimeoutMs = -1;
 
   private com.outbrain.swinfra.metrics.api.MetricFactory metricFactory;
 
@@ -370,6 +371,12 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     return this;
   }
 
+  @Override
+  public ExtraParamsPhase setRequestTimeout(long timeout, TimeUnit unit) {
+    this.requestTimeoutMs = unit.toMillis(timeout);
+    return this;
+  }
+
   private static void registerServices(final List<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
                                        final ComposableExecutorService executorService) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
@@ -398,7 +405,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     return new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
-                           appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength);
+                           appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
   }
 
   public class ServiceBuilder implements ContextBasedServiceBuilderPhase, RawServiceBuilderPhase {
