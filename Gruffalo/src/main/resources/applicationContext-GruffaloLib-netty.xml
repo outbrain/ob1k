@@ -12,6 +12,7 @@
     <constructor-arg ref="udpServerPipelineFactory"/>
     <constructor-arg value="${com.outbrain.gruffalo.tcp.port}"/>
     <constructor-arg value="${com.outbrain.gruffalo.udp.port}"/>
+    <constructor-arg ref="throttler"/>
   </bean>
 
   <bean id="eventLoopGroup" class="io.netty.channel.nio.NioEventLoopGroup"/>
@@ -105,6 +106,7 @@
 
   <bean id="throttler" class="com.outbrain.gruffalo.netty.Throttler">
     <constructor-arg ref="allServerChannels"/>
+    <constructor-arg ref="osMetricFactory"/>
   </bean>
 
 </beans>

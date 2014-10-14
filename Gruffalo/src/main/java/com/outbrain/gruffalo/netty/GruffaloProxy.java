@@ -1,6 +1,8 @@
 package com.outbrain.gruffalo.netty;
 
+import com.google.common.base.Preconditions;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +21,12 @@ class GruffaloProxy {
   private final ChannelFuture tcpChannelFuture;
   private final ChannelFuture udpChannelFuture;
   private final EventLoopGroup eventLoopGroup;
+  private final Throttler throttler;
 
   public GruffaloProxy(final EventLoopGroup eventLoopGroup, final TcpServerPipelineFactory tcpServerPipelineFactory,
-      final UdpServerPipelineFactory udpServerPipelineFactory, final int tcpPort, final int udpPort) throws InterruptedException {
-    this.eventLoopGroup = eventLoopGroup;
+                       final UdpServerPipelineFactory udpServerPipelineFactory, final int tcpPort, final int udpPort, final Throttler throttler) throws InterruptedException {
+    this.throttler = Preconditions.checkNotNull(throttler, "throttler must not be null");
+    this.eventLoopGroup = Preconditions.checkNotNull(eventLoopGroup, "eventLoopGroup must not be null");
     tcpChannelFuture = createTcpBootstrap(tcpServerPipelineFactory, tcpPort);
     udpChannelFuture = createUdpBootstrap(udpServerPipelineFactory, udpPort);
     log.info("Initialization completed");
@@ -50,7 +54,12 @@ class GruffaloProxy {
     tcpBootstrap.childHandler(tcpServerPipelineFactory);
     tcpBootstrap.option(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT);
 
-    final ChannelFuture channelFuture = tcpBootstrap.bind(tcpPort);
+    final ChannelFuture channelFuture = tcpBootstrap.bind(tcpPort).addListener(new ChannelFutureListener() {
+      @Override
+      public void operationComplete(final ChannelFuture future) throws Exception {
+        throttler.setServerChannel(future.channel());
+      }
+    });
     log.info("Binding to TCP port {}", tcpPort);
     return channelFuture;
   }
