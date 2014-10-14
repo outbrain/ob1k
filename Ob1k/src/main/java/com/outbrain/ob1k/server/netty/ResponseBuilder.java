@@ -63,6 +63,10 @@ public class ResponseBuilder {
     return withContent(Unpooled.copiedBuffer(rawContent, charset));
   }
 
+  public ResponseBuilder withContent(final byte[] rawContent) {
+    return withContent(Unpooled.copiedBuffer(rawContent));
+  }
+
   // TODO do we want this API coupling to Netty?
   public ResponseBuilder withContent(final ByteBuf rawContent) {
     this.rawContent = rawContent;
