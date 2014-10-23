@@ -53,6 +53,16 @@
     -->
 
   </properties>
+
+  <distributionManagement>
+    <!-- Temp Bintray repo -->
+    <repository>
+      <id>bintray-harel-eran-Ob1k-com.outbrain.swinfra</id>
+      <name>harel-eran-Ob1k-com.outbrain.swinfra</name>
+      <url>https://api.bintray.com/maven/harel-eran/Ob1k/com.outbrain.swinfra</url>
+    </repository>
+  </distributionManagement>
+
   <build>
     <plugins>
       <plugin>
