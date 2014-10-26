@@ -25,7 +25,6 @@
   </developers>
 
   <modules>
-    <module>Gruffalo</module>
     <module>MetricsLib</module>
     <module>ConfigAPI</module>
     <module>ConcurrentLib</module>
