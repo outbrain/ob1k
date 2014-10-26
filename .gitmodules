@@ -1,3 +1,0 @@
-[submodule "Gruffalo"]
-	path = Gruffalo
-	url = git@github.com:outbrain/gruffalo.git
