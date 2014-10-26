@@ -5,13 +5,12 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>0.2</version>
+    <version>0.8.1</version>
   </parent>
 
   <artifactId>Ob1k</artifactId>
   <name>Ob1k</name>
   <packaging>jar</packaging>
-  <version>${ob1k.version}</version>
 
   <dependencies>
     <dependency>
@@ -23,7 +22,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ConcurrentLib</artifactId>
-      <version>${ob1k.version}</version>
+      <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
