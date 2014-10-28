@@ -5,7 +5,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>0.8.1</version>
+    <version>0.9</version>
   </parent>
 
   <artifactId>Ob1k</artifactId>
@@ -15,8 +15,8 @@
   <dependencies>
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>MetricsLib</artifactId>
-      <version>0.1</version>
+      <artifactId>util-metrics</artifactId>
+      <version>0.2</version>
     </dependency>
 
     <dependency>
