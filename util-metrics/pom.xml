@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.outbrain.swinfra</groupId>
+    <artifactId>outbrain-sw-infra</artifactId>
+    <version>0.9</version>
+  </parent>
+  <artifactId>util-metrics</artifactId>
+  <name>util-metrics</name>
+  <packaging>jar</packaging>
+  <version>0.2</version>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>com.codahale.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>3.0.2</version>
+      <scope>provided</scope>
+    </dependency>
+
+  </dependencies>
+</project>
