@@ -2,11 +2,9 @@ package com.outbrain.ob1k.server.registry;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
+import java.util.*;
 
+import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.concurrent.ComposableExecutorService;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -54,10 +52,18 @@ public class ServiceRegistry {
     register(name, service, null, null, null, bindPrefix, executorService);
   }
 
-  public void register(final String name, final Service service, final AsyncFilter[] asyncFilters,
-                       final SyncFilter[] syncFilters, final StreamFilter[] streamFilters,
-                       final Map<String, Method> methodBinds, final boolean bindPrefix,
-                       final ComposableExecutorService executorService) {
+  public static class EndpointDescriptor {
+    public final Method method;
+    public final List<? extends ServiceFilter> filters;
+
+    public EndpointDescriptor(Method method, List<? extends ServiceFilter> filters) {
+      this.method = method;
+      this.filters = filters;
+    }
+  }
+
+  public void register(final String name, final Service service, final Map<String, EndpointDescriptor> descriptors,
+                       final boolean bindPrefix, final ComposableExecutorService executorService) {
 
     if (contextPath == null) {
       throw new RuntimeException("can't add service before context path is set.");
@@ -65,12 +71,12 @@ public class ServiceRegistry {
 
     final Map<Method, List<String>> methodsParams;
     try {
-      methodsParams = MethodParamNamesExtractor.extract(service.getClass(), methodBinds.values());
+      methodsParams = MethodParamNamesExtractor.extract(service.getClass(), getMethods(descriptors));
     } catch (final Exception e) {
       throw new RuntimeException("service " + name +" can't be analyzed", e);
     }
 
-    for (final String methodBind: methodBinds.keySet()) {
+    for (final String methodBind: descriptors.keySet()) {
       final StringBuilder path = new StringBuilder();
       path.append(contextPath);
       if (!contextPath.endsWith("/")) {
@@ -93,33 +99,109 @@ public class ServiceRegistry {
         path.append(methodBind);
       }
 
-      final Method method = methodBinds.get(methodBind);
+      final EndpointDescriptor endpointDesc = descriptors.get(methodBind);
+      final Method method = endpointDesc.method;
       final String[] params = methodsParams.get(method).toArray(new String[methodsParams.get(method).size()]);
       final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
-          new AsyncServerEndpoint(service, asyncFilters, method, params) :
+          new AsyncServerEndpoint(service, getAsyncFilters(endpointDesc.filters, methodBind), method, params) :
           isStreamingMethod(method) ?
-              new StreamServerEndpoint(service, streamFilters, method, params) :
-              new SyncServerEndpoint(service, syncFilters, method, params, executorService);
+              new StreamServerEndpoint(service, getStreamFilters(endpointDesc.filters, methodBind), method, params) :
+              new SyncServerEndpoint(service, getSyncFilters(endpointDesc.filters, methodBind), method, params, executorService);
+
       endpoints.insert(path.toString(), endpoint, bindPrefix);
     }
   }
 
-  public void register(final String name, final Service service, final AsyncFilter[] asyncFilters,
-                       final SyncFilter[] syncFilters, final StreamFilter[] streamFilters, final boolean bindPrefix,
-                       final ComposableExecutorService executorService) {
+  private static List<Method> getMethods(final Map<String, EndpointDescriptor> descriptors) {
+    final List<Method> methods = new ArrayList<>();
+    for (EndpointDescriptor desc : descriptors.values()) {
+      methods.add(desc.method);
+    }
 
-    register(name, service, asyncFilters, syncFilters, streamFilters, getEndpointMappings(service,
-             executorService), bindPrefix, executorService);
+    return methods;
   }
 
-  private Map<String, Method> getEndpointMappings(final Service service, final ComposableExecutorService executorService) {
+  private static AsyncFilter[] getAsyncFilters(List<? extends ServiceFilter> filters, String methodName) {
+    if (filters == null)
+      return null;
+
+    final AsyncFilter[] result = new AsyncFilter[filters.size()];
+    int index = 0;
+    for (ServiceFilter filter : filters) {
+      if (filter instanceof AsyncFilter) {
+        result[index++] = (AsyncFilter) filter;
+      } else {
+        throw new RuntimeException("method " + methodName + " can only receive async filters");
+      }
+    }
+
+    return result;
+  }
+
+  private static SyncFilter[] getSyncFilters(List<? extends ServiceFilter> filters, String methodName) {
+    if (filters == null)
+      return null;
+
+    final SyncFilter[] result = new SyncFilter[filters.size()];
+    int index = 0;
+    for (ServiceFilter filter : filters) {
+      if (filter instanceof SyncFilter) {
+        result[index++] = (SyncFilter) filter;
+      } else {
+        throw new RuntimeException("method " + methodName + " can only receive sync filters");
+      }
+    }
+
+    return result;
+  }
+
+  private static StreamFilter[] getStreamFilters(List<? extends ServiceFilter> filters, String methodName) {
+    if (filters == null)
+      return null;
+
+    final StreamFilter[] result = new StreamFilter[filters.size()];
+    int index = 0;
+    for (ServiceFilter filter : filters) {
+      if (filter instanceof StreamFilter) {
+        result[index++] = (StreamFilter) filter;
+      } else {
+        throw new RuntimeException("method " + methodName + " can only receive stream filters");
+      }
+    }
+
+    return result;
+  }
+
+
+  public void register(final String name, final Service service, final List<AsyncFilter> asyncFilters,
+                       final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters, final boolean bindPrefix,
+                       final ComposableExecutorService executorService) {
+
+    final Map<String, EndpointDescriptor> descriptors = getEndpointsDescriptor(service,
+        executorService, asyncFilters, syncFilters, streamFilters);
+    register(name, service, descriptors, bindPrefix, executorService);
+  }
+
+  private Map<String, EndpointDescriptor> getEndpointsDescriptor(final Service service,
+                                                                final ComposableExecutorService executorService,
+                                                                final List<AsyncFilter> asyncFilters,
+                                                                final List<SyncFilter> syncFilters,
+                                                                final List<StreamFilter> streamFilters) {
+
     final Method[] methods = service.getClass().getDeclaredMethods();
-    final Map<String, Method> result = new HashMap<>();
+    final Map<String, EndpointDescriptor> result = new HashMap<>();
     for (final Method m : methods) {
       final int modifiers = m.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
-        if (isAsyncMethod(m) || isStreamingMethod(m) || executorService != null) {
-          result.put(m.getName(), m);
+        if (isAsyncMethod(m)) {
+          result.put(m.getName(), new EndpointDescriptor(m, asyncFilters));
+          marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
+        } else if (isStreamingMethod(m)) {
+          result.put(m.getName(), new EndpointDescriptor(m, streamFilters));
+          marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
+        } else if (executorService != null) {
+          // a sync method with a defined executor service.
+          result.put(m.getName(), new EndpointDescriptor(m, syncFilters));
           marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
         } else {
           logger.info("method " + m.getName() + " wasn't bounded. sync method needs a configured executor service");

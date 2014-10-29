@@ -192,7 +192,7 @@ public class BasicDaoQueryTest {
 
   @Test
   @Ignore
-  public void testInsertAndGetId() throws ExecutionException, InterruptedException {
+  public void testInsertAndGetId() throws Exception {
 //    final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null);
     final BasicDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null);
     final ComposableFuture<Map<String, Object>> resMap = dao.get("select LAST_INSERT_ID()");

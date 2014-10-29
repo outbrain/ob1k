@@ -403,4 +403,40 @@ public class ComposableFutureTest {
 
   }
 
+  @Test
+  public void testFuturesToStream() throws InterruptedException {
+    final ComposableFuture<Long> first = schedule(new Callable<Long>() {
+      @Override
+      public Long call() throws Exception {
+        return System.currentTimeMillis();
+      }
+    }, 1, TimeUnit.SECONDS);
+
+    final ComposableFuture<Long> second = schedule(new Callable<Long>() {
+      @Override
+      public Long call() throws Exception {
+        return System.currentTimeMillis();
+      }
+    }, 2, TimeUnit.SECONDS);
+
+    final ComposableFuture<Long> third = schedule(new Callable<Long>() {
+      @Override
+      public Long call() throws Exception {
+        return System.currentTimeMillis();
+      }
+    }, 3, TimeUnit.SECONDS);
+
+    final Iterable<Long> events = toObservable(Arrays.asList(first, second, third)).toBlocking().toIterable();
+    long prevEvent = 0;
+    int counter = 0;
+    for(Long event: events) {
+      counter++;
+      Assert.assertTrue("event should have bigger timestamp than the previous one", event > prevEvent);
+      prevEvent = event;
+    }
+
+    Assert.assertEquals("should receive 3 events", counter, 3);
+
+  }
+
 }

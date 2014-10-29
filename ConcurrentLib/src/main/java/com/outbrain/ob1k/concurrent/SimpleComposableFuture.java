@@ -190,6 +190,8 @@ public class SimpleComposableFuture<T> extends FutureTask<T> implements Composab
           result.set(handler.handle(element));
         } catch (final ExecutionException e) {
           result.setException(e.getCause() != null ? e.getCause() : e);
+        } catch (final Exception e) {
+          result.setException(e);
         }
       }
     });
@@ -256,6 +258,8 @@ public class SimpleComposableFuture<T> extends FutureTask<T> implements Composab
       public void handle(final Throwable error) {
         try {
           result.set(handler.handle(error));
+        } catch (final ExecutionException e) {
+          result.setException(e.getCause() != null ? e.getCause() : e);
         } catch (final Exception e) {
           result.setException(e);
         }

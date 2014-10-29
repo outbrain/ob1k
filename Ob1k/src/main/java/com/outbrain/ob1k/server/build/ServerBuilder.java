@@ -24,10 +24,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -132,21 +129,22 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   private static class ServiceDescriptor {
     final String name;
     final Service service;
-    final AsyncFilter[] asyncFilters;
-    final SyncFilter[] syncFilters;
-    final StreamFilter[] streamFilters;
-    final Map<String, Method> methodBinds;
+    final List<AsyncFilter> asyncFilters;
+    final List<SyncFilter> syncFilters;
+    final List<StreamFilter> streamFilters;
+    final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding;
     final boolean bindPrefix;
 
-    private ServiceDescriptor(final String name, final Service service, final AsyncFilter[] asyncFilters,
-                              final SyncFilter[] syncFilters, final StreamFilter[] streamFilters,
-                              final Map<String, Method> methodBinds, final boolean bindPrefix) {
+    private ServiceDescriptor(final String name, final Service service, final List<AsyncFilter> asyncFilters,
+                              final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
+                              final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding,
+                              final boolean bindPrefix) {
       this.name = name;
       this.service = service;
       this.asyncFilters = asyncFilters;
       this.syncFilters = syncFilters;
       this.streamFilters = streamFilters;
-      this.methodBinds = methodBinds;
+      this.endpointsBinding = endpointsBinding;
       this.bindPrefix = bindPrefix;
     }
   }
@@ -173,12 +171,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
       }
     }
 
-    final AsyncFilter[] asyncFiltersArray = asyncFilters.toArray(new AsyncFilter[asyncFilters.size()]);
-    final SyncFilter[] syncFiltersArray = syncFilters.toArray(new SyncFilter[syncFilters.size()]);
-    final StreamFilter[] streamFiltersArray = streamFilters.toArray(new StreamFilter[streamFilters.size()]);
-    serviceDescriptors.add(new ServiceDescriptor(path, service, asyncFiltersArray,
-        syncFiltersArray, streamFiltersArray, null, bindPrefix));
-
+    serviceDescriptors.add(new ServiceDescriptor(path, service, asyncFilters, syncFilters, streamFilters, null, bindPrefix));
     return this;
   }
 
@@ -380,10 +373,8 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   private static void registerServices(final List<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
                                        final ComposableExecutorService executorService) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
-      if (desc.methodBinds != null) {
-        registry.register(desc.name, desc.service,
-            desc.asyncFilters, desc.syncFilters, desc.streamFilters,
-            desc.methodBinds, desc.bindPrefix, executorService);
+      if (desc.endpointsBinding != null) {
+        registry.register(desc.name, desc.service, desc.endpointsBinding, desc.bindPrefix, executorService);
       } else {
         registry.register(desc.name, desc.service,
             desc.asyncFilters, desc.syncFilters, desc.streamFilters,
@@ -411,68 +402,30 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   public class ServiceBuilder implements ContextBasedServiceBuilderPhase, RawServiceBuilderPhase {
     public final Service service;
     public final String name;
-    public final List<AsyncFilter> asyncFilters;
-    public final List<SyncFilter> syncFilters;
-    public final List<StreamFilter> streamFilters;
     public final boolean bindPrefix;
-    private final Map<String, Method> methodBinds;
+    private final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding;
 
     public ServiceBuilder(final Service service, final String name, final boolean bindPrefix) {
       this.service = service;
-      this.asyncFilters = new ArrayList<>();
-      this.syncFilters = new ArrayList<>();
-      this.streamFilters = new ArrayList<>();
       this.name = name;
       this.bindPrefix = bindPrefix;
-      this.methodBinds = new HashMap<>();
+      this.endpointsBinding = new HashMap<>();
     }
 
     public ServerBuilder addService() {
       serviceDescriptors.add(new ServiceDescriptor(name, service,
-          asyncFilters.toArray(new AsyncFilter[asyncFilters.size()]),
-          syncFilters.toArray(new SyncFilter[syncFilters.size()]),
-          streamFilters.toArray(new StreamFilter[streamFilters.size()]),
-          methodBinds, bindPrefix));
+          null, null, null, endpointsBinding, bindPrefix));
 
       return ServerBuilder.this;
     }
 
     @Override
-    public ServiceBuilder addFilterFromContext(final String ctxName, final Class<? extends ServiceFilter> filterType) {
-      final ServiceFilter filter = ctx.getBean(ctxName, filterType);
-      if (filter instanceof AsyncFilter) {
-        addFilter((AsyncFilter)filter);
-      }
-      if (filter instanceof SyncFilter) {
-        addFilter((SyncFilter)filter);
-      }
-      if (filter instanceof StreamFilter) {
-        addFilter((StreamFilter)filter);
-      }
-
-      return this;
+    public ServiceBuilder addEndpoint(final String methodName, final String path, final ServiceFilter... filters) {
+      final List<ServiceFilter> filtersList = filters != null ? Arrays.asList(filters) : null;
+      return addEndpoint(methodName, path, filtersList);
     }
 
-    @Override
-    public ServiceBuilder addFilter(final AsyncFilter filter) {
-      asyncFilters.add(filter);
-      return this;
-    }
-
-    @Override
-    public ServiceBuilder addFilter(final SyncFilter filter) {
-      syncFilters.add(filter);
-      return this;
-    }
-
-    @Override
-    public ServiceBuilder addFilter(final StreamFilter filter) {
-      streamFilters.add(filter);
-      return this;
-    }
-
-    @Override
-    public ServiceBuilder addEndpoint(final String methodName, final String path) {
+    private ServiceBuilder addEndpoint(final String methodName, final String path, final List<ServiceFilter> filters) {
       final Method[] methods = service.getClass().getDeclaredMethods();
       Method method = null;
       for (final Method m : methods) {
@@ -488,8 +441,32 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
         throw new RuntimeException("method: " + methodName + " not found or not proper service method");
       }
 
-      methodBinds.put(path, method);
+      endpointsBinding.put(path, new ServiceRegistry.EndpointDescriptor(method, filters));
       return this;
+    }
+
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path) {
+      return addEndpoint(methodName, path, new ServiceFilter[0]);
+    }
+
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path, final String ctxName, Class<? extends ServiceFilter> filterType) {
+      final ServiceFilter filter = ctx.getBean(ctxName, filterType);
+      return addEndpoint(methodName, path, filter);
+    }
+
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path, final String ctxName,
+                                                       List<Class<? extends ServiceFilter>> filtersType) {
+
+      final List<ServiceFilter> filters = new ArrayList<>();
+      for (Class<? extends ServiceFilter> filterType : filtersType) {
+        final ServiceFilter filter = ctx.getBean(ctxName, filterType);
+        filters.add(filter);
+      }
+
+      return addEndpoint(methodName, path, filters);
     }
   }
 

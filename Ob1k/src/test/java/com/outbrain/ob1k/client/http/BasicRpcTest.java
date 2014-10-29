@@ -6,15 +6,19 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
+import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.server.build.*;
+import com.outbrain.ob1k.server.filters.CachingFilter;
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
@@ -38,10 +42,20 @@ import rx.functions.Action1;
 public class BasicRpcTest {
 
   private static final String HELLO_SERVICE_PATH = "/hello-service";
+  private static final String FILTERED_SERVICE_PATH = "/filtered";
   private static final String CTX_PATH = "/TestApp";
 
   private static int port;
   private static Server server;
+
+  private static ServiceFilter createCachingFilter() {
+    return new CachingFilter<String, String>(new CachingFilter.CacheKeyGenerator<String>() {
+      @Override
+      public String createKey(Object[] params) {
+        return params[0].toString();
+      }
+    },10, 1, TimeUnit.SECONDS);
+  }
 
   @BeforeClass
   public static void setup() {
@@ -65,7 +79,13 @@ public class BasicRpcTest {
           public void addServices(final AddRawServicePhase builder) {
             builder.addService(new HelloService(), HELLO_SERVICE_PATH);
             builder.addService(new ParamsService(), "/params");
-
+            builder.defineService(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindingProvider() {
+              @Override
+              public void configureService(RawServiceBuilderPhase builder) {
+               builder.addEndpoint("getNextCode", "/next", createCachingFilter());
+               builder.addEndpoint("getRandomCode", "/random");
+              }
+            });
           }
         }).
         configureStaticResources(new StaticResourcesProvider() {
@@ -121,7 +141,6 @@ public class BasicRpcTest {
   }
 
   @Test
-  @Ignore
   public void testTimeout() {
     final int requestTimeout = 100;
     final IHelloService fastClient = createClient(port, requestTimeout, 3);
@@ -142,8 +161,7 @@ public class BasicRpcTest {
     final long period = t2 - t1;
 
     Assert.assertTrue("request time was too short", period >= requestTimeout);
-    // TODO test is disabled since testing env is so loaded that we can't put a sensible cap on the request time.
-    // Assert.assertTrue("request time was too long", period < requestTimeout * 3);
+    Assert.assertTrue("request time was too long", period < requestTimeout * 3);
   }
 
   @Test
@@ -153,7 +171,7 @@ public class BasicRpcTest {
     final Observable<String> messages = client.getMessages("moshe", SIZE, false);
 
     final List<String> results = new ArrayList<>();
-    messages.toBlockingObservable().forEach(new Action1<String>() {
+    messages.toBlocking().forEach(new Action1<String>() {
       @Override
       public void call(final String element) {
         results.add(element);
@@ -166,7 +184,7 @@ public class BasicRpcTest {
     final List<String> badResults = new ArrayList<>();
 
     try {
-      badMessages.toBlockingObservable().forEach(new Action1<String>() {
+      badMessages.toBlocking().forEach(new Action1<String>() {
         @Override
         public void call(final String element) {
           badResults.add(element);
@@ -263,11 +281,51 @@ public class BasicRpcTest {
 
   }
 
+  @Test
+  public void testCachingFilters() throws Exception {
+    final IFilteredService client = createFilteredClient(port);
+    try {
+      final String res1 = client.getNextCode("haim").get();
+      final String res2 = client.getNextCode("haim").get();
+
+      Thread.sleep(2000);
+
+      final String res3 = client.getNextCode("haim").get();
+
+      Assert.assertEquals(res1, res2);
+      Assert.assertNotSame(res2, res3);
+
+      final String res4 = client.getRandomCode("moshe").get();
+      final String res5 = client.getRandomCode("moshe").get();
+
+      Thread.sleep(2000);
+
+      final String res6 = client.getRandomCode("moshe").get();
+
+      Assert.assertEquals(res4, res5);
+      Assert.assertNotSame(res5, res6);
+
+    } finally {
+      Clients.close(client);
+    }
+  }
+
+
   private IHelloService createClient(final ContentType protocol, final int port) {
     return new ClientBuilder<>(IHelloService.class).
         setProtocol(protocol).
         setRequestTimeout(120000). // heavily loaded testing environment.
         addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
+        build();
+  }
+
+  private IFilteredService createFilteredClient(final int port) {
+    return new ClientBuilder<>(IFilteredService.class).
+        setProtocol(ContentType.JSON).
+        addTarget("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH).
+        bindEndpoint("getNextCode", "/next").
+        bindEndpoint("getRandomCode", "/random").
+        addFilter(createCachingFilter(), "getRandomCode").
         build();
   }
 

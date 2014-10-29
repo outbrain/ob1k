@@ -29,6 +29,12 @@ public class MySqlConnectionPool {
 
   private final ConnectionPool<MySQLConnection> _pool;
 
+  public MySqlConnectionPool(MySQLConnectionFactory connFactory, final int maxConnections, MetricFactory metricFactory) {
+    final PoolConfiguration configuration = new PoolConfiguration(maxConnections, 4, 10, 5000);
+    _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
+    initializeMetrics(metricFactory, _pool);
+  }
+
   public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
                              final String password, final MetricFactory metricFactory) {
     this(host, port, database, userName, password, 10, metricFactory);
@@ -41,25 +47,29 @@ public class MySqlConnectionPool {
     final PoolConfiguration configuration = new PoolConfiguration(maxConnections, 4, 10, 5000);
     _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
 
+    initializeMetrics(metricFactory, _pool);
+  }
+
+  private static void initializeMetrics(final MetricFactory metricFactory, final ConnectionPool<MySQLConnection> pool) {
     if (metricFactory != null) {
       metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", new Gauge<Integer>() {
         @Override
         public Integer getValue() {
-          return _pool.availables().size();
+          return pool.availables().size();
         }
       });
 
       metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", new Gauge<Integer>() {
         @Override
         public Integer getValue() {
-          return _pool.queued().size();
+          return pool.queued().size();
         }
       });
 
       metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", new Gauge<Integer>() {
         @Override
         public Integer getValue() {
-          return _pool.inUse().size();
+          return pool.inUse().size();
         }
       });
     }
