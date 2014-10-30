@@ -1,7 +1,11 @@
 package com.outbrain.ob1k.client.http;
 
+import com.outbrain.ob1k.Response;
+import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.server.netty.ResponseBuilder;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import rx.Observable;
 import rx.functions.Func1;
 
@@ -75,5 +79,13 @@ public class HelloService implements IHelloService {
         }
       }).take(iterations);
     }
+  }
+
+  public ComposableFuture<Response> noJsonContent() {
+    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.JSON.responseEncoding()).build());
+  }
+
+  public ComposableFuture<Response> noMsgPackContent() {
+    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.MESSAGE_PACK.responseEncoding()).build());
   }
 }

@@ -5,11 +5,25 @@ import com.ning.http.util.Base64;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.concurrent.handlers.*;
+import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.build.AddRawServicePhase;
+import com.outbrain.ob1k.server.build.ChoosePortPhase;
+import com.outbrain.ob1k.server.build.ExtraParamsPhase;
+import com.outbrain.ob1k.server.build.ExtraParamsProvider;
+import com.outbrain.ob1k.server.build.PortsProvider;
+import com.outbrain.ob1k.server.build.RawServiceProvider;
+import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.build.StaticResourcesPhase;
+import com.outbrain.ob1k.server.build.StaticResourcesProvider;
 import junit.framework.Assert;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.msgpack.annotation.Message;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -27,6 +41,66 @@ import static com.outbrain.ob1k.client.http.HttpClient.param;
  * Time: 3:02 PM
  */
 public class BasicHttpClientTest {
+
+  public static final java.lang.String HELLO_SERVICE_PATH = "/ello";
+
+  private static int port;
+  private static Server server;
+
+  @BeforeClass
+  public static void setup() {
+    server = ServerBuilder.newBuilder().
+            configurePorts(new PortsProvider() {
+              @Override
+              public void configure(final ChoosePortPhase builder) {
+                builder.useRandomPort();
+              }
+            }).
+            setContextPath("/").
+            withServices(new RawServiceProvider() {
+
+              @Override
+              public void addServices(final AddRawServicePhase builder) {
+                builder.addService(new HelloService(), HELLO_SERVICE_PATH);
+              }
+            }).
+            build();
+
+    final InetSocketAddress address = server.start();
+    port = address.getPort();
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    server.stop();
+  }
+
+  @Test
+  public void testNoContent_withJsonPayload() throws InterruptedException, ExecutionException {
+    final HttpClient client = new HttpClient();
+    final ComposableFuture<Object> f1 = client.httpGet("http://localhost:" + port + "/ello/noJsonContent", Object.class);
+
+    final Object response = f1.get();
+    Assert.assertNull("Response should be null", response);
+  }
+
+  @Test
+  public void testNoContent_withMsgPackPayload() throws InterruptedException, ExecutionException {
+    final HttpClient client = new HttpClient();
+    final ComposableFuture<Object> f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent", Msg.class, new Object[0], ContentType.MESSAGE_PACK.responseEncoding());
+
+    final Object response = f1.get();
+    Assert.assertNull("Response should be null", response);
+  }
+
+  @Test
+  public void testHello() throws InterruptedException, ExecutionException {
+    final HttpClient client = new HttpClient();
+    final ComposableFuture<String> f1 = client.httpGet("http://localhost:" + port + "/ello/hello?name=Ob1k", String.class);
+
+    final String response = f1.get();
+    Assert.assertEquals("Unexpected Response", "hello Ob1k", response);
+  }
 
   @Test
   @Ignore
@@ -258,4 +332,9 @@ public class BasicHttpClientTest {
     });
   }
 
+
+  @Message
+  public static class Msg {
+
+  }
 }

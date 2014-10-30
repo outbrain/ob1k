@@ -1,5 +1,18 @@
 package com.outbrain.ob1k.common.marshalling;
 
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CHUNKED;
+import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -12,23 +25,18 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 import com.outbrain.ob1k.Request;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.TRANSFER_ENCODING;
-import static io.netty.handler.codec.http.HttpHeaders.Values.CHUNKED;
-import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Created with IntelliJ IDEA.
@@ -117,7 +125,9 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   public Object unmarshallResponse(final Response httpResponse, final Type resType, final boolean failOnError) throws IOException {
     final String body = httpResponse.getResponseBody();
     final int statusCode = httpResponse.getStatusCode();
-    if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
+    if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
+      return null;
+    } else if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
       return mapper.readValue(body, getJacksonType(resType));
     } else {
       throw new IOException("called failed for:" + httpResponse + "\n" + body);

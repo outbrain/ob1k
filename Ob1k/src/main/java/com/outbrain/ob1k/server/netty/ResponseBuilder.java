@@ -103,6 +103,11 @@ public class ResponseBuilder {
     return this;
   }
 
+  public ResponseBuilder setContentType(String contentType) {
+    addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+    return this;
+  }
+
   public ResponseBuilder addCookie(final String name, final String value) {
     return bakeCookie(name, value).bake();
   }

@@ -33,13 +33,14 @@ public class NettyResponse implements Response {
   }
 
   FullHttpResponse toFullHttpResponse(final RequestMarshaller marshaller) throws IOException {
+    final FullHttpResponse response;
     if (null == rawContent && null == message) {
-      return new DefaultFullHttpResponse(HTTP_1_1, status);
+      response = new DefaultFullHttpResponse(HTTP_1_1, status);
+    } else {
+      response = rawContent == null ?
+              marshaller.marshallResponse(message, status) :
+              new DefaultFullHttpResponse(HTTP_1_1, status, rawContent);
     }
-
-    final FullHttpResponse response = rawContent == null ?
-        marshaller.marshallResponse(message, status) :
-        new DefaultFullHttpResponse(HTTP_1_1, status, rawContent);
 
     if (headers != null) {
       response.headers().add(headers);

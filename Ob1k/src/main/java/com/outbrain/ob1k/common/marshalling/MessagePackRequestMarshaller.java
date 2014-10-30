@@ -187,7 +187,9 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   @Override
   public Object unmarshallResponse(final Response httpResponse, final Type resType, final boolean failOnError) throws IOException {
     final int statusCode = httpResponse.getStatusCode();
-    if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
+    if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
+      return null;
+    } else if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
       final byte[] body = httpResponse.getResponseBodyAsBytes();
       final Template template = msgPack.lookup(resType);
       final Value value = msgPack.read(body);
