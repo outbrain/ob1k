@@ -15,6 +15,12 @@
     </license>
   </licenses>
 
+  <scm>
+    <connection>scm:git:ssh://github.com:outbrain/sw-infra.git</connection>
+    <developerConnection>scm:git:ssh://github.com:outbrain/sw-infra.git</developerConnection>
+    <url>https://github.com/outbrain/sw-infra/</url>
+  </scm>
+
   <organization>
     <name>outbrain</name>
     <url>http://www.outbrain.com</url>
@@ -24,6 +30,7 @@
     <developer>
       <name>Eran Harel</name>
       <url>http://il.linkedin.com/pub/eran-harel/4/4a3/234/</url>
+      <email>eran@outbrain.com</email>
     </developer>
     <developer>
       <name>Asy Ronen</name>
