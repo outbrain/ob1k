@@ -93,8 +93,10 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
               final ComposablePromise<V> promise = newPromise();
               final ComposablePromise<V> prev = futureValues.putIfAbsent(key, promise);
               if (prev == null) {
+//                System.out.println("key " + key + " is not in process");
                 missingEntries.put(key, promise);
               } else {
+//                System.out.println("key " + key + " is in process");
                 inProcessEntries.put(key, prev);
               }
             }
