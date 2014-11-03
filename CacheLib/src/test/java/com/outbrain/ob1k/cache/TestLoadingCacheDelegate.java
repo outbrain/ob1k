@@ -58,16 +58,29 @@ public class TestLoadingCacheDelegate {
       }
     }, "default");
 
-    final ComposableFuture<String> res1 = loadingCache.getAsync("1");
-    final ComposableFuture<Map<String, String>> res2 = loadingCache.getBulkAsync(Arrays.asList("1", "2"));
-    final ComposableFuture<Map<String, String>> res3 = loadingCache.getBulkAsync(Arrays.asList("1", "2", "3", "4", "5"));
+    for (int i=0;i < 100; i++) {
+      final ComposableFuture<String> res1 = loadingCache.getAsync("1");
+      final ComposableFuture<Map<String, String>> res2 = loadingCache.getBulkAsync(Arrays.asList("1", "2"));
+      final ComposableFuture<Map<String, String>> res3 = loadingCache.getBulkAsync(Arrays.asList("1", "2", "3", "4", "5"));
 
-    Assert.assertEquals(res1.get(), "res-1");
-    Assert.assertEquals(res2.get().size(), 2);
-    Assert.assertEquals(res3.get().size(), 5);
-    Assert.assertEquals(res3.get().get("5"), "res-5");
+      Assert.assertEquals(res1.get(), "res-1");
+      Assert.assertEquals(res2.get().size(), 2);
+      Assert.assertEquals(res3.get().size(), 5);
+      Assert.assertEquals(res3.get().get("5"), "res-5");
 
-    Assert.assertEquals(loaderCounter.get(), 5);
+      Assert.assertTrue(loaderCounter.get() <= 5);
+
+      loadingCache.deleteAsync("1").get();
+      loadingCache.deleteAsync("2").get();
+      loadingCache.deleteAsync("3").get();
+      loadingCache.deleteAsync("4").get();
+      loadingCache.deleteAsync("5").get();
+
+//      Thread.sleep(200L);
+      loaderCounter.set(0);
+
+      System.out.println("---------------------------");
+    }
 
   }
 
