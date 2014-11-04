@@ -38,7 +38,11 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
 
   @Override
   public <R> ComposableFuture<R> continueWith(FutureResultHandler<T, R> handler) {
-    return handler.handle(this);
+    try {
+      return handler.handle(this);
+    } catch (Exception e) {
+      return new FulfilledFuture<>(e);
+    }
   }
 
   @Override
@@ -47,14 +51,20 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
       return ComposableFutures.fromValue(handler.handle(this));
     } catch (ExecutionException e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
-      return ComposableFutures.fromError(cause);
+      return new FulfilledFuture<>(cause);
+    } catch (Exception e) {
+      return new FulfilledFuture<>(e);
     }
   }
 
   @Override
   public <R> ComposableFuture<R> continueOnSuccess(FutureSuccessHandler<? super T, ? extends R> handler) {
     if (isSuccess()) {
-      return (ComposableFuture<R>) handler.handle(value);
+      try {
+        return (ComposableFuture<R>) handler.handle(value);
+      } catch (Exception e) {
+        return new FulfilledFuture<>(e);
+      }
     } else {
       return (ComposableFuture<R>) this;
     }
@@ -67,7 +77,9 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
         return ComposableFutures.fromValue(handler.handle(value));
       } catch (ExecutionException e) {
         Throwable cause = e.getCause() != null ? e.getCause() : e;
-        return ComposableFutures.fromError(cause);
+        return new FulfilledFuture<R>(cause);
+      } catch (Exception e) {
+        return new FulfilledFuture<R>(e);
       }
     } else {
       return (ComposableFuture<R>) this;
@@ -79,7 +91,11 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
     if (isSuccess()) {
       return this;
     } else {
-      return (ComposableFuture<T>) handler.handle(error);
+      try {
+        return (ComposableFuture<T>) handler.handle(error);
+      } catch (Exception e) {
+        return new FulfilledFuture<T>(e);
+      }
     }
   }
 
@@ -92,7 +108,9 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
         return ComposableFutures.fromValue(handler.handle(error));
       } catch (ExecutionException e) {
         Throwable cause = e.getCause() != null ? e.getCause() : e;
-        return ComposableFutures.fromError(cause);
+        return new FulfilledFuture<>(cause);
+      } catch (Exception e) {
+        return new FulfilledFuture<>(e);
       }
     }
   }
