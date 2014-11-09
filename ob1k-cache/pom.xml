@@ -8,11 +8,17 @@
     <version>0.14-SNAPSHOT</version>
   </parent>
 
-  <artifactId>DBLib</artifactId>
-  <name>DBLib</name>
+  <artifactId>ob1k-cache</artifactId>
+  <name>ob1k-cache</name>
   <packaging>jar</packaging>
 
   <dependencies>
+
+    <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>ob1k-concurrent</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
@@ -21,15 +27,15 @@
     </dependency>
 
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ConcurrentLib</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>net.spy</groupId>
+      <artifactId>spymemcached</artifactId>
+      <version>2.10.0</version>
     </dependency>
 
     <dependency>
-      <groupId>com.github.mauricio</groupId>
-      <artifactId>mysql-async_2.10</artifactId>
-      <version>0.2.12</version>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>16.0.1</version>
     </dependency>
 
     <dependency>

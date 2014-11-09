@@ -41,12 +41,12 @@
   <modules>
     <module>util-metrics</module>
     <module>util-config</module>
-    <module>ConcurrentLib</module>
-    <module>Ob1k</module>
-    <module>JettyLib</module>
-    <module>CacheLib</module>
-    <module>DBLib</module>
-    <module>CqlLib</module>
+    <module>ob1k-concurrent</module>
+    <module>ob1k-core</module>
+    <module>ob1k-jetty</module>
+    <module>ob1k-cache</module>
+    <module>ob1k-db</module>
+    <module>ob1k-cql</module>
   </modules>
 
   <properties>

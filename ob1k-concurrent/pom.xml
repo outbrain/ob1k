@@ -8,34 +8,33 @@
     <version>0.14-SNAPSHOT</version>
   </parent>
 
-  <artifactId>CacheLib</artifactId>
-  <name>CacheLib</name>
+  <artifactId>ob1k-concurrent</artifactId>
+  <name>ob1k-concurrent</name>
   <packaging>jar</packaging>
 
   <dependencies>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>16.0.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.netflix.rxjava</groupId>
+        <artifactId>rxjava-core</artifactId>
+        <version>0.19.4</version>
+      </dependency>
 
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ConcurrentLib</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.5</version>
     </dependency>
-
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>util-metrics</artifactId>
-      <version>0.2</version>
-    </dependency>
-
-    <dependency>
-      <groupId>net.spy</groupId>
-      <artifactId>spymemcached</artifactId>
-      <version>2.10.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>16.0.1</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.7.5</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>

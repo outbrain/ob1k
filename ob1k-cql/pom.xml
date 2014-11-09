@@ -8,8 +8,8 @@
     <version>0.14-SNAPSHOT</version>
   </parent>
 
-  <artifactId>CqlLib</artifactId>
-  <name>CqlLib</name>
+  <artifactId>ob1k-cql</artifactId>
+  <name>ob1k-cql</name>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -20,7 +20,7 @@
     </dependency>
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ConcurrentLib</artifactId>
+      <artifactId>ob1k-concurrent</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
