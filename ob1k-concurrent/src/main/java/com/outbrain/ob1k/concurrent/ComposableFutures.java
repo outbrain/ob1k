@@ -270,6 +270,23 @@ public class ComposableFutures {
     });
   }
 
+  public static <T> ComposableFuture<T> doubleDispatch(final long duration, final TimeUnit unit, final FutureAction<T> action) {
+    final ComposableFuture<T> first = action.execute();
+    final ComposableFuture<T> second = scheduleFuture(new Callable<ComposableFuture<T>>() {
+      @Override
+      public ComposableFuture<T> call() throws Exception {
+        if (first.isDone()) {
+          return first;
+        } else {
+          return action.execute();
+        }
+      }
+    }, duration, unit);
+
+    return any(first, second);
+  }
+
+
   public static <T> rx.Observable<T> toObservable(final List<ComposableFuture<T>> futures) {
     return toObservable(futures, true);
   }
