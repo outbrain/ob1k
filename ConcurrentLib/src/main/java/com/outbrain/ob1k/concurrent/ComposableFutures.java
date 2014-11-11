@@ -3,9 +3,7 @@ package com.outbrain.ob1k.concurrent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.outbrain.ob1k.concurrent.combiners.BiFunction;
-import com.outbrain.ob1k.concurrent.combiners.Combiner;
-import com.outbrain.ob1k.concurrent.combiners.TriFunction;
+import com.outbrain.ob1k.concurrent.combiners.*;
 import com.outbrain.ob1k.concurrent.handlers.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,16 +73,23 @@ public class ComposableFutures {
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right,
                                                         final BiFunction<T1, T2, R> combiner) {
+    return Combiner.combine(left, right, combiner);
+  }
 
+  public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right,
+                                                        final FutureBiFunction<T1, T2, R> combiner) {
     return Combiner.combine(left, right, combiner);
   }
 
   public static <T1, T2, T3, R> ComposableFuture<R> combine(final ComposableFuture<T1> first, final ComposableFuture<T2> second,
                                                             final ComposableFuture<T3> third, final TriFunction<T1, T2, T3, R> combiner) {
-
     return Combiner.combine(first, second, third, combiner);
   }
 
+  public static <T1, T2, T3, R> ComposableFuture<R> combine(final ComposableFuture<T1> first, final ComposableFuture<T2> second,
+                                                            final ComposableFuture<T3> third, final FutureTriFunction<T1, T2, T3, R> combiner) {
+    return Combiner.combine(first, second, third, combiner);
+  }
 
   public static <T> ComposableFuture<T> any(final ComposableFuture<T> f1, final ComposableFuture<T> f2) {
     return any(Arrays.asList(f1, f2));
@@ -269,9 +274,48 @@ public class ComposableFutures {
     return toObservable(futures, true);
   }
 
-  public static <T> rx.Observable<T> toObservable(final List<ComposableFuture<T>> futures, final boolean failOnError) {
+  public static <T> Observable<T> toObservable(final List<ComposableFuture<T>> futures, final boolean failOnError) {
     final FuturesToStreamHandler<T> handler = new FuturesToStreamHandler<>(futures, failOnError);
-    return rx.Observable.create(handler);
+    return Observable.create(handler);
+  }
+
+  public static <T> Observable<T> toObservable(final FutureProvider<T> provider) {
+    return Observable.create(new FutureProviderToStreamHandler<>(provider));
+  }
+
+//  public static <K, V> Observable<Map.Entry<K, V>> toObservable(final List<K> keys, final int bulkSize, final FutureBulkProvider<K, V> provider) {
+//    return toObservable(new FutureProvider<Map.Entry<K, V>>() {
+//      @Override
+//      public boolean moveNext() {
+//        ???
+//        return false;
+//      }
+//
+//      @Override
+//      public ComposableFuture<Map.Entry<K, V>> current() {
+//        return null;
+//      }
+//    });
+//  }
+//
+//  public static interface FutureBulkProvider<K, V> {
+//    public ComposableFuture<Map<K, V>> getBulk(List<K> keys);
+//  }
+
+  public static <T> Observable<T> toObservable(final FutureAction<T> provider, final int iterations) {
+    return toObservable(new FutureProvider<T>() {
+      volatile int iteration = iterations;
+      @Override
+      public boolean moveNext() {
+        iteration -= 1;
+        return iteration < 0;
+      }
+
+      @Override
+      public ComposableFuture<T> current() {
+        return provider.execute();
+      }
+    });
   }
 
 

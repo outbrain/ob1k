@@ -14,6 +14,7 @@ public interface TypedCache<K, V> {
     ComposableFuture<Map<K, V>> getBulkAsync(Iterable<? extends K> keys);
 
     ComposableFuture<Boolean> setAsync(K key, V value);
+    ComposableFuture<Boolean> setAsync(K key, V oldValue, V newValue);
     ComposableFuture<Map<K, Boolean>> setBulkAsync(Map<? extends K, ? extends V> entries);
 
     ComposableFuture<Boolean> deleteAsync(final K key);

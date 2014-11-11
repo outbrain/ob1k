@@ -18,8 +18,10 @@ import org.junit.Test;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import rx.Observable;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
 
 /**
  * User: aronen
@@ -429,13 +431,55 @@ public class ComposableFutureTest {
     final Iterable<Long> events = toObservable(Arrays.asList(first, second, third)).toBlocking().toIterable();
     long prevEvent = 0;
     int counter = 0;
-    for(Long event: events) {
+    for(final Long event: events) {
       counter++;
       Assert.assertTrue("event should have bigger timestamp than the previous one", event > prevEvent);
       prevEvent = event;
     }
 
     Assert.assertEquals("should receive 3 events", counter, 3);
+
+  }
+
+  @Test
+  public void testFutureProviderToStream() {
+    final Observable<Long> stream = toObservable(new FutureProvider<Long>() {
+      private volatile int index = 3;
+      private volatile ComposableFuture<Long> currentRes;
+
+      @Override
+      public boolean moveNext() {
+        if (index > 0) {
+          index--;
+          currentRes = schedule(new Callable<Long>() {
+            @Override
+            public Long call() throws Exception {
+              return System.currentTimeMillis();
+            }
+          }, 100, TimeUnit.MILLISECONDS);
+
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public ComposableFuture<Long> current() {
+        return currentRes;
+      }
+    });
+
+    long current = System.currentTimeMillis();
+    final Iterable<Long> events = stream.toBlocking().toIterable();
+    int counter = 0;
+    for (final Long event: events) {
+      Assert.assertTrue(event > current);
+      current = event;
+      counter++;
+    }
+
+    Assert.assertTrue(counter == 3);
 
   }
 

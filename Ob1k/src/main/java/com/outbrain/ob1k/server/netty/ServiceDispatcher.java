@@ -38,14 +38,15 @@ public class ServiceDispatcher {
     callMethod(endpoint, request, handler);
   }
 
-  private void callMethod(final AbstractServerEndpoint endpoint, final Request request, final ResponseHandler handler)
-      throws InvocationTargetException, IllegalAccessException, IOException {
+  private void callMethod(final AbstractServerEndpoint endpoint, final Request request, final ResponseHandler handler) throws IOException {
 
     final Object[] params;
     final Method method = endpoint.method;
     final Class<?>[] parameterTypes = method.getParameterTypes();
 
-    if (parameterTypes.length == 1 && parameterTypes[0] == Request.class) {
+    if (parameterTypes.length == 0) {
+      params = new Object[0];
+    } else if (parameterTypes.length == 1 && parameterTypes[0] == Request.class) {
       params = new Object[]{ request };
     } else {
       final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(request.getContentType());

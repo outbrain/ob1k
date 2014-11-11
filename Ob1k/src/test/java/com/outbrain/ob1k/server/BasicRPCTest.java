@@ -37,7 +37,7 @@ public class BasicRPCTest {
       try {
         final String response1 = res1.get();
         Assert.assertTrue(response1.endsWith("moshe"));
-      } catch (ExecutionException e) {
+      } catch (final ExecutionException e) {
         e.printStackTrace();
       }
 
@@ -59,7 +59,7 @@ public class BasicRPCTest {
 
   }
 
-  private SimpleTestService buildClient(int port) {
+  private SimpleTestService buildClient(final int port) {
     return new ClientBuilder<>(SimpleTestService.class).addTarget("http://localhost:"+port+"/test/simple").build();
   }
 
@@ -96,8 +96,33 @@ public class BasicRPCTest {
       try {
         final Boolean response1 = res.get();
         Assert.fail("should get timeout exception");
-      } catch (ExecutionException e) {
+      } catch (final ExecutionException e) {
         Assert.assertTrue(e.getCause().getMessage().contains("response took too long"));
+      }
+
+    } finally {
+      if (client != null)
+        Clients.close(client);
+
+      if (server != null)
+        server.stop();
+    }
+  }
+
+  @Test
+  public void testNoParamMethod() throws Exception {
+    Server server = null;
+    SimpleTestService client = null;
+    try {
+      server = buildServer();
+      final int port = server.start().getPort();
+      client = buildClient(port);
+
+      try {
+        final Integer nextNum = client.nextRandom().get();
+        Assert.assertTrue(nextNum != null);
+      } catch (final Exception e) {
+        Assert.fail("no params method failed. error: " + e.getMessage());
       }
 
     } finally {

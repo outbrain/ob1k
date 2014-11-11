@@ -359,4 +359,53 @@ public class SimpleComposableFuture<T> extends FutureTask<T> implements Composab
       }
     }
   }
+
+  public boolean equals(final Object o) {
+    if (this == o) return true;
+    if (o == null || !(o instanceof ComposableFuture)) return false;
+
+    final ComposableFuture that = (ComposableFuture) o;
+    final State thatState = that.getState();
+    final State thisState = getState();
+
+    if (thisState != thatState) {
+      return false;
+    }
+
+    if (thisState != State.Success && thisState != State.Failure) {
+      return false;
+    }
+
+    if (thisState == State.Success) {
+      try {
+        final Object thisValue = this.get();
+        final Object thatValue = that.get();
+        return thisValue == null ? thatValue == null : thisValue.equals(thatValue);
+      } catch (final Exception e) {
+        return false;
+      }
+    } else /* must be failure state */ {
+      return error.equals(that.getError());
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    final State state = getState();
+    if (state == State.Waiting) {
+      return super.hashCode();
+    }
+
+    if (state == State.Success) {
+      try {
+        final T thisValue = this.get();
+        return thisValue != null ? thisValue.hashCode() : 0;
+      } catch (final Exception e) {
+        return super.hashCode(); // super weird...
+      }
+    }
+
+    return error.hashCode();
+  }
+
 }

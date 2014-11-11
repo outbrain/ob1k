@@ -3,6 +3,7 @@ package com.outbrain.ob1k.concurrent.combiners;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.OnErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.OnSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
@@ -115,6 +116,37 @@ public class Combiner {
     });
   }
 
+  public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right, final FutureBiFunction<T1, T2, R> combiner) {
+    final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.continueOnSuccess(new SuccessHandler<T1, BiContainer<T1, T2>>() {
+      @Override
+      public BiContainer<T1, T2> handle(final T1 result) throws ExecutionException {
+        return new BiContainer<>(result, null);
+      }
+    });
+
+    final ComposableFuture<BiContainer<T1, T2>> upliftRight = right.continueOnSuccess(new SuccessHandler<T2, BiContainer<T1, T2>>() {
+      @Override
+      public BiContainer<T1, T2> handle(final T2 result) throws ExecutionException {
+        return new BiContainer<>(null, result);
+      }
+    });
+
+    final HashMap<String, ComposableFuture<BiContainer<T1, T2>>> elements = new HashMap<>();
+    final String leftKey = "left";
+    final String rightKey = "right";
+    elements.put(leftKey, upliftLeft);
+    elements.put(rightKey, upliftRight);
+
+    return all(true, elements).continueOnSuccess(new FutureSuccessHandler<Map<String, BiContainer<T1, T2>>, R>() {
+      @Override
+      public ComposableFuture<R> handle(final Map<String, BiContainer<T1, T2>> result) {
+        final BiContainer<T1, T2> leftContainer = result.get(leftKey);
+        final BiContainer<T1, T2> rightContainer = result.get(rightKey);
+        return combiner.apply(leftContainer.left, rightContainer.right);
+      }
+    });
+  }
+
   public static <T1, T2, T3, R> ComposableFuture<R> combine(final ComposableFuture<T1> first,
                                                             final ComposableFuture<T2> second,
                                                             final ComposableFuture<T3> third,
@@ -162,4 +194,53 @@ public class Combiner {
     });
 
   }
+
+  public static <T1, T2, T3, R> ComposableFuture<R> combine(final ComposableFuture<T1> first,
+                                                            final ComposableFuture<T2> second,
+                                                            final ComposableFuture<T3> third,
+                                                            final FutureTriFunction<T1, T2, T3, R> combiner) {
+
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftFirst = first.continueOnSuccess(new SuccessHandler<T1, TriContainer<T1, T2, T3>>() {
+      @Override
+      public TriContainer<T1, T2, T3> handle(final T1 result) throws ExecutionException {
+        return new TriContainer<>(result, null, null);
+      }
+    });
+
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftSecond = second.continueOnSuccess(new SuccessHandler<T2, TriContainer<T1, T2, T3>>() {
+      @Override
+      public TriContainer<T1, T2, T3> handle(final T2 result) throws ExecutionException {
+        return new TriContainer<>(null, result, null);
+      }
+    });
+
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftThird = third.continueOnSuccess(new SuccessHandler<T3, TriContainer<T1, T2, T3>>() {
+      @Override
+      public TriContainer<T1, T2, T3> handle(final T3 result) throws ExecutionException {
+        return new TriContainer<>(null, null, result);
+      }
+    });
+
+    final HashMap<String, ComposableFuture<TriContainer<T1, T2, T3>>> elements = new HashMap<>();
+    final String firstKey = "first";
+    final String secondKey = "second";
+    final String thirdKey = "third";
+
+    elements.put(firstKey, upliftFirst);
+    elements.put(secondKey, upliftSecond);
+    elements.put(thirdKey, upliftThird);
+
+    return all(true, elements).continueOnSuccess(new FutureSuccessHandler<Map<String, TriContainer<T1, T2, T3>>, R>() {
+      @Override
+      public ComposableFuture<R> handle(final Map<String, TriContainer<T1, T2, T3>> result) {
+        final TriContainer<T1, T2, T3> firstContainer = result.get(firstKey);
+        final TriContainer<T1, T2, T3> secondContainer = result.get(secondKey);
+        final TriContainer<T1, T2, T3> thirdContainer = result.get(thirdKey);
+
+        return combiner.apply(firstContainer.first, secondContainer.second, thirdContainer.third);
+      }
+    });
+
+  }
+
 }

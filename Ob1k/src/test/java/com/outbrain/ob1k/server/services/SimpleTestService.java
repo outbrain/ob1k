@@ -12,4 +12,6 @@ public interface SimpleTestService extends Service {
   ComposableFuture<TestEntity> method2(int val1, String val2);
 
   ComposableFuture<Boolean> slowMethod(long delayTimeMs);
+
+  ComposableFuture<Integer> nextRandom();
 }

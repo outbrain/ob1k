@@ -29,7 +29,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private final String cacheName;
   private final ConcurrentMap<K, ComposablePromise<V>> futureValues;
 
-  public LoadingCacheDelegate(TypedCache<K, V> cache, CacheLoader<K, V> loader, final String cacheName) {
+  public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName) {
     this.cache = cache;
     this.loader = loader;
     this.cacheName = cacheName;
@@ -47,17 +47,17 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     final ComposableFuture<V> cachedResult = cache.getAsync(key);
     cachedResult.onSuccess(new OnSuccessHandler<V>() {
       @Override
-      public void handle(V result) {
+      public void handle(final V result) {
         if (result == null) {
 
           final ComposableFuture<V> loadedResult = loader.load(cacheName, key);
           loadedResult.onSuccess(new OnSuccessHandler<V>() {
             @Override
-            public void handle(V element) {
+            public void handle(final V element) {
               promise.set(element);
               cache.setAsync(key, element).onResult(new OnResultHandler<Boolean>() {
                 @Override
-                public void handle(ComposableFuture<Boolean> result) {
+                public void handle(final ComposableFuture<Boolean> result) {
                   futureValues.remove(key, promise);
                 }
               });
@@ -66,7 +66,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
           loadedResult.onError(new OnErrorHandler() {
             @Override
-            public void handle(Throwable error) {
+            public void handle(final Throwable error) {
               promise.setException(error);
               futureValues.remove(key, promise);
             }
@@ -80,7 +80,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     cachedResult.onError(new OnErrorHandler() {
       @Override
-      public void handle(Throwable error) {
+      public void handle(final Throwable error) {
         promise.setException(error);
         futureValues.remove(key, promise);
       }
@@ -95,7 +95,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     final List<K> processedKeys = new ArrayList<>();
     final Map<K, ComposableFuture<V>> res = new HashMap<>();
 
-    for (K key : listKeys) {
+    for (final K key : listKeys) {
       final ComposablePromise<V> promise = newPromise();
       final ComposablePromise<V> prev = futureValues.putIfAbsent(key, promise);
       if (prev == null) {
@@ -109,9 +109,9 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys);
     cachedResults.onSuccess(new OnSuccessHandler<Map<K, V>>() {
       @Override
-      public void handle(Map<K, V> result) {
+      public void handle(final Map<K, V> result) {
         final List<K> missingFromCacheKeys = new ArrayList<>();
-        for (K key : processedKeys) {
+        for (final K key : processedKeys) {
           if (result.containsKey(key)) {
             final ComposablePromise<V> promise = futureValues.get(key);
             promise.set(result.get(key));
@@ -125,15 +125,15 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
           final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys);
           loadedResults.onSuccess(new OnSuccessHandler<Map<K, V>>() {
             @Override
-            public void handle(Map<K, V> elements) {
-              for (K key : missingFromCacheKeys) {
+            public void handle(final Map<K, V> elements) {
+              for (final K key : missingFromCacheKeys) {
                 futureValues.get(key).set(elements.get(key));
               }
 
               cache.setBulkAsync(elements).onResult(new OnResultHandler<Map<K, Boolean>>() {
                 @Override
-                public void handle(ComposableFuture<Map<K, Boolean>> result) {
-                  for (K key : missingFromCacheKeys) {
+                public void handle(final ComposableFuture<Map<K, Boolean>> result) {
+                  for (final K key : missingFromCacheKeys) {
                     futureValues.remove(key, res.get(key));
                   }
                 }
@@ -143,8 +143,8 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
           loadedResults.onError(new OnErrorHandler() {
             @Override
-            public void handle(Throwable error) {
-              for (K key : missingFromCacheKeys) {
+            public void handle(final Throwable error) {
+              for (final K key : missingFromCacheKeys) {
                 final ComposablePromise<V> promise = futureValues.get(key);
                 promise.setException(error);
                 futureValues.remove(key, promise);
@@ -157,8 +157,8 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     cachedResults.onError(new OnErrorHandler() {
       @Override
-      public void handle(Throwable error) {
-        for (K key : processedKeys) {
+      public void handle(final Throwable error) {
+        for (final K key : processedKeys) {
           final ComposablePromise<V> promise = futureValues.get(key);
           promise.setException(error);
           futureValues.remove(key, promise);
@@ -170,17 +170,22 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> setAsync(K key, V value) {
+  public ComposableFuture<Boolean> setAsync(final K key, final V value) {
     return cache.setAsync(key, value);
   }
 
   @Override
-  public ComposableFuture<Map<K, Boolean>> setBulkAsync(Map<? extends K, ? extends V> entries) {
+  public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
+    return cache.setAsync(key, oldValue, newValue);
+  }
+
+  @Override
+  public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
     return cache.setBulkAsync(entries);
   }
 
   @Override
-  public ComposableFuture<Boolean> deleteAsync(K key) {
+  public ComposableFuture<Boolean> deleteAsync(final K key) {
     return cache.deleteAsync(key);
   }
 }

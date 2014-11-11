@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+
 
 /**
  * User: aronen
@@ -172,13 +174,13 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       if (loadingCache != null) {
         ComposableFuture<V> res = loadingCache.get(key);
         if (res == null) {
-          res = ComposableFutures.fromValue(null);
+          res = fromValue(null);
         }
         return res;
       } else {
         ComposableFuture<V> res = localCache.getIfPresent(key);
         if (res == null) {
-          res = ComposableFutures.fromValue(null);
+          res = fromValue(null);
         }
         return res;
       }
@@ -217,18 +219,27 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       localCache.invalidate(key);
     }
 
-    return ComposableFutures.fromValue(true);
+    return fromValue(true);
   }
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
     if (loadingCache != null) {
-      loadingCache.put(key, ComposableFutures.fromValue(value));
+      loadingCache.put(key, fromValue(value));
     } else {
-      localCache.put(key, ComposableFutures.fromValue(value));
+      localCache.put(key, fromValue(value));
     }
 
-    return ComposableFutures.fromValue(true);
+    return fromValue(true);
+  }
+
+  @Override
+  public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
+    if (loadingCache != null) {
+      return fromValue(loadingCache.asMap().replace(key, fromValue(oldValue), fromValue(newValue)));
+    } else {
+      return fromValue(localCache.asMap().replace(key, fromValue(oldValue), fromValue(newValue)));
+    }
   }
 
   @Override

@@ -9,60 +9,62 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * Created by aronen on 10/26/14.
+ *
+ * a fixed implementation of a Promise that already contains the final value.
  */
 public class FulfilledFuture<T> implements ComposablePromise<T> {
   private final T value;
   private final Throwable error;
 
-  public FulfilledFuture(T value) {
+  public FulfilledFuture(final T value) {
     this.value = value;
     this.error = null;
   }
 
-  public FulfilledFuture(Throwable error) {
+  public FulfilledFuture(final Throwable error) {
     this.error = error;
     this.value = null;
   }
 
   @Override
-  public void set(T value) {
-    // should is perform as trySet ?
+  public void set(final T value) {
+    // should it perform as trySet ?
     throw new UnsupportedOperationException("already fulfilled future.");
   }
 
   @Override
-  public void setException(Throwable error) {
-    // should is perform as trySetException ?
+  public void setException(final Throwable error) {
+    // should it perform as trySetException ?
     throw new UnsupportedOperationException("already fulfilled future.");
   }
 
   @Override
-  public <R> ComposableFuture<R> continueWith(FutureResultHandler<T, R> handler) {
+  public <R> ComposableFuture<R> continueWith(final FutureResultHandler<T, R> handler) {
     try {
       return handler.handle(this);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       return new FulfilledFuture<>(e);
     }
   }
 
   @Override
-  public <R> ComposableFuture<R> continueWith(ResultHandler<T, R> handler) {
+  public <R> ComposableFuture<R> continueWith(final ResultHandler<T, R> handler) {
     try {
       return ComposableFutures.fromValue(handler.handle(this));
-    } catch (ExecutionException e) {
-      Throwable cause = e.getCause() != null ? e.getCause() : e;
+    } catch (final ExecutionException e) {
+      final Throwable cause = e.getCause() != null ? e.getCause() : e;
       return new FulfilledFuture<>(cause);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       return new FulfilledFuture<>(e);
     }
   }
 
   @Override
-  public <R> ComposableFuture<R> continueOnSuccess(FutureSuccessHandler<? super T, ? extends R> handler) {
+  public <R> ComposableFuture<R> continueOnSuccess(final FutureSuccessHandler<? super T, ? extends R> handler) {
     if (isSuccess()) {
       try {
         return (ComposableFuture<R>) handler.handle(value);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         return new FulfilledFuture<>(e);
       }
     } else {
@@ -71,15 +73,15 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
   }
 
   @Override
-  public <R> ComposableFuture<R> continueOnSuccess(SuccessHandler<? super T, ? extends R> handler) {
+  public <R> ComposableFuture<R> continueOnSuccess(final SuccessHandler<? super T, ? extends R> handler) {
     if (isSuccess()) {
       try {
         return ComposableFutures.fromValue(handler.handle(value));
-      } catch (ExecutionException e) {
-        Throwable cause = e.getCause() != null ? e.getCause() : e;
-        return new FulfilledFuture<R>(cause);
-      } catch (Exception e) {
-        return new FulfilledFuture<R>(e);
+      } catch (final ExecutionException e) {
+        final Throwable cause = e.getCause() != null ? e.getCause() : e;
+        return new FulfilledFuture<>(cause);
+      } catch (final Exception e) {
+        return new FulfilledFuture<>(e);
       }
     } else {
       return (ComposableFuture<R>) this;
@@ -87,55 +89,55 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
   }
 
   @Override
-  public ComposableFuture<T> continueOnError(FutureErrorHandler<? extends T> handler) {
+  public ComposableFuture<T> continueOnError(final FutureErrorHandler<? extends T> handler) {
     if (isSuccess()) {
       return this;
     } else {
       try {
         return (ComposableFuture<T>) handler.handle(error);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         return new FulfilledFuture<T>(e);
       }
     }
   }
 
   @Override
-  public ComposableFuture<T> continueOnError(ErrorHandler<? extends T> handler) {
+  public ComposableFuture<T> continueOnError(final ErrorHandler<? extends T> handler) {
     if (isSuccess()) {
       return this;
     } else {
       try {
         return ComposableFutures.fromValue(handler.handle(error));
-      } catch (ExecutionException e) {
-        Throwable cause = e.getCause() != null ? e.getCause() : e;
+      } catch (final ExecutionException e) {
+        final Throwable cause = e.getCause() != null ? e.getCause() : e;
         return new FulfilledFuture<>(cause);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         return new FulfilledFuture<>(e);
       }
     }
   }
 
   @Override
-  public void onResult(OnResultHandler<T> handler) {
+  public void onResult(final OnResultHandler<T> handler) {
     handler.handle(this);
   }
 
   @Override
-  public void onSuccess(OnSuccessHandler<? super T> handler) {
+  public void onSuccess(final OnSuccessHandler<? super T> handler) {
     if (isSuccess()) {
       handler.handle(value);
     }
   }
 
   @Override
-  public void onError(OnErrorHandler handler) {
+  public void onError(final OnErrorHandler handler) {
     if (!isSuccess()) {
       handler.handle(error);
     }
   }
 
   @Override
-  public ComposableFuture<T> withTimeout(long duration, TimeUnit unit) {
+  public ComposableFuture<T> withTimeout(final long duration, final TimeUnit unit) {
     // already fulfilled.
     return this;
   }
@@ -166,7 +168,7 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
   }
 
   @Override
-  public boolean cancel(boolean mayInterruptIfRunning) {
+  public boolean cancel(final boolean mayInterruptIfRunning) {
     return false;
   }
 
@@ -190,7 +192,37 @@ public class FulfilledFuture<T> implements ComposablePromise<T> {
   }
 
   @Override
-  public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+  public T get(final long timeout, final TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
     return get();
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) return true;
+    if (o == null || !(o instanceof ComposableFuture)) return false;
+
+    final ComposableFuture that = (ComposableFuture) o;
+    final State thatState = that.getState();
+    if (thatState == State.Success) {
+      try {
+        final Object thatValue = that.get();
+        return value == null ? thatValue == null : value.equals(thatValue);
+      } catch (final Exception e) {
+        return false;
+      }
+    } else if (thatState == State.Failure) {
+      return error.equals(that.getError());
+    } else {
+      return false;
+    }
+  }
+
+  @Override
+  public int hashCode() {
+    if (getState() == State.Success) {
+      return value != null ? value.hashCode() : 0;
+    } else {
+      return error.hashCode();
+    }
   }
 }

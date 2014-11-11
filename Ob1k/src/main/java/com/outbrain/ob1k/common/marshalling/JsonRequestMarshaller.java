@@ -82,8 +82,10 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final Object[] requestParams) throws IOException {
     // requests can come from a regular httpClient post request with a single param that get wrapped inside an array
     // or in case of a real RPC call with a single param. in both cases we unwrap it and send it as is.
-    // the code in unmarshalRequestParams() know how to deal with both single object or array of objects.
-    final Object params = (requestParams != null && requestParams.length == 1) ? requestParams[0] : requestParams;
+    // the code in unmarshallRequestParams() know how to deal with both single object or array of objects.
+    final Object params = requestParams == null ? new Object[0] :
+        requestParams.length == 1 ? requestParams[0] : requestParams;
+
     final String body = mapper.writeValueAsString(params);
     requestBuilder.setBody(body);
     requestBuilder.setContentLength(body.getBytes("UTF8").length);
