@@ -2,7 +2,7 @@
 <!--suppress ALL --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.13</version>
+  <version>0.14-SNAPSHOT</version>
   <artifactId>outbrain-sw-infra</artifactId>
   <name>SW Infra Root Project</name>
   <packaging>pom</packaging>
@@ -41,12 +41,12 @@
   <modules>
     <module>util-metrics</module>
     <module>util-config</module>
-    <module>ConcurrentLib</module>
-    <module>Ob1k</module>
-    <module>JettyLib</module>
-    <module>CacheLib</module>
-    <module>DBLib</module>
-    <module>CqlLib</module>
+    <module>ob1k-concurrent</module>
+    <module>ob1k-core</module>
+    <module>ob1k-jetty</module>
+    <module>ob1k-cache</module>
+    <module>ob1k-db</module>
+    <module>ob1k-cql</module>
   </modules>
 
   <properties>

@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>0.13</version>
+    <version>0.14-SNAPSHOT</version>
   </parent>
 
-  <artifactId>Ob1k</artifactId>
-  <name>Ob1k</name>
+  <artifactId>ob1k-core</artifactId>
+  <name>ob1k-core</name>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -21,13 +21,13 @@
 
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ConcurrentLib</artifactId>
+      <artifactId>ob1k-concurrent</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>CacheLib</artifactId>
+      <artifactId>ob1k-cache</artifactId>
       <scope>provided</scope>
       <version>${project.parent.version}</version>
     </dependency>

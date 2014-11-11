@@ -5,38 +5,28 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>outbrain-sw-infra</artifactId>
-    <version>0.13</version>
+    <version>0.14-SNAPSHOT</version>
   </parent>
 
-  <artifactId>DBLib</artifactId>
-  <name>DBLib</name>
+  <artifactId>ob1k-cql</artifactId>
+  <name>ob1k-cql</name>
   <packaging>jar</packaging>
 
   <dependencies>
-
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>util-metrics</artifactId>
       <version>0.2</version>
     </dependency>
-
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ConcurrentLib</artifactId>
+      <artifactId>ob1k-concurrent</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
-
     <dependency>
-      <groupId>com.github.mauricio</groupId>
-      <artifactId>mysql-async_2.10</artifactId>
-      <version>0.2.12</version>
-    </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.10</version>
-      <scope>test</scope>
+      <groupId>com.datastax.cassandra</groupId>
+      <artifactId>cassandra-driver-core</artifactId>
+      <version>2.0.3</version>
     </dependency>
 
   </dependencies>
