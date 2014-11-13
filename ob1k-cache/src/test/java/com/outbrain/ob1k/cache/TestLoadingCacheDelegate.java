@@ -23,12 +23,12 @@ public class TestLoadingCacheDelegate {
   @Test
   public void testPartialLoading() throws ExecutionException, InterruptedException {
     final AtomicInteger loaderCounter = new AtomicInteger();
-    TypedCache<String, String> cache = new LocalAsyncCache<>();
-    TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, new CacheLoader<String, String>() {
+    final TypedCache<String, String> cache = new LocalAsyncCache<>();
+    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, new CacheLoader<String, String>() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
 
       @Override
-      public ComposableFuture<String> load(String cacheName, final String key) {
+      public ComposableFuture<String> load(final String cacheName, final String key) {
         System.out.println("loading(single): " + key);
         loaderCounter.incrementAndGet();
         return ComposableFutures.schedule(new Callable<String>() {
@@ -40,7 +40,7 @@ public class TestLoadingCacheDelegate {
       }
 
       @Override
-      public ComposableFuture<Map<String, String>> load(String cacheName, Iterable<? extends String> keys) {
+      public ComposableFuture<Map<String, String>> load(final String cacheName, final Iterable<? extends String> keys) {
         final Map<String, ComposableFuture<String>> res = new HashMap<>();
         for (final String key: keys) {
           System.out.println("loading(multiple): " + key);

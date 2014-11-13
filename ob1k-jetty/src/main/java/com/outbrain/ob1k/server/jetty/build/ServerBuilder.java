@@ -23,6 +23,7 @@ public class ServerBuilder {
   protected MetricFactory metricFactory;
   protected String applicationName;
   protected String logDirectory;
+  private Integer setMaxFormSize;
 
   public ServerBuilder configurationPorts(final int httpPort, final Integer securePort) {
     this.port = httpPort;
@@ -92,10 +93,16 @@ public class ServerBuilder {
     return this;
   }
 
+  public ServerBuilder setMaxFormSize(final int size) {
+    this.setMaxFormSize = size;
+    return this;
+  }
+
   public Server build() {
     final String accessLogsDirectory = accessLogEnabled ? logDirectory : null;
     return new JettyServer(applicationName, port, sslContext, contextPath, maxThreads, httpConnectorIdleTimeout,
-        requestTimeoutMillis, accessLogsDirectory, compressionEnabled, staticRootResourcesBase, metricFactory);
+        requestTimeoutMillis, setMaxFormSize, accessLogsDirectory, compressionEnabled, staticRootResourcesBase,
+        metricFactory);
   }
 
 

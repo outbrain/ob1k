@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -28,14 +27,35 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
  * all operations are async and return ComposableFuture.
  */
 public class MemcacheClient<K, V> implements TypedCache<K, V> {
+  private static final long MAX_EXPIRATION_SEC = 60 * 60 * 24 * 30;
+
   private final MemcachedClientIF spyClient;
   private final CacheKeyTranslator<K> keyTranslator;
-  private final int expirationMs;
+  private final int expirationSpyUnits;
 
   public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator, final long expiration, final TimeUnit timeUnit) {
     this.spyClient = spyClient;
     this.keyTranslator = keyTranslator;
-    this.expirationMs = (int) timeUnit.toMillis(expiration);
+    this.expirationSpyUnits = expirationInSpyUnits(expiration, timeUnit);
+  }
+
+  /**
+   * from spy documentation:
+   *
+   * The actual (exp)value sent may either be Unix time (number of seconds since
+   * January 1, 1970, as a 32-bit value), or a number of seconds starting from
+   * current time. In the latter case, this number of seconds may not exceed
+   * 60*60*24*30 (number of seconds in 30 days); if the number sent by a client
+   * is larger than that, the server will consider it to be real Unix time value
+   * rather than an offset from current time.
+   *
+   * @param exp expiration in unit units.
+   * @param unit the time unit.
+   * @return the expiration in secs according to memcached format.
+   */
+  private static int expirationInSpyUnits(final long exp, final TimeUnit unit) {
+    final long intervalSec = unit.toSeconds(exp);
+    return (int) (intervalSec <= MAX_EXPIRATION_SEC ? intervalSec : (System.currentTimeMillis() / 1000) + intervalSec);
   }
 
   @Override
@@ -68,7 +88,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
     try {
-      final Future<Boolean> setRes = spyClient.set(keyTranslator.translateKey(key), expirationMs, value);
+      final Future<Boolean> setRes = spyClient.set(keyTranslator.translateKey(key), expirationSpyUnits, value);
       return SpyFutureHelper.fromOperation(setRes);
     } catch (final Exception e) {
       return fromError(e);

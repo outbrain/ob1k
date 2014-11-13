@@ -58,6 +58,7 @@ public class JettyServer implements Server {
   public static final int ACCEPT_QUEUE_SIZE = 128;
 //  public static final int SO_LINGER_TIME = 25000; // 25 sec like in tomcat...
   public static final int DEFAULT_THREAD_IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
   private final MetricFactory metricFactory;
   private final org.eclipse.jetty.server.Server server;
   private final WebAppContext webAppContext;
@@ -65,13 +66,17 @@ public class JettyServer implements Server {
   private final ServerConnector httpSecureConnector;
   private final String applicationName;
   private final HttpConfiguration baseHttpConfiguration;
+  private final Integer maxFormSize;
 
-  public JettyServer(final String applicationName, final int httpPort, final SslContext sslContext, final String contextPath, final int maxThreads,
-      final Long httpConnectorIdleTimeout, final Long requestTimeoutMillis, final String accessLogsDirectory, final boolean compressionEnabled, final String staticRootResourcesBase,
-      final MetricFactory metricFactory) {
+  public JettyServer(final String applicationName, final int httpPort, final SslContext sslContext, final String contextPath,
+                     final int maxThreads, final Long httpConnectorIdleTimeout, final Long requestTimeoutMillis,
+                     final Integer maxFormSize, final String accessLogsDirectory, final boolean compressionEnabled,
+                     final String staticRootResourcesBase, final MetricFactory metricFactory) {
+
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.applicationName = applicationName;
     this.metricFactory = Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
+    this.maxFormSize = maxFormSize;
     webAppContext = initWebAppContext(contextPath);
     server = new org.eclipse.jetty.server.Server(initThreadPool(maxThreads, metricFactory));
     log.info("Embedded Jetty server version: {}", org.eclipse.jetty.server.Server.getVersion());
@@ -267,6 +272,10 @@ public class JettyServer implements Server {
     wac.setContextPath(contextPath);
     wac.setCompactPath(true);
     wac.setThrowUnavailableOnStartupException(true);
+
+    if (maxFormSize != null) {
+      wac.setMaxFormContentSize(maxFormSize);
+    }
 
     // in production this is set by theforce.sh
     // in dev jetty will use the defaults (/tmp/...)
