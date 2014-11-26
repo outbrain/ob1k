@@ -180,6 +180,11 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   @Override
+  public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
+    return cache.setAsync(key, mapper, maxIterations);
+  }
+
+  @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
     return cache.setBulkAsync(entries);
   }

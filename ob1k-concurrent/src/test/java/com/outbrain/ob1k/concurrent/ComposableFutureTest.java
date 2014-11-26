@@ -1,8 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -172,14 +170,14 @@ public class ComposableFutureTest {
 
       final ComposableFuture<Long> f2 = f1.continueOnSuccess(new SuccessHandler<Long, Long>() {
         @Override
-        public Long handle(final Long seed) throws ExecutionException {
+        public Long handle(final Long seed) {
           return computeHash(seed);
         }
       });
 
       final ComposableFuture<Long> f3 = f2.continueOnSuccess(new SuccessHandler<Long, Long>() {
         @Override
-        public Long handle(final Long seed) throws ExecutionException {
+        public Long handle(final Long seed) {
           return computeHash(seed);
         }
       });
@@ -232,7 +230,7 @@ public class ComposableFutureTest {
         }).
         continueOnSuccess(new SuccessHandler<String, String>() {
           @Override
-          public String handle(final String result) throws ExecutionException {
+          public String handle(final String result) {
             System.out.println("in third phase, ****** shouldn't be here !!!!!  ******** returning second lala");
             return "second lala";
           }
@@ -330,7 +328,7 @@ public class ComposableFutureTest {
     final ComposableFuture<Integer> second = fromValue(2);
     final ComposableFuture<Object> badRes = combine(first, second, new BiFunction<String, Integer, Object>() {
       @Override
-      public Object apply(String left, Integer right) throws ExecutionException {
+      public Object apply(final String left, final Integer right) throws ExecutionException {
         throw new ExecutionException(new RuntimeException("not the same..."));
       }
     });
@@ -338,9 +336,9 @@ public class ComposableFutureTest {
     try {
       badRes.get();
       Assert.fail("should get an error");
-    } catch (InterruptedException e) {
+    } catch (final InterruptedException e) {
       Assert.fail(e.getMessage());
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       Assert.assertTrue(e.getCause().getMessage().contains("not the same..."));
     }
 
@@ -359,10 +357,10 @@ public class ComposableFutureTest {
     final ComposableFuture<String> f3 = fromValue("fast2");
 
     final ComposableFuture<List<String>> res = all(Arrays.asList(f1, f2, f3));
-    long t1 = System.currentTimeMillis();
+    final long t1 = System.currentTimeMillis();
     try {
       final List<String> results = res.get();
-      long t2 = System.currentTimeMillis();
+      final long t2 = System.currentTimeMillis();
       Assert.assertTrue("time is: " + (t2 - t1), (t2 - t1) > 900); // not
     } catch (InterruptedException | ExecutionException e) {
       Assert.fail(e.getMessage());
@@ -376,12 +374,12 @@ public class ComposableFutureTest {
     }, 1, TimeUnit.SECONDS);
     final ComposableFuture<String> f5 = fromError(new RuntimeException("oops"));
     final ComposableFuture<List<String>> res2 = all(true, Arrays.asList(f4, f5));
-    long t3 = System.currentTimeMillis();
+    final long t3 = System.currentTimeMillis();
     try {
       final List<String> results = res2.get();
       Assert.fail("should get error.");
     } catch (InterruptedException | ExecutionException e) {
-      long t4 = System.currentTimeMillis();
+      final long t4 = System.currentTimeMillis();
       Assert.assertTrue((t4 - t3) < 100);
     }
 
@@ -393,12 +391,12 @@ public class ComposableFutureTest {
     }, 1, TimeUnit.SECONDS);
     final ComposableFuture<String> f7 = fromError(new RuntimeException("oops"));
     final ComposableFuture<List<String>> res3 = all(true, Arrays.asList(f6, f7));
-    long t5 = System.currentTimeMillis();
+    final long t5 = System.currentTimeMillis();
     try {
       final List<String> results = res3.get();
       Assert.fail("should get error.");
     } catch (InterruptedException | ExecutionException e) {
-      long t6 = System.currentTimeMillis();
+      final long t6 = System.currentTimeMillis();
       System.out.println("time took to fail: " + (t6 - t5));
       Assert.assertTrue((t6 - t5) < 100);
     }
@@ -481,6 +479,110 @@ public class ComposableFutureTest {
 
     Assert.assertTrue(counter == 3);
 
+  }
+
+  @Test
+  public void testFirstNoTimeout() throws Exception {
+    final Map<String, ComposableFuture<String>> elements = createElementsMap();
+
+    final Map<String, String> res = first(elements, 3).get();
+    Assert.assertEquals(res.size(), 3);
+    Assert.assertEquals(res.get("one"), "one");
+    Assert.assertEquals(res.get("three"), "three");
+    Assert.assertEquals(res.get("five"), "five");
+  }
+
+  @Test
+  public void testFirstWithTimeout() throws Exception {
+    final Map<String, ComposableFuture<String>> elements = createElementsMap();
+
+    final Map<String, String> res = first(elements, 3, 10, TimeUnit.MILLISECONDS).get();
+    Assert.assertEquals(res.size(), 2);
+    Assert.assertEquals(res.get("one"), "one");
+    Assert.assertEquals(res.get("five"), "five");
+  }
+
+  @Test
+  public void testAllFailOnError() throws Exception {
+    final Map<String, ComposableFuture<String>> elements = createElementsMap();
+
+    try {
+      all(true, elements).get();
+      Assert.fail("should get an exception");
+    } catch (final ExecutionException e) {
+      Assert.assertTrue(e.getCause().getMessage().contains("bad element"));
+    }
+
+  }
+
+  @Test
+  public void testAllFailFast() throws Exception {
+    final Map<String, ComposableFuture<String>> elements = new HashMap<>();
+
+    elements.put("one", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        Thread.sleep(100);
+        return "one";
+      }
+    }));
+
+    elements.put("two", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        throw new RuntimeException("error...");
+      }
+    }));
+
+    final long t1 = System.currentTimeMillis();
+    try {
+      all(true, elements).get();
+      Assert.fail("should fail");
+    } catch (final ExecutionException e) {
+      final long t2 = System.currentTimeMillis();
+      System.out.println("time: " + (t2 - t1));
+      Assert.assertTrue("should fail fast", (t2 - t1) < 50);
+    }
+  }
+
+  private Map<String, ComposableFuture<String>> createElementsMap() {
+    final Map<String, ComposableFuture<String>> elements = new HashMap<>();
+
+    elements.put("one", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        return "one";
+      }
+    }));
+    elements.put("two", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        Thread.sleep(50);
+        return "two";
+      }
+    }));
+    elements.put("three", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        Thread.sleep(20);
+        return "three";
+      }
+    }));
+    elements.put("four", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        Thread.sleep(50);
+        throw new RuntimeException("bad element");
+        //return "four";
+      }
+    }));
+    elements.put("five", submit(new Callable<String>() {
+      @Override
+      public String call() throws Exception {
+        return "five";
+      }
+    }));
+    return elements;
   }
 
 }

@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.cache.memcache;
 
+import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -18,6 +19,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
 /**
  * Created by aronen on 10/12/14.
@@ -97,22 +99,58 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
+    return casUpdate(key, new EntryMapper<K, V>() {
+      @Override
+      public V map(final K key, final V value) {
+        if (oldValue.equals(value)) {
+          return newValue;
+        } else {
+          return null;
+        }
+      }
+    }).continueOnSuccess(new SuccessHandler<CASResponse, Boolean>() {
+      @Override
+      public Boolean handle(final CASResponse result) {
+        return result == CASResponse.OK;
+      }
+    });
+  }
+
+  @Override
+  public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
+    return casUpdate(key, mapper).continueOnSuccess(new FutureSuccessHandler<CASResponse, Boolean>() {
+      @Override
+      public ComposableFuture<Boolean> handle(final CASResponse result) {
+        if (result == CASResponse.OK) {
+          return fromValue(true);
+        }
+
+        if (maxIterations > 0 && result == CASResponse.EXISTS) {
+          return setAsync(key, mapper, maxIterations - 1);
+        }
+
+        return fromValue(false);
+      }
+    });
+  }
+
+  private ComposableFuture<CASResponse> casUpdate(final K key, final EntryMapper<K, V> mapper) {
     try {
       final String cacheKey = keyTranslator.translateKey(key);
       final Future<CASValue<Object>> getFutureValue = spyClient.asyncGets(cacheKey);
       return SpyFutureHelper.<V>fromCASValue(getFutureValue).continueOnSuccess(new FutureSuccessHandler<CASValue<V>, CASResponse>() {
         @Override
         public ComposableFuture<CASResponse> handle(final CASValue<V> result) {
+          final V newValue = mapper.map(key, result.getValue());
+          if (newValue == null) {
+            return fromValue(CASResponse.OBSERVE_ERROR_IN_ARGS);
+          }
+
           try {
-            return SpyFutureHelper.fromCASResponse(spyClient.asyncCAS(cacheKey, result.getCas(), result.getValue()));
+            return SpyFutureHelper.fromCASResponse(spyClient.asyncCAS(cacheKey, result.getCas(), newValue));
           } catch (final Exception e) {
             return fromError(e);
           }
-        }
-      }).continueOnSuccess(new SuccessHandler<CASResponse, Boolean>() {
-        @Override
-        public Boolean handle(final CASResponse result) {
-          return result == CASResponse.OK;
         }
       });
     } catch (final Exception e) {
@@ -120,7 +158,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
     }
   }
 
-  @Override
+    @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
     final Map<K, ComposableFuture<Boolean>> results = new HashMap<>();
     for (final K key : entries.keySet()) {

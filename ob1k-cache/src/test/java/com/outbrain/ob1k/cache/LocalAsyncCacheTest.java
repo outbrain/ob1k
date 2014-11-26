@@ -166,4 +166,91 @@ public class LocalAsyncCacheTest {
     Assert.assertEquals(res3, Boolean.FALSE);
   }
 
+  public static class Box {
+    public final int number;
+
+    public Box(final int number) {
+      this.number = number;
+    }
+  }
+
+  public static class BoxUpdater extends Thread {
+    private final TypedCache<String, Box> cache;
+    private final String key;
+    private final int iterations;
+    private volatile int successCounter;
+
+    public BoxUpdater(final TypedCache<String, Box> cache, final String key, final int iterations) {
+      this.cache = cache;
+      this.key = key;
+      this.iterations = iterations;
+    }
+
+    @Override
+    public void run() {
+      int success = 0;
+      int failure = 0;
+      for (int i =0; i < iterations; i++) {
+        try {
+          final boolean res = cache.setAsync(key, new EntryMapper<String, Box>() {
+            @Override
+            public Box map(final String key, final Box value) {
+              return new Box(value.number + 1);
+            }
+          }, 100).get();
+
+          if (res) {
+            success++;
+          } else {
+            failure++;
+          }
+
+        } catch (final Exception e) {
+          e.printStackTrace();
+        }
+
+      }
+
+      System.out.println("successes: " + success);
+      System.out.println("failures: " + failure);
+      successCounter = success;
+    }
+
+    public int getSuccessCounter() {
+      return successCounter;
+    }
+  }
+
+  @Test
+  public void testCasWithMapper() throws Exception {
+    final TypedCache<String, Box> cache = new LocalAsyncCache<>(300, 100, TimeUnit.SECONDS);
+    final String cacheKey = "box";
+    cache.setAsync(cacheKey, new Box(0));
+
+    final BoxUpdater updater1 = new BoxUpdater(cache, cacheKey, 1000000);
+    final BoxUpdater updater2 = new BoxUpdater(cache, cacheKey, 1000000);
+    final BoxUpdater updater3 = new BoxUpdater(cache, cacheKey, 1000000);
+    final BoxUpdater updater4 = new BoxUpdater(cache, cacheKey, 1000000);
+
+    updater1.start();
+    updater2.start();
+    updater3.start();
+    updater4.start();
+
+    updater1.join();
+    updater2.join();
+    updater3.join();
+    updater4.join();
+
+    final int finalRes = cache.getAsync(cacheKey).get().number;
+    final int successfulUpdates = updater1.getSuccessCounter() +
+                                  updater2.getSuccessCounter() +
+                                  updater3.getSuccessCounter() +
+                                  updater4.getSuccessCounter();
+
+    System.out.println("final res: " + finalRes);
+    System.out.println("successful updates: " + successfulUpdates);
+    Assert.assertEquals(finalRes, successfulUpdates);
+  }
+
 }

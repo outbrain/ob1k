@@ -33,7 +33,7 @@ public class ComposableFutures {
         new ScheduledComposableThreadPool(ComposableFutureConfig.timerSize);
   }
 
-  private static Logger logger = LoggerFactory.getLogger(ComposableFutures.class);
+  private static final Logger logger = LoggerFactory.getLogger(ComposableFutures.class);
 
   public static <T> ComposableFuture<T> recursive(final Supplier<ComposableFuture<T>> creator, final Predicate<T> stopCriteria) {
     return creator.get().continueOnSuccess(new FutureSuccessHandler<T, T>() {
@@ -69,6 +69,15 @@ public class ComposableFutures {
 
   public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> futures) {
     return Combiner.all(failOnError, futures);
+  }
+
+  public static <K, T> ComposableFuture<Map<K, T>> first(final Map<K, ComposableFuture<T>> futures, final int numOfSuccess) {
+    return Combiner.first(futures, numOfSuccess, false, null, null);
+  }
+
+  public static <K, T> ComposableFuture<Map<K, T>> first(final Map<K, ComposableFuture<T>> futures,
+                                                         final int numOfSuccess, final long timeout, final TimeUnit timeUnit) {
+    return Combiner.first(futures, numOfSuccess, false, timeout, timeUnit);
   }
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right,

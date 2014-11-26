@@ -10,12 +10,13 @@ import java.util.Map;
  * an interface for local async cache with loader.
  */
 public interface TypedCache<K, V> {
-    ComposableFuture<V> getAsync(K key);
-    ComposableFuture<Map<K, V>> getBulkAsync(Iterable<? extends K> keys);
+    ComposableFuture<V> getAsync(final K key);
+    ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys);
 
-    ComposableFuture<Boolean> setAsync(K key, V value);
-    ComposableFuture<Boolean> setAsync(K key, V oldValue, V newValue);
-    ComposableFuture<Map<K, Boolean>> setBulkAsync(Map<? extends K, ? extends V> entries);
+    ComposableFuture<Boolean> setAsync(final K key, final  V value);
+    ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue);
+    ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations);
+    ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries);
 
     ComposableFuture<Boolean> deleteAsync(final K key);
 }

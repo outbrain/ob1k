@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.outbrain.ob1k.cache.memcache.MemcacheClient;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.ComposablePromise;
@@ -19,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -235,10 +237,35 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
-    if (loadingCache != null) {
-      return fromValue(loadingCache.asMap().replace(key, fromValue(oldValue), fromValue(newValue)));
-    } else {
-      return fromValue(localCache.asMap().replace(key, fromValue(oldValue), fromValue(newValue)));
+    final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
+    return fromValue(map.replace(key, fromValue(oldValue), fromValue(newValue)));
+  }
+
+  @Override
+  public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
+    final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
+    try {
+      for (int i=0; i< maxIterations; i++) {
+        final ComposableFuture<V> currentFuture = map.get(key);
+        if (!currentFuture.isDone()) {
+          return fromValue(false);
+        }
+
+        final V currentValue = currentFuture.get();
+        final V newValue = mapper.map(key, currentValue);
+        if (newValue == null) {
+          return fromValue(false);
+        }
+
+        final boolean success = map.replace(key, currentFuture, fromValue(newValue));
+        if (success) {
+          return fromValue(true);
+        }
+      }
+
+      return fromValue(false);
+    } catch (final Exception e) {
+      return fromValue(false);
     }
   }
 
