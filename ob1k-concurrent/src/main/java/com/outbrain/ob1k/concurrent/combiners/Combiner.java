@@ -180,7 +180,7 @@ public class Combiner {
   private static <K, T> Map<K, T> collectResults(final KeyValue<K, T>[] elements) {
     final Map<K, T> result = new HashMap<>();
     for (final KeyValue<K, T> element : elements) {
-      if (element != null) {
+      if (element != null && element.value != null) {
         result.put(element.key, element.value);
       }
     }
