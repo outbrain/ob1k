@@ -12,6 +12,7 @@ import io.netty.util.CharsetUtil;
 
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,24 @@ public class NettyRequest implements Request {
     final Map<String, String> result = new HashMap<>();
     for (final Map.Entry<String, String> entry : entries) {
       result.put(entry.getKey(), entry.getValue());
+    }
+
+    return result;
+  }
+
+  @Override
+  public Map<String, List<String>> getAllHeaders() {
+    final HttpHeaders headers = inner.headers();
+    final List<Map.Entry<String, String>> entries = headers.entries();
+    final Map<String, List<String>> result = new HashMap<>();
+    for (final Map.Entry<String, String> entry : entries) {
+      List<String> list = result.get(entry.getKey());
+      if (list == null) {
+        list = new ArrayList<>();
+        result.put(entry.getKey(), list);
+      }
+
+      list.add(entry.getValue());
     }
 
     return result;
