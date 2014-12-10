@@ -25,7 +25,7 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  * Created by aronen on 10/12/14.
  * a thin wrapper around spy memcache client.
  * it creates a typed "view" over the content of the cache with predefined expiration for all entries in it.
- *
+ * <p/>
  * all operations are async and return ComposableFuture.
  */
 public class MemcacheClient<K, V> implements TypedCache<K, V> {
@@ -43,7 +43,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   /**
    * from spy documentation:
-   *
+   * <p/>
    * The actual (exp)value sent may either be Unix time (number of seconds since
    * January 1, 1970, as a 32-bit value), or a number of seconds starting from
    * current time. In the latter case, this number of seconds may not exceed
@@ -51,7 +51,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
    * is larger than that, the server will consider it to be real Unix time value
    * rather than an offset from current time.
    *
-   * @param exp expiration in unit units.
+   * @param exp  expiration in unit units.
    * @param unit the time unit.
    * @return the expiration in secs according to memcached format.
    */
@@ -141,7 +141,9 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
       return SpyFutureHelper.<V>fromCASValue(getFutureValue).continueOnSuccess(new FutureSuccessHandler<CASValue<V>, CASResponse>() {
         @Override
         public ComposableFuture<CASResponse> handle(final CASValue<V> result) {
-          final V newValue = mapper.map(key, result.getValue());
+          final V newValue = result == null ?
+                  mapper.map(key, null) :
+                  mapper.map(key, result.getValue());
           if (newValue == null) {
             return fromValue(CASResponse.OBSERVE_ERROR_IN_ARGS);
           }
@@ -158,7 +160,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
     }
   }
 
-    @Override
+  @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
     final Map<K, ComposableFuture<Boolean>> results = new HashMap<>();
     for (final K key : entries.keySet()) {
