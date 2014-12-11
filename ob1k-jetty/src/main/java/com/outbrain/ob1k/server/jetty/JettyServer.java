@@ -103,6 +103,8 @@ public class JettyServer implements Server {
   private HttpConfiguration initBaseHttpConfiguration() {
     final HttpConfiguration httpConfiguration = new HttpConfiguration();
     httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
+    httpConfiguration.setSendXPoweredBy(false);
+    httpConfiguration.setSendServerVersion(false);
     return httpConfiguration;
   }
 
