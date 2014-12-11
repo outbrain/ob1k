@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -141,15 +142,27 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
       return SpyFutureHelper.<V>fromCASValue(getFutureValue).continueOnSuccess(new FutureSuccessHandler<CASValue<V>, CASResponse>() {
         @Override
         public ComposableFuture<CASResponse> handle(final CASValue<V> result) {
-          final V newValue = result == null ?
-                  mapper.map(key, null) :
-                  mapper.map(key, result.getValue());
+          final V newValue = result == null ? mapper.map(key, null) : mapper.map(key, result.getValue());
           if (newValue == null) {
             return fromValue(CASResponse.OBSERVE_ERROR_IN_ARGS);
           }
 
           try {
-            return SpyFutureHelper.fromCASResponse(spyClient.asyncCAS(cacheKey, result.getCas(), newValue));
+            if (result != null) {
+              return SpyFutureHelper.fromCASResponse(spyClient.asyncCAS(cacheKey, result.getCas(), newValue));
+            } else {
+              final Future<Boolean> addResponse = spyClient.add(cacheKey, expirationSpyUnits, newValue);
+              return SpyFutureHelper.fromOperation(addResponse).continueOnSuccess(new SuccessHandler<Boolean, CASResponse>() {
+                @Override
+                public CASResponse handle(final Boolean result) throws ExecutionException {
+                  if (result == Boolean.TRUE) {
+                    return CASResponse.OK;
+                  } else {
+                    return CASResponse.OBSERVE_MODIFIED;
+                  }
+                }
+              });
+            }
           } catch (final Exception e) {
             return fromError(e);
           }
