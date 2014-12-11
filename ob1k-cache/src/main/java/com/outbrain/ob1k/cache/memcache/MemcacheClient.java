@@ -122,7 +122,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
     return casUpdate(key, mapper).continueOnSuccess(new FutureSuccessHandler<CASResponse, Boolean>() {
       @Override
       public ComposableFuture<Boolean> handle(final CASResponse result) {
-        if (result == CASResponse.OK) {
+        if (result == CASResponse.OK || result == CASResponse.OBSERVE_MODIFIED) {
           return fromValue(true);
         }
 
@@ -158,7 +158,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
                   if (result == Boolean.TRUE) {
                     return CASResponse.OK;
                   } else {
-                    return CASResponse.OBSERVE_MODIFIED;
+                    return CASResponse.EXISTS;
                   }
                 }
               });
