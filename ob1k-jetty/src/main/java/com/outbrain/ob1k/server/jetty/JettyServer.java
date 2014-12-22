@@ -7,6 +7,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.servlet.DispatcherType;
 
@@ -67,6 +68,7 @@ public class JettyServer implements Server {
   private final String applicationName;
   private final HttpConfiguration baseHttpConfiguration;
   private final Integer maxFormSize;
+  private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
 
   public JettyServer(final String applicationName, final int httpPort, final SslContext sslContext, final String contextPath,
                      final int maxThreads, final Long httpConnectorIdleTimeout, final Long requestTimeoutMillis,
@@ -298,6 +300,7 @@ public class JettyServer implements Server {
       throw new RuntimeException("Failed to start Jetty server", e);
     }
 
+    onStarted();
     return new InetSocketAddress(httpConnector.getLocalPort());
   }
 
@@ -322,6 +325,23 @@ public class JettyServer implements Server {
   @Override
   public String getContextPath() {
     return webAppContext.getContextPath();
+  }
+
+  @Override
+  public void addListener(Listener listener) {
+    listeners.add(listener);
+  }
+
+  @Override
+  public void removeListener(Listener listener) {
+    listeners.remove(listener);
+  }
+
+  private void onStarted() {
+    log.info("**************** Module '{}' Started ****************", applicationName);
+    for (final Listener listener : listeners) {
+      listener.serverStarted(this);
+    }
   }
 
   private void initServerLifeCycleListener() {

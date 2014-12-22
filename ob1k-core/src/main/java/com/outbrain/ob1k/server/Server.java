@@ -11,4 +11,11 @@ public interface Server {
   InetSocketAddress start();
   void stop();
   String getContextPath();
+
+  void addListener(Listener listener);
+  void removeListener(Listener listener);
+
+  public interface Listener {
+    public void serverStarted(Server server);
+  }
 }

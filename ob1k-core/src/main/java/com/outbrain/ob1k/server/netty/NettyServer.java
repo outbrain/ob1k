@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * User: aronen
@@ -46,6 +47,7 @@ public class NettyServer implements Server {
   private final boolean supportZip;
   private final MetricFactory metricFactory;
   private final int maxContentLength;
+  private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
 
   public NettyServer(final int port, final ServiceRegistry registry, final RequestMarshallerRegistry marshallerRegistry,
                      final StaticPathResolver staticResolver, final SyncRequestQueueObserver queueObserver,
@@ -89,6 +91,7 @@ public class NettyServer implements Server {
       queueObserver.setServerChannel(channel);
 
       final InetSocketAddress address = (InetSocketAddress) channel.localAddress();
+      onStarted();
       logger.info("server is up and bounded on address: {}{}", address, getOpeningText());
       return address;
     } catch (final Exception e) {
@@ -124,6 +127,23 @@ public class NettyServer implements Server {
     queueObserver.setServerChannel(null);
     channel.close().awaitUninterruptibly(200);
     nioGroup.shutdownGracefully();
+  }
+
+  @Override
+  public void addListener(Listener listener) {
+    listeners.add(listener);
+  }
+
+  @Override
+  public void removeListener(Listener listener) {
+    listeners.remove(listener);
+  }
+
+  private void onStarted() {
+    logger.info("**************** Module '{}' Started ****************", applicationName);
+    for (final Listener listener : listeners) {
+      listener.serverStarted(this);
+    }
   }
 
   private class RPCServerInitializer extends ChannelInitializer<SocketChannel> {

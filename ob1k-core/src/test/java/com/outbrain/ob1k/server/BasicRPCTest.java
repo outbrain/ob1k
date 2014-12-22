@@ -23,6 +23,16 @@ import java.util.concurrent.TimeoutException;
 public class BasicRPCTest {
 
   @Test
+  public void testServerListener() throws Exception {
+    Server server = buildServer();
+    Listener listener = new Listener();
+    server.addListener(listener);
+    server.start();
+    Assert.assertTrue("serverStarted() wasn't called", listener.serverStartedCalled);
+    server.stop();
+  }
+
+  @Test
   public void testServiceCreation() throws Exception {
     Server server = null;
     SimpleTestService client = null;
@@ -32,7 +42,7 @@ public class BasicRPCTest {
       client = buildClient(port);
 
       final ComposableFuture<String> res1 =
-          client.method1(3, "4", new TestEntity(Sets.newHashSet(1L, 2L, 3L), "moshe", null, Lists.<OtherEntity>newArrayList()));
+              client.method1(3, "4", new TestEntity(Sets.newHashSet(1L, 2L, 3L), "moshe", null, Lists.<OtherEntity>newArrayList()));
 
       try {
         final String response1 = res1.get();
@@ -131,6 +141,16 @@ public class BasicRPCTest {
 
       if (server != null)
         server.stop();
+    }
+  }
+
+  private static class Listener implements Server.Listener {
+
+    private boolean serverStartedCalled = false;
+
+    @Override
+    public void serverStarted(Server server) {
+      serverStartedCalled = true;
     }
   }
 }
