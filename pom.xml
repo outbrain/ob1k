@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
   <version>0.21-SNAPSHOT</version>
-  <artifactId>outbrain-sw-infra</artifactId>
+  <artifactId>ob1k</artifactId>
   <name>SW Infra Root Project</name>
   <packaging>pom</packaging>
   <url>http://www.outbrain.com</url>
