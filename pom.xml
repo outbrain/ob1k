@@ -16,8 +16,8 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:ssh://github.com:outbrain/sw-infra.git</connection>
-    <developerConnection>scm:git:ssh://github.com:outbrain/sw-infra.git</developerConnection>
+    <connection>scm:git:ssh://github.com:outbrain/ob1k.git</connection>
+    <developerConnection>scm:git:ssh://github.com:outbrain/ob1k.git</developerConnection>
     <url>https://github.com/outbrain/sw-infra/</url>
   </scm>
 
