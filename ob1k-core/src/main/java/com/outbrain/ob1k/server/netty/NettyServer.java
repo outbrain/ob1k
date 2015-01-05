@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.netty;
 
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+import com.outbrain.ob1k.common.metrics.NettyQueuesGaugeBuilder;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
@@ -89,6 +90,7 @@ public class NettyServer implements Server {
 
       channel = b.bind(port).sync().channel();
       queueObserver.setServerChannel(channel);
+      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
 
       final InetSocketAddress address = (InetSocketAddress) channel.localAddress();
       onStarted();

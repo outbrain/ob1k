@@ -29,7 +29,7 @@ public class MySqlConnectionPool {
 
   private final ConnectionPool<MySQLConnection> _pool;
 
-  public MySqlConnectionPool(MySQLConnectionFactory connFactory, final int maxConnections, MetricFactory metricFactory) {
+  public MySqlConnectionPool(final MySQLConnectionFactory connFactory, final int maxConnections, final MetricFactory metricFactory) {
     final PoolConfiguration configuration = new PoolConfiguration(maxConnections, 4, 10, 5000);
     _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
     initializeMetrics(metricFactory, _pool);

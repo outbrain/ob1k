@@ -21,7 +21,7 @@ public class SyncRequestQueueObserver implements QueueObserver {
   private final Counter pushbackCounter;
   private final ChannelGroup activeChannels;
 
-  private AtomicBoolean autoRead = new AtomicBoolean(true);
+  private final AtomicBoolean autoRead = new AtomicBoolean(true);
 
   private volatile Channel serverChannel;
 
