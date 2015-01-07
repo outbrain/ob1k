@@ -70,6 +70,7 @@
 
   <build>
     <plugins>
+      <!--
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>versions-maven-plugin</artifactId>
@@ -82,6 +83,13 @@
         <configuration>
           <tag>${project.artifactId}-${project.version}</tag>
         </configuration>
+      </plugin>
+      -->
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5.1</version>
       </plugin>
 
       <plugin>
@@ -114,13 +122,8 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <svn-revision>${svn.revision}</svn-revision>
               <timestamp>${maven.build.timestamp}</timestamp>
             </manifestEntries>
-            <manifest>
-              <mainClass>${mainClass}</mainClass>
-              <addClasspath>${addClasspath}</addClasspath>
-            </manifest>
           </archive>
         </configuration>
 
