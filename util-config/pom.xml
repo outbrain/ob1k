@@ -4,12 +4,12 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.22</version>
+    <version>0.23-SNAPSHOT</version>
   </parent>
 
   <artifactId>util-config</artifactId>
   <name>util-config</name>
-  <version>0.2</version>
+  <version>0.3-SNAPSHOT</version>
 
   <dependencies>
     <dependency>
