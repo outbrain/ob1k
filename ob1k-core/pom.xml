@@ -15,7 +15,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>util-metrics</artifactId>
-      <version>${parent.version}</version>
+      <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
