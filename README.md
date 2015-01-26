@@ -1,6 +1,6 @@
 Ob1k
 ========
 
-The home of the infamou Ob1k RPC framework.
+The home of the infamous Ob1k RPC framework.
 
 Long live Obi-Wan Kenobi
