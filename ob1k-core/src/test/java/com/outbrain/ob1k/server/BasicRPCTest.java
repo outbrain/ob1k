@@ -24,11 +24,11 @@ public class BasicRPCTest {
 
   @Test
   public void testServerListener() throws Exception {
-    Server server = buildServer();
     Listener listener = new Listener();
+    Server server = buildServer(listener);
     server.addListener(listener);
     server.start();
-    Assert.assertTrue("serverStarted() wasn't called", listener.serverStartedCalled);
+    Assert.assertEquals("serverStarted() wasn't called", 2, listener.serverStartedCallCount);
     server.stop();
   }
 
@@ -37,7 +37,7 @@ public class BasicRPCTest {
     Server server = null;
     SimpleTestService client = null;
     try {
-      server = buildServer();
+      server = buildServer(null);
       final int port = server.start().getPort();
       client = buildClient(port);
 
@@ -73,7 +73,7 @@ public class BasicRPCTest {
     return new ClientBuilder<>(SimpleTestService.class).addTarget("http://localhost:"+port+"/test/simple").build();
   }
 
-  private static Server buildServer() {
+  private static Server buildServer(final Listener listener) {
     return ServerBuilder.newBuilder().configurePorts(new PortsProvider() {
       @Override
       public void configure(ChoosePortPhase builder) {
@@ -88,6 +88,9 @@ public class BasicRPCTest {
       @Override
       public void configureExtraParams(ExtraParamsPhase builder) {
         builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
+        if (listener != null) {
+          builder.addListener(listener);
+        }
       }
     }).build();
   }
@@ -97,7 +100,7 @@ public class BasicRPCTest {
     Server server = null;
     SimpleTestService client = null;
     try {
-      server = buildServer();
+      server = buildServer(null);
       final int port = server.start().getPort();
       client = buildClient(port);
 
@@ -124,7 +127,7 @@ public class BasicRPCTest {
     Server server = null;
     SimpleTestService client = null;
     try {
-      server = buildServer();
+      server = buildServer(null);
       final int port = server.start().getPort();
       client = buildClient(port);
 
@@ -146,11 +149,11 @@ public class BasicRPCTest {
 
   private static class Listener implements Server.Listener {
 
-    private boolean serverStartedCalled = false;
+    private int serverStartedCallCount = 0;
 
     @Override
     public void serverStarted(Server server) {
-      serverStartedCalled = true;
+      serverStartedCallCount++;
     }
   }
 }

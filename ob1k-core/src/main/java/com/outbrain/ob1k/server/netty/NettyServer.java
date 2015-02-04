@@ -137,8 +137,8 @@ public class NettyServer implements Server {
     listeners.add(listener);
   }
 
-  public void addListeners(Collection<Listener> listeners) {
-    listeners.addAll(listeners);
+  public void addListeners(Collection<Listener> moreListeners) {
+    listeners.addAll(moreListeners);
   }
 
   @Override
