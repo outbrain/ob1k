@@ -58,6 +58,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   private ThreadPoolConfig threadPoolConfig = null;
   private BeanContext ctx;
   private List<ServiceDescriptor> serviceDescriptors = new ArrayList<>();
+  private List<Server.Listener> listeners = new LinkedList<>();
 
   public static InitialPhase newBuilder() {
     return new ServerBuilder();
@@ -118,6 +119,12 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   @Override
   public ExtraParamsPhase setMetricFactory(final MetricFactory metricFactory) {
     this.metricFactory = metricFactory;
+    return this;
+  }
+
+  @Override
+  public ExtraParamsPhase addListener(Server.Listener listener) {
+    this.listeners.add(listener);
     return this;
   }
 
@@ -395,8 +402,10 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     registerServices(serviceDescriptors, registry, executorService);
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    return new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
-                           appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+    NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
+            appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+    server.addListeners(listeners);
+    return server;
   }
 
   public class ServiceBuilder implements ContextBasedServiceBuilderPhase, RawServiceBuilderPhase {

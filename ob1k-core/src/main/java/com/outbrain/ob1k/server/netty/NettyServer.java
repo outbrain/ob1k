@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -134,6 +135,10 @@ public class NettyServer implements Server {
   @Override
   public void addListener(Listener listener) {
     listeners.add(listener);
+  }
+
+  public void addListeners(Collection<Listener> moreListeners) {
+    listeners.addAll(moreListeners);
   }
 
   @Override

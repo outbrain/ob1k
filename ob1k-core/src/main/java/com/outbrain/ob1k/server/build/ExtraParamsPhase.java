@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.build;
 
 
+import com.outbrain.ob1k.server.Server;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -15,4 +16,5 @@ public interface ExtraParamsPhase {
   ExtraParamsPhase setRequestTimeout(final long timeout, TimeUnit unit);
   ExtraParamsPhase configureExecutorService(final int minSize, final int maxSize);
   ExtraParamsPhase setMetricFactory(final MetricFactory metricFactory);
+  ExtraParamsPhase addListener(final Server.Listener listener);
 }
