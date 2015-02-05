@@ -11,13 +11,13 @@ public class SystemPropertyBasedConfigurationSelector implements ConfigurationPr
 
   public static final String CONFIGURATION_SELECTION_PROPERTY_KEY = "com.outbrain.swinfra.config.provider.impl.class";
 
-  private ConfigurationProvider configProvider;
+  private final ConfigurationProvider configProvider;
 
   public SystemPropertyBasedConfigurationSelector() {
     this(CONFIGURATION_SELECTION_PROPERTY_KEY);
   }
 
-  public SystemPropertyBasedConfigurationSelector(String configSelectionPropertyKey) {
+  public SystemPropertyBasedConfigurationSelector(final String configSelectionPropertyKey) {
     if (null == configSelectionPropertyKey) {
       throw new IllegalArgumentException("configSelectionPropertyKey must not be null");
     }
@@ -29,9 +29,9 @@ public class SystemPropertyBasedConfigurationSelector implements ConfigurationPr
 
     try {
       configProvider = (ConfigurationProvider) Class.forName(configProviderFactoryClass).newInstance();
-    } catch (ClassNotFoundException e) {
+    } catch (final ClassNotFoundException e) {
       throw new IllegalArgumentException("Configuration factory class was not found in classpath - " + configProviderFactoryClass, e);
-    } catch (InstantiationException | IllegalAccessException e) {
+    } catch (final InstantiationException | IllegalAccessException e) {
       throw new IllegalArgumentException("Failed to instantiate configuration factory class - " + configProviderFactoryClass, e);
     }
   }

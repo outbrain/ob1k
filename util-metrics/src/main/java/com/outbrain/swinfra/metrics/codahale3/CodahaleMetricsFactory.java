@@ -14,24 +14,24 @@ import com.outbrain.swinfra.metrics.api.Timer;
 public class CodahaleMetricsFactory implements MetricFactory {
   private final MetricRegistry registry;
 
-  public CodahaleMetricsFactory(MetricRegistry registry) {
+  public CodahaleMetricsFactory(final MetricRegistry registry) {
     this.registry = registry;
   }
 
   @Override
-  public Timer createTimer(String component, String methodName) {
+  public Timer createTimer(final String component, final String methodName) {
     final com.codahale.metrics.Timer timer = registry.timer(MetricRegistry.name(component, methodName));
     return new com.outbrain.swinfra.metrics.codahale3.Timer(timer);
   }
 
   @Override
-  public Counter createCounter(String component, String methodName) {
+  public Counter createCounter(final String component, final String methodName) {
     final com.codahale.metrics.Counter counter = registry.counter(MetricRegistry.name(component, methodName));
     return new com.outbrain.swinfra.metrics.codahale3.Counter(counter);
   }
 
   @Override
-  public <T> Gauge<T> registerGauge(String component, String methodName, final Gauge<T> gauge) {
+  public <T> Gauge<T> registerGauge(final String component, final String methodName, final Gauge<T> gauge) {
     registry.register(MetricRegistry.name(component, methodName), new com.codahale.metrics.Gauge<T>() {
       @Override
       public T getValue() {
@@ -43,13 +43,13 @@ public class CodahaleMetricsFactory implements MetricFactory {
   }
 
   @Override
-  public Meter createMeter(String component, String methodName, String eventType) {
+  public Meter createMeter(final String component, final String methodName, final String eventType) {
     final com.codahale.metrics.Meter meter = registry.meter(MetricRegistry.name(component, methodName));
     return new com.outbrain.swinfra.metrics.codahale3.Meter(meter);
   }
 
   @Override
-  public Histogram createHistogram(String component, String methodName, boolean biased) {
+  public Histogram createHistogram(final String component, final String methodName, final boolean biased) {
     final com.codahale.metrics.Histogram histogram = registry.histogram(MetricRegistry.name(component, methodName));
     return new com.outbrain.swinfra.metrics.codahale3.Histogram(histogram);
   }

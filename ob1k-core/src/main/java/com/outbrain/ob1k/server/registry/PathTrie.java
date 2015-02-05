@@ -147,7 +147,7 @@ public class PathTrie<T> {
 
     public void collectPathMappings(final Map<String, T> collectedMappings) {
       // skip the root...
-      for (TrieNode child : children.values()) {
+      for (final TrieNode child : children.values()) {
         child.collectPathMappings("", collectedMappings);
       }
     }

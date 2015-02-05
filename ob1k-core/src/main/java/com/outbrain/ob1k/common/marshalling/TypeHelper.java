@@ -10,18 +10,18 @@ import java.lang.reflect.Type;
  * Time: 7:41 PM
  */
 public class TypeHelper {
-  public static Type[] extractTypes(Method method) {
-    Type[] parameterTypes = method.getGenericParameterTypes();
-    Type retType = extractReturnType(method);
+  public static Type[] extractTypes(final Method method) {
+    final Type[] parameterTypes = method.getGenericParameterTypes();
+    final Type retType = extractReturnType(method);
 
-    Type[] res = new Type[parameterTypes.length + 1];
+    final Type[] res = new Type[parameterTypes.length + 1];
     System.arraycopy(parameterTypes, 0, res, 0, parameterTypes.length);
     res[parameterTypes.length] = retType;
 
     return res;
   }
 
-  public static Type extractReturnType(Method method) {
+  public static Type extractReturnType(final Method method) {
     Type retType = method.getGenericReturnType();
     if (retType instanceof ParameterizedType) {
       retType = ((ParameterizedType) retType).getActualTypeArguments()[0];
