@@ -6,6 +6,7 @@ import org.objectweb.asm.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
@@ -29,22 +30,22 @@ public class MethodParamNamesExtractor {
       throw new IllegalArgumentException("method names must be unique in service: " + type.getName());
     }
 
-    final Map<Method, List<String>> result = new HashMap<>();
+    final Map<Method, SortedMap<Integer, String>> paramsMap = new HashMap<>();
     cr.accept(new ClassVisitor(Opcodes.ASM4) {
       public MethodVisitor visitMethod(final int access, final String name, final String desc, final String signature, final String[] exceptions) {
         final Method method = methodsSignature.get(name);
         if(method != null) {
-          final Type[] types = Type.getArgumentTypes(desc);
-          final List<String> names = new ArrayList<>(types.length);
-          result.put(method, names);
+          final SortedMap<Integer, String> names = new TreeMap<>();
+          paramsMap.put(method, names);
 
           return new MethodVisitor(Opcodes.ASM4) {
             @Override
             public void visitLocalVariable(final String name, final String description, final String signature, final Label start, final Label end, final int index) {
+//              System.out.println("visiting: " + name + " ,desc: " + description + " ,signature: " + signature + " ,index: " + index);
               // zero index is always this in non-static, non constructor methods.
-              // Notes: don't ask me why, but ASM doesn't always pass in indexes from 0 to num args + 1, and sometimes weird 'input' name is passed in at the end. Meh.
-              if (index > 0 && names.size() < types.length) {
-                names.add(name);
+              // we collect all method params including local params and only at the end sort by index and take the first N actual request params.
+              if (Modifier.isStatic(method.getModifiers()) || index > 0) {
+                names.put(index, name);
               }
             }
           };
@@ -53,6 +54,21 @@ public class MethodParamNamesExtractor {
         }
       }
     }, 0);
+
+    final Map<Method, List<String>> result = new HashMap<>();
+    for (final Method method : paramsMap.keySet()) {
+      final SortedMap<Integer, String> params = paramsMap.get(method);
+      final List<String> names = new ArrayList<>();
+      final int length = method.getParameterTypes().length;
+      int index = 0;
+      for (final String name: params.values()) {
+        if (index < length) {
+          names.add(name);
+        }
+        index++;
+      }
+      result.put(method, names);
+    }
 
     return result;
   }
