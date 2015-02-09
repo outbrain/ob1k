@@ -18,56 +18,56 @@ public class PathParamMarshaller {
       }
     });
 
-    put(Integer.class, new Marshaller<Integer>() {
+    put(int.class, new Marshaller<Integer>() {
       @Override
       public Integer unMarshell(final Object value) {
         return Integer.parseInt(String.valueOf(value));
       }
     });
 
-    put(Boolean.class, new Marshaller<Boolean>() {
+    put(boolean.class, new Marshaller<Boolean>() {
       @Override
       public Boolean unMarshell(final Object value) {
         return Boolean.parseBoolean(String.valueOf(value));
       }
     });
 
-    put(Long.class, new Marshaller<Long>() {
+    put(long.class, new Marshaller<Long>() {
       @Override
       public Long unMarshell(final Object value) {
         return Long.parseLong(String.valueOf(value));
       }
     });
 
-    put(Float.class, new Marshaller<Float>() {
+    put(float.class, new Marshaller<Float>() {
       @Override
       public Float unMarshell(final Object value) {
         return Float.parseFloat(String.valueOf(value));
       }
     });
 
-    put(Double.class, new Marshaller<Double>() {
+    put(double.class, new Marshaller<Double>() {
       @Override
       public Double unMarshell(final Object value) {
         return Double.parseDouble(String.valueOf(value));
       }
     });
 
-    put(Character.class, new Marshaller<Character>() {
+    put(char.class, new Marshaller<Character>() {
       @Override
       public Character unMarshell(final Object value) {
         return String.valueOf(value).charAt(0);
       }
     });
 
-    put(Byte.class, new Marshaller<Byte>() {
+    put(byte.class, new Marshaller<Byte>() {
       @Override
       public Byte unMarshell(final Object value) {
         return Byte.parseByte(String.valueOf(value));
       }
     });
 
-    put(Short.class, new Marshaller<Short>() {
+    put(short.class, new Marshaller<Short>() {
       @Override
       public Short unMarshell(final Object value) {
         return Short.parseShort(String.valueOf(value));
