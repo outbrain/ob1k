@@ -122,7 +122,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
 
   @Override
   public Object[] unmarshallRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
-    final Class<?>[] types = method.getParameterTypes();
+    final Type[] types = method.getGenericParameterTypes();
     final Object[] res = new Object[types.length];
     final InputStream inputStream = request.getRequestInputStream();
     final Value rawValues = msgPack.read(inputStream);
@@ -134,7 +134,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     for (int index = 0; index < types.length; index++) {
       final String paramName = paramNames[index];
       if (pathParams.containsKey(paramName)) {
-        res[index] = PathParamMarshaller.unMarshell(pathParams.get(paramName), types[index]);
+        res[index] = PathParamMarshaller.unMarshell(pathParams.get(paramName), (Class) types[index]);
       } else {
         final Template template = msgPack.lookup(types[index]);
         res[index] = template.read(new Converter(msgPack, values[index - pathParamsSize]), null);

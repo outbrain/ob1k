@@ -39,7 +39,7 @@ import rx.functions.Action1;
  * Date: 8/19/13
  * Time: 5:16 PM
  */
-public class BasicRpcTest {
+public class BasicClientRpcTest {
 
   private static final String HELLO_SERVICE_PATH = "/hello-service";
   private static final String FILTERED_SERVICE_PATH = "/filtered";

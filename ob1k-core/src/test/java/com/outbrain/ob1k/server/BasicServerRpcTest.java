@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by aronen on 10/6/14.
  */
-public class BasicRPCTest {
+public class BasicServerRpcTest {
 
   @Test
   public void testServerListener() throws Exception {

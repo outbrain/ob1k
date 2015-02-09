@@ -150,14 +150,14 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
   private Object[] parseURLRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
     final Object[] result = new Object[paramNames.length];
-
+    final Type[] types = method.getGenericParameterTypes();
     int index = 0;
     for (final String paramName: paramNames) {
       String param = request.getQueryParam(paramName);
       if (param == null) {
         param = request.getPathParam(paramName);
       }
-      final Class currentType = (Class) method.getGenericParameterTypes()[index];
+      final Class currentType = (Class) types[index];
       if (param == null) {
         if (currentType.isPrimitive()) {
           throw new IOException("Parameter " + paramName + " is primitive and cannot be null");
@@ -167,7 +167,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
         // parsing is unneeded.
         result[index] = param;
       } else {
-        final Object value = mapper.readValue(param, getJacksonParamType(method, index));
+        final Object value = mapper.readValue(param, getJacksonType(types[index]));
         result[index] = value;
       }
       index++;
@@ -180,10 +180,10 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     final JsonParser jp = factory.createParser(json);
     JsonToken token;
     final List<Object> results = new ArrayList<>();
-    final Class<?>[] types = method.getParameterTypes();
+    final Type[] types = method.getGenericParameterTypes();
     int index = 0;
     for (final String pathParam : pathParams.values()) {
-      results.add(PathParamMarshaller.unMarshell(pathParam, types[index]));
+      results.add(PathParamMarshaller.unMarshell(pathParam, (Class) types[index]));
       index++;
     }
     token = jp.nextToken();
@@ -193,7 +193,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
         if (token == JsonToken.END_ARRAY)
           break;
 
-        final Object res = mapper.readValue(jp, getJacksonParamType(method, index));
+        final Object res = mapper.readValue(jp, getJacksonType(types[index]));
         results.add(res);
         index++;
 
@@ -201,16 +201,11 @@ public class JsonRequestMarshaller implements RequestMarshaller {
       }
     } else {
       // string contains just a single object read it completely and finish.
-      final Object param = mapper.readValue(json, getJacksonParamType(method, 0));
+      final Object param = mapper.readValue(json, getJacksonType(types[0]));
       results.add(param);
     }
 
     return results.toArray();
-  }
-
-  private JavaType getJacksonParamType(final Method method, final int index) {
-    final Type[] types = method.getGenericParameterTypes();
-    return getJacksonType(types[index]);
   }
 
   private JavaType getJacksonType(final Type type) {

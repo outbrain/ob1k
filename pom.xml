@@ -4,7 +4,7 @@
   <groupId>com.outbrain.swinfra</groupId>
   <version>0.28-SNAPSHOT</version>
   <artifactId>ob1k</artifactId>
-  <name>SW Infra Root Project</name>
+  <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
   <url>http://www.outbrain.com</url>
   <licenses>
