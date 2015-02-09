@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.registry.endpoints;
 
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.StreamFilter;
@@ -19,8 +20,8 @@ import java.lang.reflect.Method;
 public class StreamServerEndpoint extends AbstractServerEndpoint {
   public final StreamFilter[] filters;
 
-  public StreamServerEndpoint(final Service service, final StreamFilter[] filters, final Method method, final String[] paramNames) {
-    super(service, method, paramNames);
+  public StreamServerEndpoint(final Service service, final StreamFilter[] filters, final Method method, final HttpRequestMethodType requestMethodType, final String[] paramNames) {
+    super(service, method, requestMethodType, paramNames);
     this.filters = filters;
   }
 
@@ -35,7 +36,7 @@ public class StreamServerEndpoint extends AbstractServerEndpoint {
         @SuppressWarnings("unchecked")
         final Observable<T> result = (Observable<T>) method.invoke(service, ctx.getParams());
         return result;
-      } catch (IllegalAccessException | InvocationTargetException e) {
+      } catch (final IllegalAccessException | InvocationTargetException e) {
         return Observable.error(e);
       }
     }

@@ -1,18 +1,20 @@
 package com.outbrain.ob1k.client.http;
 
-import com.ning.http.client.*;
+import com.ning.http.client.AsyncHttpClient;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
- * User: aronen
- * Date: 6/16/13
- * Time: 6:06 PM
+ * @author aronen
  */
 public class RequestBuilder {
   private final RequestMarshallerRegistry registry;
@@ -32,10 +34,10 @@ public class RequestBuilder {
 
   public AsyncHttpClient.BoundRequestBuilder buildPostRequestWithParams(final AsyncHttpClient client, final String url,
                                                                         final String contentType, final Object[] requestParams) throws IOException {
-    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePost(url);
-
+    final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, requestParams);
+    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePost(urlAndParams.getKey());
     final RequestMarshaller marshaller = registry.getMarshaller(contentType);
-    marshaller.marshallRequestParams(requestBuilder, requestParams);
+    marshaller.marshallRequestParams(requestBuilder, urlAndParams.getValue());
     return requestBuilder;
   }
 
@@ -51,6 +53,15 @@ public class RequestBuilder {
     return requestBuilder;
   }
 
+  public AsyncHttpClient.BoundRequestBuilder buildGetRequestWithParams(final AsyncHttpClient client, final String url, final List<String> methodParams,
+                                                                       final Object[] ctxParams, final String contentType) throws IOException {
+    final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, ctxParams);
+    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareGet(urlAndParams.getKey());
+    final RequestMarshaller marshaller = registry.getMarshaller(contentType);
+    marshaller.marshallRequestParams(requestBuilder, methodParams, urlAndParams.getValue());
+    return requestBuilder;
+  }
+
   public AsyncHttpClient.BoundRequestBuilder buildGetRequest(final AsyncHttpClient client, final String url, final Map<String, String> requestParams) {
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareGet(url);
     if (requestParams != null) {
@@ -59,6 +70,25 @@ public class RequestBuilder {
       }
     }
 
+    return requestBuilder;
+  }
+
+  public AsyncHttpClient.BoundRequestBuilder buildPutRequestWithParams(final AsyncHttpClient client, final String url,
+                                                                        final String contentType, final Object[] requestParams) throws IOException {
+    final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, requestParams);
+    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePut(urlAndParams.getKey());
+
+    final RequestMarshaller marshaller = registry.getMarshaller(contentType);
+    marshaller.marshallRequestParams(requestBuilder, urlAndParams.getValue());
+    return requestBuilder;
+  }
+
+  public AsyncHttpClient.BoundRequestBuilder buildDeleteRequestWithParams(final AsyncHttpClient client, final String url, final List<String> methodParams,
+                                                                       final Object[] ctxParams, final String contentType) throws IOException {
+    final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, ctxParams);
+    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareDelete(urlAndParams.getKey());
+    final RequestMarshaller marshaller = registry.getMarshaller(contentType);
+    marshaller.marshallRequestParams(requestBuilder, methodParams, urlAndParams.getValue());
     return requestBuilder;
   }
 
@@ -78,4 +108,22 @@ public class RequestBuilder {
     return marshaller.unmarshallResponse(httpResponse, resType, true);
   }
 
+  private AbstractMap.SimpleEntry<String, Object[]> replacePathParamsWithValues(final String url, final Object[] params) {
+    if (params == null) {
+      return new AbstractMap.SimpleEntry<>(url, null);
+    }
+    final List<Object> paramsList = new ArrayList<>(Arrays.asList(params));
+    int index = url.indexOf('{');
+    int pathIndex = 0;
+    String newUrl = url;
+    while (index >= 0) {
+      paramsList.remove(pathIndex);
+      final int endIndex = newUrl.indexOf('}', index);
+      final String pathParameter = newUrl.substring(index, endIndex + 1);
+      newUrl = newUrl.replace(pathParameter, String.valueOf(params[pathIndex]));
+      index = newUrl.indexOf('{', endIndex);
+      pathIndex++;
+    }
+    return new AbstractMap.SimpleEntry<>(newUrl, paramsList.toArray());
+  }
 }

@@ -12,7 +12,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -63,16 +63,15 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
   @Override
   public Object[] unmarshallRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
-    final String httpMethod = request.getMethod();
-    if (httpMethod.equals("GET") || httpMethod.equals("DELETE")) {
+    final HttpRequestMethodType httpMethod = request.getMethod();
+    if (HttpRequestMethodType.GET == httpMethod || HttpRequestMethodType.DELETE == httpMethod) {
       return parseURLRequestParams(request, method, paramNames);
-    } else if (httpMethod.equals("POST") || httpMethod.equals("PUT")) {
+    } else if (HttpRequestMethodType.POST == httpMethod || HttpRequestMethodType.PUT == httpMethod) {
       final String body = request.getRequestBody();
       if (body == null || body.isEmpty()) {
         return new Object[0];
       }
-
-      return parseBodyRequestParams(body, method);
+      return parseBodyRequestParams(body, request.getPathParams(), method);
     } else {
       throw new IllegalArgumentException("http method not supported.");
     }
@@ -90,6 +89,19 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     requestBuilder.setBody(body);
     requestBuilder.setContentLength(body.getBytes("UTF8").length);
     requestBuilder.setBodyEncoding("UTF8");
+    requestBuilder.setHeader("Content-Type", ContentType.JSON.requestEncoding());
+  }
+
+  @Override
+  public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final List<String> requestParamsNames,
+                                    final Object[] requestParams) throws IOException {
+    if (requestParamsNames != null) {
+      int index = 0;
+      for (final String name : requestParamsNames) {
+        requestBuilder.addQueryParameter(name, mapper.writeValueAsString(requestParams[index]));
+        index++;
+      }
+    }
     requestBuilder.setHeader("Content-Type", ContentType.JSON.requestEncoding());
   }
 
@@ -145,11 +157,13 @@ public class JsonRequestMarshaller implements RequestMarshaller {
       if (param == null) {
         param = request.getPathParam(paramName);
       }
-
+      final Class currentType = (Class) method.getGenericParameterTypes()[index];
       if (param == null) {
-        //probably a bad request. will cause a NPE downstream.
+        if (currentType.isPrimitive()) {
+          throw new IOException("Parameter " + paramName + " is primitive and cannot be null");
+        }
         result[index] = null;
-      } else if (method.getGenericParameterTypes()[index] == String.class && !param.startsWith("'") && !param.endsWith("'")) {
+      } else if (currentType == String.class && !param.startsWith("'") && !param.endsWith("'")) {
         // parsing is unneeded.
         result[index] = param;
       } else {
@@ -162,13 +176,18 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     return result;
   }
 
-  private Object[] parseBodyRequestParams(final String json, final Method method) throws IOException {
+  private Object[] parseBodyRequestParams(final String json, final Map<String, String> pathParams, final Method method) throws IOException {
     final JsonParser jp = factory.createParser(json);
     JsonToken token;
     final List<Object> results = new ArrayList<>();
+    final Class<?>[] types = method.getParameterTypes();
+    int index = 0;
+    for (final String pathParam : pathParams.values()) {
+      results.add(PathParamMarshaller.unMarshell(pathParam, types[index]));
+      index++;
+    }
     token = jp.nextToken();
     if (token == JsonToken.START_ARRAY) {
-      int index = 0;
       token = jp.nextToken();
       while (true) {
         if (token == JsonToken.END_ARRAY)

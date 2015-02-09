@@ -2,8 +2,14 @@ package com.outbrain.ob1k.server.registry;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
 
+import com.google.common.collect.Maps;
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.concurrent.ComposableExecutorService;
@@ -30,7 +36,7 @@ import rx.Observable;
 public class ServiceRegistry {
   private static final Logger logger = LoggerFactory.getLogger(ServiceRegistry.class);
 
-  private final PathTrie<AbstractServerEndpoint> endpoints;
+  private final PathTrie<Map<HttpRequestMethodType, AbstractServerEndpoint>> endpoints;
   private String contextPath;
   private final RequestMarshallerRegistry marshallerRegistry;
 
@@ -43,8 +49,15 @@ public class ServiceRegistry {
     this.contextPath = contextPath;
   }
 
-  public AbstractServerEndpoint findEndpoint(final String path, final Map<String, String> pathParams) {
-    return endpoints.retrieve(path, pathParams);
+  public AbstractServerEndpoint findEndpoint(final String path, final HttpRequestMethodType requestMethodType, final Map<String, String> pathParams) {
+    final Map<HttpRequestMethodType, AbstractServerEndpoint> serviceEndpoints = endpoints.retrieve(path, pathParams);
+    if (serviceEndpoints == null) {
+      return null;
+    }
+    if (serviceEndpoints.containsKey(HttpRequestMethodType.ANY)) {
+      return serviceEndpoints.get(HttpRequestMethodType.ANY);
+    }
+    return serviceEndpoints.get(requestMethodType);
   }
 
   public void register(final String name, final Service service, final boolean bindPrefix,
@@ -55,32 +68,41 @@ public class ServiceRegistry {
   public static class EndpointDescriptor {
     public final Method method;
     public final List<? extends ServiceFilter> filters;
+    public final HttpRequestMethodType requestMethodType;
 
-    public EndpointDescriptor(Method method, List<? extends ServiceFilter> filters) {
+    public EndpointDescriptor(final Method method, final List<? extends ServiceFilter> filters, final HttpRequestMethodType requestMethodType) {
       this.method = method;
       this.filters = filters;
+      this.requestMethodType = requestMethodType;
     }
   }
 
-  public void register(final String name, final Service service, final Map<String, EndpointDescriptor> descriptors,
+  public void register(final String name, final Service service, final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
                        final boolean bindPrefix, final ComposableExecutorService executorService) {
 
     if (contextPath == null) {
-      throw new RuntimeException("can't add service before context path is set.");
+      throw new RuntimeException("Can't add service before context path is set.");
     }
 
     final Map<Method, List<String>> methodsParams;
+
     try {
       methodsParams = MethodParamNamesExtractor.extract(service.getClass(), getMethods(descriptors));
     } catch (final Exception e) {
-      throw new RuntimeException("service " + name +" can't be analyzed", e);
+      throw new RuntimeException("Service " + name + " can't be analyzed", e);
     }
 
+    /**
+     * Building full path
+     */
     for (final String methodBind: descriptors.keySet()) {
+
       final StringBuilder path = new StringBuilder();
+
       path.append(contextPath);
+
       if (!contextPath.endsWith("/")) {
-        path.append("/");
+        path.append('/');
       }
 
       if (name.startsWith("/")) {
@@ -90,7 +112,7 @@ public class ServiceRegistry {
       }
 
       if (!name.endsWith("/")) {
-        path.append("/");
+        path.append('/');
       }
 
       if (methodBind.startsWith("/")) {
@@ -99,35 +121,84 @@ public class ServiceRegistry {
         path.append(methodBind);
       }
 
-      final EndpointDescriptor endpointDesc = descriptors.get(methodBind);
-      final Method method = endpointDesc.method;
-      final String[] params = methodsParams.get(method).toArray(new String[methodsParams.get(method).size()]);
-      final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
-          new AsyncServerEndpoint(service, getAsyncFilters(endpointDesc.filters, methodBind), method, params) :
-          isStreamingMethod(method) ?
-              new StreamServerEndpoint(service, getStreamFilters(endpointDesc.filters, methodBind), method, params) :
-              new SyncServerEndpoint(service, getSyncFilters(endpointDesc.filters, methodBind), method, params, executorService);
+      final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptors = descriptors.get(methodBind);
+      final Map<HttpRequestMethodType, AbstractServerEndpoint> endpointsMap = new HashMap<>();
+      
+      if (endpointDescriptors.containsKey(HttpRequestMethodType.ANY) && endpointDescriptors.size() > 1) {
+        throw new RuntimeException("Cannot add more request methods for the path after defining an ANY (all) endpoint path");
+      }
 
-      endpoints.insert(path.toString(), endpoint, bindPrefix);
+      for (final Map.Entry<HttpRequestMethodType, EndpointDescriptor> endpointDescriptorEntry : endpointDescriptors.entrySet()) {
+        final EndpointDescriptor endpointDesc = endpointDescriptorEntry.getValue();
+        final Method method = endpointDesc.method;
+        final List<String> methodParamNames = methodsParams.get(method);
+
+        marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
+
+        validatePathParam(methodBind, endpointDesc, method, methodParamNames);
+
+        final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
+        final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
+                new AsyncServerEndpoint(service, getAsyncFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
+                isStreamingMethod(method) ?
+                        new StreamServerEndpoint(service, getStreamFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
+                        new SyncServerEndpoint(service, getSyncFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params, executorService);
+        endpointsMap.put(endpointDescriptorEntry.getKey(), endpoint);
+      }
+
+      endpoints.insert(path.toString(), endpointsMap, bindPrefix);
     }
   }
 
-  private static List<Method> getMethods(final Map<String, EndpointDescriptor> descriptors) {
+  private void validatePathParam(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
+    if (methodBind.contains("{")) {
+      int index = methodBind.indexOf('{');
+      int methodParamPos = 0;
+
+      while (index >= 0) {
+        final int endIndex = methodBind.indexOf('}', index);
+        final String pathParameter = methodBind.substring(index + 1, endIndex);
+
+        if (!methodParamNames.contains(pathParameter)) {
+          throw new RuntimeException("Parameter " + pathParameter + " does not exists in method signature");
+        }
+
+        if (endpointDesc.requestMethodType == HttpRequestMethodType.POST || endpointDesc.requestMethodType == HttpRequestMethodType.PUT) {
+          if (methodParamNames.indexOf(pathParameter) != methodParamPos) {
+            throw new RuntimeException("Path parameters should be in prefix when using method binding, i.e. methodName(id, name) => {id}/{name} or {id} with body of [name]");
+          }
+          methodParamPos++;
+        }
+
+        final Class paramType = method.getParameterTypes()[methodParamNames.indexOf(pathParameter)];
+
+        if (!paramType.isPrimitive() && !String.class.isAssignableFrom(paramType)) {
+          throw new RuntimeException("Path parameter " + paramType + " can be only primitive or String type");
+        }
+
+        index = methodBind.indexOf('{', endIndex);
+      }
+    }
+  }
+
+  private static List<Method> getMethods(final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors) {
     final List<Method> methods = new ArrayList<>();
-    for (EndpointDescriptor desc : descriptors.values()) {
-      methods.add(desc.method);
+    for (final Map<HttpRequestMethodType, EndpointDescriptor> descMap : descriptors.values()) {
+      for (final EndpointDescriptor desc : descMap.values()) {
+        methods.add(desc.method);
+      }
     }
 
     return methods;
   }
 
-  private static AsyncFilter[] getAsyncFilters(List<? extends ServiceFilter> filters, String methodName) {
+  private static AsyncFilter[] getAsyncFilters(final List<? extends ServiceFilter> filters, final String methodName) {
     if (filters == null)
       return null;
 
     final AsyncFilter[] result = new AsyncFilter[filters.size()];
     int index = 0;
-    for (ServiceFilter filter : filters) {
+    for (final ServiceFilter filter : filters) {
       if (filter instanceof AsyncFilter) {
         result[index++] = (AsyncFilter) filter;
       } else {
@@ -138,13 +209,13 @@ public class ServiceRegistry {
     return result;
   }
 
-  private static SyncFilter[] getSyncFilters(List<? extends ServiceFilter> filters, String methodName) {
+  private static SyncFilter[] getSyncFilters(final List<? extends ServiceFilter> filters, final String methodName) {
     if (filters == null)
       return null;
 
     final SyncFilter[] result = new SyncFilter[filters.size()];
     int index = 0;
-    for (ServiceFilter filter : filters) {
+    for (final ServiceFilter filter : filters) {
       if (filter instanceof SyncFilter) {
         result[index++] = (SyncFilter) filter;
       } else {
@@ -155,13 +226,13 @@ public class ServiceRegistry {
     return result;
   }
 
-  private static StreamFilter[] getStreamFilters(List<? extends ServiceFilter> filters, String methodName) {
+  private static StreamFilter[] getStreamFilters(final List<? extends ServiceFilter> filters, final String methodName) {
     if (filters == null)
       return null;
 
     final StreamFilter[] result = new StreamFilter[filters.size()];
     int index = 0;
-    for (ServiceFilter filter : filters) {
+    for (final ServiceFilter filter : filters) {
       if (filter instanceof StreamFilter) {
         result[index++] = (StreamFilter) filter;
       } else {
@@ -177,34 +248,32 @@ public class ServiceRegistry {
                        final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters, final boolean bindPrefix,
                        final ComposableExecutorService executorService) {
 
-    final Map<String, EndpointDescriptor> descriptors = getEndpointsDescriptor(service,
-        executorService, asyncFilters, syncFilters, streamFilters);
+    final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors = getEndpointsDescriptor(service,
+            executorService, asyncFilters, syncFilters, streamFilters);
     register(name, service, descriptors, bindPrefix, executorService);
   }
 
-  private Map<String, EndpointDescriptor> getEndpointsDescriptor(final Service service,
+  private Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> getEndpointsDescriptor(final Service service,
                                                                 final ComposableExecutorService executorService,
                                                                 final List<AsyncFilter> asyncFilters,
                                                                 final List<SyncFilter> syncFilters,
                                                                 final List<StreamFilter> streamFilters) {
 
     final Method[] methods = service.getClass().getDeclaredMethods();
-    final Map<String, EndpointDescriptor> result = new HashMap<>();
+    final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> result = new HashMap<>();
+
     for (final Method m : methods) {
       final int modifiers = m.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
         if (isAsyncMethod(m)) {
-          result.put(m.getName(), new EndpointDescriptor(m, asyncFilters));
-          marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
+          result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, asyncFilters, HttpRequestMethodType.ANY)));
         } else if (isStreamingMethod(m)) {
-          result.put(m.getName(), new EndpointDescriptor(m, streamFilters));
-          marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
+          result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, streamFilters, HttpRequestMethodType.ANY)));
         } else if (executorService != null) {
-          // a sync method with a defined executor service.
-          result.put(m.getName(), new EndpointDescriptor(m, syncFilters));
-          marshallerRegistry.registerTypes(TypeHelper.extractTypes(m));
+          // A sync method with a defined executor service.
+          result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, syncFilters, HttpRequestMethodType.ANY)));
         } else {
-          logger.info("method " + m.getName() + " wasn't bounded. sync method needs a configured executor service");
+          logger.info("Method " + m.getName() + " wasn't bounded. Sync method needs a configured executor service");
         }
       }
     }
@@ -217,14 +286,22 @@ public class ServiceRegistry {
     return result;
   }
 
-  public SortedMap<String, AbstractServerEndpoint> getRegisteredEndpoints() {
+  private Map<HttpRequestMethodType, EndpointDescriptor> singleEndpointDescToMap(final EndpointDescriptor endpointDescriptor) {
+    final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptorMap = Maps.newHashMap();
+    endpointDescriptorMap.put(HttpRequestMethodType.ANY, endpointDescriptor);
+    return endpointDescriptorMap;
+  }
+
+  public SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> getRegisteredEndpoints() {
     return endpoints.getPathToValueMapping();
   }
 
   public void logRegisteredEndpoints() {
-    for (final Map.Entry<String, AbstractServerEndpoint> endpoint : getRegisteredEndpoints().entrySet()) {
-      final AbstractServerEndpoint endpointValue = endpoint.getValue();
-      logger.info("Registered endpoint [{} ==> {}]", endpoint.getKey(), endpointValue.getTargetAsString());
+    for (final Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> pathEndpointsMap : getRegisteredEndpoints().entrySet()) {
+      for (final Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : pathEndpointsMap.getValue().entrySet()) {
+        final AbstractServerEndpoint endpointValue = endpointEntry.getValue();
+        logger.info("Registered endpoint [{} ==> {}, via method: {}]", pathEndpointsMap.getKey(), endpointValue.getTargetAsString(), endpointValue.requestMethodType);
+      }
     }
   }
 

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.*;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
@@ -42,7 +44,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   private static final byte[] HTML_NEW_LINE = "<br/>\n".getBytes(CharsetUtil.UTF_8);
   private static final byte[] HEADER = ChunkHeader.ELEMENT_HEADER.getBytes(CharsetUtil.UTF_8);
 
-  private MessagePack msgPack;
+  private final MessagePack msgPack;
 
   public MessagePackRequestMarshaller() {
     msgPack = new MessagePack();
@@ -112,7 +114,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
 
     try {
       msgPack.register(cls);
-    } catch (MessageTypeException | TemplateBuildException e) {
+    } catch (final MessageTypeException | TemplateBuildException e) {
       logger.warn("class " + cls.getName() + " is not MsgPack compatible. class must have empty constructor, all fields must be concrete and have getters and setters");
       throw e;
     }
@@ -120,17 +122,23 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
 
   @Override
   public Object[] unmarshallRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
-    final Type[] types = method.getGenericParameterTypes();
+    final Class<?>[] types = method.getParameterTypes();
     final Object[] res = new Object[types.length];
     final InputStream inputStream = request.getRequestInputStream();
     final Value rawValues = msgPack.read(inputStream);
     final Value[] values = rawValues.asArrayValue().getElementArray();
 
-    int index = 0;
-    for (final Type type : types) {
-      final Template template = msgPack.lookup(type);
-      res[index] = template.read(new Converter(msgPack, values[index]), null);
-      index++;
+    final Map<String, String> pathParams = request.getPathParams();
+    final int pathParamsSize = pathParams.size();
+
+    for (int index = 0; index < types.length; index++) {
+      final String paramName = paramNames[index];
+      if (pathParams.containsKey(paramName)) {
+        res[index] = PathParamMarshaller.unMarshell(pathParams.get(paramName), types[index]);
+      } else {
+        final Template template = msgPack.lookup(types[index]);
+        res[index] = template.read(new Converter(msgPack, values[index - pathParamsSize]), null);
+      }
     }
 
     return res;
@@ -170,10 +178,17 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   @Override
   public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final Object[] requestParams) throws IOException {
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
     final Packer packer = msgPack.createPacker(outputStream);
-    packer.writeArrayBegin(requestParams.length);
-    for (final Object param : requestParams) {
+
+    final Object[] params;
+    if (requestParams == null) {
+      params = new Object[0];
+    } else {
+      params = requestParams;
+    }
+
+    packer.writeArrayBegin(params.length);
+    for (final Object param : params) {
       packer.write(param);
     }
     packer.writeArrayEnd();
@@ -181,7 +196,18 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     final byte[] body = outputStream.toByteArray();
     requestBuilder.setBody(body);
     requestBuilder.setContentLength(body.length);
+    requestBuilder.setBodyEncoding("UTF8");
     requestBuilder.setHeader("Content-Type", ContentType.MESSAGE_PACK.requestEncoding());
+  }
+
+  @Override
+  public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final List<String> requestParamsNames,
+                                    final Object[] requestParams) throws IOException {
+    if (requestParamsNames.isEmpty()) {
+      return;
+    }
+
+    throw new UnsupportedOperationException("Cannot send msgpack serialization via get request");
   }
 
   @Override

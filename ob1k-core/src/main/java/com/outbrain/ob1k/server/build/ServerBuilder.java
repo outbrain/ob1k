@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.build;
 
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
@@ -13,7 +14,7 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
-import com.outbrain.ob1k.server.services.*;
+import com.outbrain.ob1k.server.services.EndpointMappingService;
 import com.outbrain.ob1k.server.util.ObservableBlockingQueue;
 import com.outbrain.ob1k.server.util.SyncRequestQueueObserver;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -24,7 +25,12 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -57,8 +63,8 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
 
   private ThreadPoolConfig threadPoolConfig = null;
   private BeanContext ctx;
-  private List<ServiceDescriptor> serviceDescriptors = new ArrayList<>();
-  private List<Server.Listener> listeners = new LinkedList<>();
+  private final List<ServiceDescriptor> serviceDescriptors = new ArrayList<>();
+  private final List<Server.Listener> listeners = new LinkedList<>();
 
   public static InitialPhase newBuilder() {
     return new ServerBuilder();
@@ -123,7 +129,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   }
 
   @Override
-  public ExtraParamsPhase addListener(Server.Listener listener) {
+  public ExtraParamsPhase addListener(final Server.Listener listener) {
     this.listeners.add(listener);
     return this;
   }
@@ -139,12 +145,12 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     final List<AsyncFilter> asyncFilters;
     final List<SyncFilter> syncFilters;
     final List<StreamFilter> streamFilters;
-    final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding;
+    final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding;
     final boolean bindPrefix;
 
     private ServiceDescriptor(final String name, final Service service, final List<AsyncFilter> asyncFilters,
                               final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
-                              final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding,
+                              final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding,
                               final boolean bindPrefix) {
       this.name = name;
       this.service = service;
@@ -372,7 +378,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   }
 
   @Override
-  public ExtraParamsPhase setRequestTimeout(long timeout, TimeUnit unit) {
+  public ExtraParamsPhase setRequestTimeout(final long timeout, final TimeUnit unit) {
     this.requestTimeoutMs = unit.toMillis(timeout);
     return this;
   }
@@ -402,7 +408,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     registerServices(serviceDescriptors, registry, executorService);
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
+    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
             appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
@@ -412,7 +418,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     public final Service service;
     public final String name;
     public final boolean bindPrefix;
-    private final Map<String, ServiceRegistry.EndpointDescriptor> endpointsBinding;
+    private final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding;
 
     public ServiceBuilder(final Service service, final String name, final boolean bindPrefix) {
       this.service = service;
@@ -430,13 +436,20 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
 
     @Override
     public ServiceBuilder addEndpoint(final String methodName, final String path, final ServiceFilter... filters) {
-      final List<ServiceFilter> filtersList = filters != null ? Arrays.asList(filters) : null;
-      return addEndpoint(methodName, path, filtersList);
+      return addEndpoint(HttpRequestMethodType.ANY, methodName, path, filters);
     }
 
-    private ServiceBuilder addEndpoint(final String methodName, final String path, final List<ServiceFilter> filters) {
+    @Override
+    public ServiceBuilder addEndpoint(final HttpRequestMethodType requestMethodType, final String methodName, final String path, final ServiceFilter... filters) {
+      final List<ServiceFilter> filtersList = filters != null ? Arrays.asList(filters) : null;
+      return addEndpoint(requestMethodType, methodName, path, filtersList);
+    }
+
+    private ServiceBuilder addEndpoint(final HttpRequestMethodType requestMethodType, final String methodName, final String path, final List<ServiceFilter> filters) {
       final Method[] methods = service.getClass().getDeclaredMethods();
+
       Method method = null;
+
       for (final Method m : methods) {
         if (Modifier.isPublic(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) {
           if (m.getName().equals(methodName)) {
@@ -447,35 +460,61 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
       }
 
       if (method == null) {
-        throw new RuntimeException("method: " + methodName + " not found or not proper service method");
+        throw new RuntimeException("Method: " + methodName + " was not found or is not a proper service method");
       }
 
-      endpointsBinding.put(path, new ServiceRegistry.EndpointDescriptor(method, filters));
+      final Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor> endpointDescriptors;
+
+      if (endpointsBinding.containsKey(path)) {
+        endpointDescriptors = endpointsBinding.get(path);
+      } else {
+        endpointDescriptors = new HashMap<>();
+        endpointsBinding.put(path, endpointDescriptors);
+      }
+
+      endpointDescriptors.put(requestMethodType, new ServiceRegistry.EndpointDescriptor(method, filters, requestMethodType));
+
       return this;
     }
 
     @Override
-    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path) {
-      return addEndpoint(methodName, path, new ServiceFilter[0]);
+    public ContextBasedServiceBuilderPhase addEndpoint(final String methodName, final String path) {
+      return addEndpoint(HttpRequestMethodType.ANY, methodName, path);
     }
 
     @Override
-    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path, final String ctxName, Class<? extends ServiceFilter> filterType) {
+    public ContextBasedServiceBuilderPhase addEndpoint(final HttpRequestMethodType requestMethodType, final String methodName, final String path) {
+      return addEndpoint(requestMethodType, methodName, path, new ServiceFilter[0]);
+    }
+
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(final String methodName, final String path, final String ctxName, final Class<? extends ServiceFilter> filterType) {
+      return addEndpoint(HttpRequestMethodType.ANY, methodName, path, ctxName, filterType);
+    }
+
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(final HttpRequestMethodType requestMethodType, final String methodName, final String path, final String ctxName,
+                                                       final Class<? extends ServiceFilter> filterType) {
       final ServiceFilter filter = ctx.getBean(ctxName, filterType);
-      return addEndpoint(methodName, path, filter);
+      return addEndpoint(requestMethodType, methodName, path, filter);
     }
 
     @Override
-    public ContextBasedServiceBuilderPhase addEndpoint(String methodName, String path, final String ctxName,
-                                                       List<Class<? extends ServiceFilter>> filtersType) {
+    public ContextBasedServiceBuilderPhase addEndpoint(final String methodName, final String path, final String ctxName,
+                                                       final List<Class<? extends ServiceFilter>> filtersType) {
+      return addEndpoint(HttpRequestMethodType.ANY, methodName, path, ctxName, filtersType);
+    }
 
+    @Override
+    public ContextBasedServiceBuilderPhase addEndpoint(final HttpRequestMethodType requestMethodType, final String methodName, final String path, final String ctxName,
+                                                       final List<Class<? extends ServiceFilter>> filtersType) {
       final List<ServiceFilter> filters = new ArrayList<>();
-      for (Class<? extends ServiceFilter> filterType : filtersType) {
+      for (final Class<? extends ServiceFilter> filterType : filtersType) {
         final ServiceFilter filter = ctx.getBean(ctxName, filterType);
         filters.add(filter);
       }
 
-      return addEndpoint(methodName, path, filters);
+      return addEndpoint(requestMethodType, methodName, path, filters);
     }
   }
 

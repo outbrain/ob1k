@@ -30,9 +30,9 @@ public class ServiceDispatcher {
       throws InvocationTargetException, IllegalAccessException, IOException {
 
     final String path = request.getPath();
-    final AbstractServerEndpoint endpoint = registry.findEndpoint(path, request.getPathParams());
+    final AbstractServerEndpoint endpoint = registry.findEndpoint(path, request.getMethod(), request.getPathParams());
     if (endpoint == null) {
-      throw new IllegalArgumentException("no matching service/method found for path: " + path);
+      throw new IllegalArgumentException("No matching service/method found for path: " + path);
     }
 
     callMethod(endpoint, request, handler);

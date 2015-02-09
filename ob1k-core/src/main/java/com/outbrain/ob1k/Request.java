@@ -11,7 +11,7 @@ import java.util.Map;
  * Time: 11:55 AM
  */
 public interface Request {
-  String getMethod();
+  HttpRequestMethodType getMethod();
 
   String getUri();
 

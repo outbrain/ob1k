@@ -324,8 +324,7 @@ public class BasicRpcTest {
         setProtocol(ContentType.JSON).
         addTarget("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH).
         bindEndpoint("getNextCode", "/next").
-        bindEndpoint("getRandomCode", "/random").
-        addFilter(createCachingFilter(), "getRandomCode").
+        bindEndpoint("getRandomCode", "/random", createCachingFilter()).
         build();
   }
 
@@ -342,10 +341,10 @@ public class BasicRpcTest {
     return new ClientBuilder<>(IHelloService.class).
         setProtocol(protocol).
         addFilter(new BangFilter()).
-        addFilter(new QFilter(), "helloFilter").
+        bindEndpoint("helloFilter", new QFilter()).
         setRequestTimeout(120000). // heavily loaded testing environment.
-        addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
-        build();
+            addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
+            build();
   }
 
   private final static class QFilter implements AsyncFilter<String, AsyncClientRequestContext> {

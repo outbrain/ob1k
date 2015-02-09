@@ -28,7 +28,7 @@ public abstract class AbstractClientRequestContext<Endpoint extends AbstractClie
 
   private static String createUrl(final String remoteTarget, final AbstractClientEndpoint endpoint) {
     final String methodPath = endpoint.methodPath;
-    return remoteTarget.endsWith("/") ? remoteTarget + methodPath : remoteTarget + "/" + methodPath;
+    return remoteTarget.endsWith("/") || methodPath.startsWith("/") ? remoteTarget + methodPath : remoteTarget + "/" + methodPath;
   }
 
   @Override

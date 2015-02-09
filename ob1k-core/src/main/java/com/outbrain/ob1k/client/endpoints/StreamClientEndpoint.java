@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.client.endpoints;
 
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ctx.DefaultStreamClientRequestContext;
 import com.outbrain.ob1k.client.ctx.StreamClientRequestContext;
 import com.outbrain.ob1k.client.http.HttpClient;
@@ -8,6 +9,7 @@ import com.outbrain.ob1k.common.marshalling.ContentType;
 import rx.Observable;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * Created by aronen on 6/10/14.
@@ -17,9 +19,9 @@ import java.lang.reflect.Method;
 public class StreamClientEndpoint extends AbstractClientEndpoint {
   private final StreamFilter[] filters;
 
-  public StreamClientEndpoint(final Method method, final Class serviceType, final HttpClient client,
-                             final StreamFilter[] filters, final ContentType contentType, final String methodPath) {
-    super(method, serviceType, client, contentType, methodPath);
+  public StreamClientEndpoint(final Method method, final List<String> methodParams, final Class serviceType, final HttpClient client,
+                             final StreamFilter[] filters, final ContentType contentType, final String methodPath, final HttpRequestMethodType requestMethodType) {
+    super(method, methodParams, serviceType, client, contentType, methodPath, requestMethodType);
     this.filters = filters;
   }
 
@@ -30,11 +32,23 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
       final Observable<T> result = (Observable<T>) filter.handleStream(ctx.nextPhase());
       return result;
     } else {
-      @SuppressWarnings("unchecked")
-      final Observable<T> result = client.httpPostStreaming(ctx.getUrl(), getResType(), ctx.getParams(), contentType.requestEncoding());
+      final Observable<T> result;
+      switch (requestMethodType) {
+        case GET:
+          result = client.httpGetStreaming(ctx.getUrl(), getResType(), contentType.requestEncoding(), methodParamNames, ctx.getParams());
+          break;
+        case PUT:
+          result = client.httpPutStreaming(ctx.getUrl(), getResType(), ctx.getParams(), contentType.requestEncoding());
+          break;
+        case DELETE:
+          result = client.httpDeleteStreaming(ctx.getUrl(), getResType(), contentType.requestEncoding(), methodParamNames, ctx.getParams());
+          break;
+        case POST:
+        default:
+          result = client.httpPostStreaming(ctx.getUrl(), getResType(), ctx.getParams(), contentType.requestEncoding());
+      }
       return result;
     }
-
   }
 
   @Override
@@ -42,5 +56,4 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
     final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
     return invokeStream(ctx);
   }
-
 }

@@ -15,9 +15,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-
 
 /**
  * User: aronen
@@ -128,6 +128,27 @@ public class HttpClient implements Closeable {
         }
       }
     });
+  }
+
+  public ComposableFuture httpGet(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
+                                         final Object[] params) {
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames,
+              params, contentType);
+      final ListenableFuture<Response> future = requestBuilder.execute();
+      return ComposableFutureAdaptor.fromListenableFuture(future).continueOnSuccess(new SuccessHandler<Response,Object>() {
+        @Override
+        public Object handle(final Response response) throws ExecutionException {
+          try {
+            return builder.unmarshallResponse(response, respType);
+          } catch (final IOException e) {
+            throw new ExecutionException(e.getMessage(), e);
+          }
+        }
+      });
+    } catch (final IOException e) {
+      return ComposableFutures.fromError(e);
+    }
   }
 
   public <T> ComposableFuture<T> httpGet(final String url, final Class<T> respType) {
@@ -278,6 +299,50 @@ public class HttpClient implements Closeable {
     });
   }
 
+  public ComposableFuture httpPut(final String url, final Type respType, final Object[] params, final String contentType) {
+    final ComposableFuture<Response> result;
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+              builder.buildPutRequestWithParams(asyncHttpClient, url, contentType, params);
+      final ListenableFuture<Response> future = requestBuilder.execute();
+      result = ComposableFutureAdaptor.fromListenableFuture(future);
+    } catch (final IOException e) {
+      return ComposableFutures.fromError(e);
+    }
+
+    return result.continueOnSuccess(new SuccessHandler<Response, Object>() {
+      @Override
+      public Object handle(final Response response) throws ExecutionException {
+        try {
+          return builder.unmarshallResponse(response, respType);
+        } catch (final IOException e) {
+          throw new ExecutionException(e);
+        }
+      }
+    });
+  }
+
+  public ComposableFuture httpDelete(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
+                                            final Object[] params) {
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames,
+              params, contentType);
+      final ListenableFuture<Response> future = requestBuilder.execute();
+      return ComposableFutureAdaptor.fromListenableFuture(future).continueOnSuccess(new SuccessHandler<Response,Object>() {
+        @Override
+        public Object handle(final Response response) throws ExecutionException {
+          try {
+            return builder.unmarshallResponse(response, respType);
+          } catch (final IOException e) {
+            throw new ExecutionException(e.getMessage(), e);
+          }
+        }
+      });
+    } catch (final IOException e) {
+      return ComposableFutures.fromError(e);
+    }
+  }
+
   public Observable httpPostStreaming(final String url, final Type respType, final Object[] params, final String contentType) {
     try {
       final AsyncHttpClient.BoundRequestBuilder requestBuilder =
@@ -286,6 +351,50 @@ public class HttpClient implements Closeable {
       final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
       requestBuilder.execute(handler);
 
+      return result;
+    } catch (final IOException e) {
+      return Observable.error(e);
+    }
+  }
+
+  public Observable httpGetStreaming(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
+                                         final Object[] params) {
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames,
+              params, contentType);
+
+      final PublishSubject<Object> result = PublishSubject.create();
+      final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
+      requestBuilder.execute(handler);
+      return result;
+    } catch (final IOException e) {
+      return Observable.error(e);
+    }
+  }
+
+  public Observable httpPutStreaming(final String url, final Type respType, final Object[] params, final String contentType) {
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+              builder.buildPutRequestWithParams(asyncHttpClient, url, contentType, params);
+      final PublishSubject<Object> result = PublishSubject.create();
+      final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
+      requestBuilder.execute(handler);
+
+      return result;
+    } catch (final IOException e) {
+      return Observable.error(e);
+    }
+  }
+
+  public Observable httpDeleteStreaming(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
+                                     final Object[] params) {
+    try {
+      final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames,
+              params, contentType);
+
+      final PublishSubject<Object> result = PublishSubject.create();
+      final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
+      requestBuilder.execute(handler);
       return result;
     } catch (final IOException e) {
       return Observable.error(e);

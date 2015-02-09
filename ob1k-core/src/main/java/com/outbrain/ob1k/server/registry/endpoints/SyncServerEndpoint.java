@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.registry.endpoints;
 
 import com.google.common.base.Preconditions;
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.concurrent.ComposableExecutorService;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -22,9 +23,9 @@ public class SyncServerEndpoint extends AbstractServerEndpoint {
   private final ComposableExecutorService executorService;
   public final SyncFilter[] filters;
 
-  public SyncServerEndpoint(final Service service, final SyncFilter[] filters, final Method method,
+  public SyncServerEndpoint(final Service service, final SyncFilter[] filters, final Method method, final HttpRequestMethodType requestMethodType,
                             final String[] paramNames, final ComposableExecutorService executorService) {
-    super(service, method, paramNames);
+    super(service, method, requestMethodType, paramNames);
     this.executorService = Preconditions.checkNotNull(executorService, "executorService must not be null");
     this.filters = filters;
   }

@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.netty;
 
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -44,8 +45,8 @@ public class NettyRequest implements Request {
   }
 
   @Override
-  public String getMethod() {
-    return inner.getMethod().name();
+  public HttpRequestMethodType getMethod() {
+    return HttpRequestMethodType.valueOf(inner.getMethod().name());
   }
 
   @Override
