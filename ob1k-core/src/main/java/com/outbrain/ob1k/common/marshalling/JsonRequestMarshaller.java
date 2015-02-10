@@ -201,7 +201,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
       }
     } else {
       // string contains just a single object read it completely and finish.
-      final Object param = mapper.readValue(json, getJacksonType(types[0]));
+      final Object param = mapper.readValue(json, getJacksonType(types[index]));
       results.add(param);
     }
 
