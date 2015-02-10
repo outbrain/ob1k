@@ -29,13 +29,19 @@
 
   <developers>
     <developer>
+      <name>Asy Ronen</name>
+      <url>http://il.linkedin.com/in/asyronen</url>
+      <email>aronen@outbrain.com</email>
+    </developer>
+    <developer>
       <name>Eran Harel</name>
       <url>http://il.linkedin.com/pub/eran-harel/4/4a3/234/</url>
       <email>eran@outbrain.com</email>
     </developer>
     <developer>
-      <name>Asy Ronen</name>
-      <url>http://il.linkedin.com/in/asyronen</url>
+      <name>Michael Arenzon</name>
+      <url>https://linkedin.com/in/arenzon</url>
+      <email>marenzon@outbrain.com</email>
     </developer>
   </developers>
 
