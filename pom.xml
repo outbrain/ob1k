@@ -54,6 +54,7 @@
     <module>ob1k-cache</module>
     <module>ob1k-db</module>
     <module>ob1k-cql</module>
+    <module>ob1k-example</module>
   </modules>
 
   <properties>
