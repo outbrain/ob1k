@@ -157,9 +157,9 @@ public class JsonRequestMarshaller implements RequestMarshaller {
       if (param == null) {
         param = request.getPathParam(paramName);
       }
-      final Class currentType = (Class) types[index];
+      final Type currentType = types[index];
       if (param == null) {
-        if (currentType.isPrimitive()) {
+        if (currentType instanceof Class && ((Class)currentType).isPrimitive()) {
           throw new IOException("Parameter " + paramName + " is primitive and cannot be null");
         }
         result[index] = null;
