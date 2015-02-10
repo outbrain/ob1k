@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.registry;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.SortedMap;
 
 import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
+import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.concurrent.ComposableExecutorService;
@@ -123,7 +125,7 @@ public class ServiceRegistry {
 
       final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptors = descriptors.get(methodBind);
       final Map<HttpRequestMethodType, AbstractServerEndpoint> endpointsMap = new HashMap<>();
-      
+
       if (endpointDescriptors.containsKey(HttpRequestMethodType.ANY) && endpointDescriptors.size() > 1) {
         throw new RuntimeException("Cannot add more request methods for the path after defining an ANY (all) endpoint path");
       }
@@ -135,7 +137,7 @@ public class ServiceRegistry {
 
         marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
 
-        validatePathParam(methodBind, endpointDesc, method, methodParamNames);
+        validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 
         final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
         final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
@@ -150,7 +152,14 @@ public class ServiceRegistry {
     }
   }
 
-  private void validatePathParam(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
+  private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
+    final Class<?>[] parameterTypes = method.getParameterTypes();
+    if (parameterTypes.length == 1 && parameterTypes[0] == Request.class) {
+      return;
+    }
+    if (Arrays.asList(parameterTypes).contains(Request.class)) {
+      throw new RuntimeException("You can't get more objects in your method signature if requesting Request object");
+    }
     if (methodBind.contains("{")) {
       int index = methodBind.indexOf('{');
       int methodParamPos = 0;
@@ -170,7 +179,7 @@ public class ServiceRegistry {
           methodParamPos++;
         }
 
-        final Class paramType = method.getParameterTypes()[methodParamNames.indexOf(pathParameter)];
+        final Class paramType = parameterTypes[methodParamNames.indexOf(pathParameter)];
 
         if (!paramType.isPrimitive() && !String.class.isAssignableFrom(paramType)) {
           throw new RuntimeException("Path parameter " + paramType + " can be only primitive or String type");
