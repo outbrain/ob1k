@@ -6,11 +6,11 @@ To start the service, open the example via your favorite IDE and run "RestServer
 As you may see in RestServer, we have the following bindings:
 
 ```java
-builder.addEndpoint(**HttpRequestMethodType.GET**, "getAll", "/");
-builder.addEndpoint(**HttpRequestMethodType.GET**, "fetchUser", "/{id}");
-builder.addEndpoint(**HttpRequestMethodType.POST**, "updateUser", "/{id}");
-builder.addEndpoint(**HttpRequestMethodType.DELETE**, "deleteUser", "/{id}");
-builder.addEndpoint(**HttpRequestMethodType.PUT**, "createUser", "/");
+builder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
+builder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
+builder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
+builder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
+builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
 ```
 
 Each addEndpoint describes its path (i.e. for getAll, it's "/") with its method inside the service class
