@@ -16,6 +16,7 @@ builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
 Each addEndpoint describes its path (i.e. for getAll, it's "/") with its method inside the service class
 and with the http method type. This example shows you how to register different http method types on the same uri
 path, with an usage of path params.
+
 **Note**: Defining the http method type is not required, calling just addEndpoint without the method will lead
 to a default method of ANY - which means that the method doesn't care about its request method type.
 
@@ -23,6 +24,7 @@ to a default method of ANY - which means that the method doesn't care about its 
 Having the following method signature: `updateUser(final int id, final User userData)` bounded to the path: `/{id}`
 We see that the method receives its id from the path param, while the User object (after the un-marshalling) comes in the request body.
 This behavior basically gives us the ability of expressing of **which** resource we're updating, with **what** data.
+
 **Important note**: When using path params in POST or PUT, each path param should always be in the beginning of your method signature, else you'll be having
 exceptions in your ServiceBuilder. That means if your path looks like: `/hello/{world}`, the method bounded to it should look like `hello(String world, String moreData)`
 
