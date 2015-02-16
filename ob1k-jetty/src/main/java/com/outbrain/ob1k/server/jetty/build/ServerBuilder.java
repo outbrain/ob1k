@@ -24,6 +24,7 @@ public class ServerBuilder {
   protected String applicationName;
   protected String logDirectory;
   private Integer setMaxFormSize;
+  private int accessLogsRetainDays;
 
   public ServerBuilder configurationPorts(final int httpPort, final Integer securePort) {
     this.port = httpPort;
@@ -64,7 +65,12 @@ public class ServerBuilder {
   }
 
   public ServerBuilder enableAccessLog() {
+    return enableAccessLog(30);
+  }
+
+  public ServerBuilder enableAccessLog(final int accessLogsRetainDays) {
     this.accessLogEnabled = true;
+    this.accessLogsRetainDays = accessLogsRetainDays;
     return this;
   }
 
@@ -101,7 +107,8 @@ public class ServerBuilder {
   public Server build() {
     final String accessLogsDirectory = accessLogEnabled ? logDirectory : null;
     return new JettyServer(applicationName, port, sslContext, contextPath, maxThreads, httpConnectorIdleTimeout,
-        requestTimeoutMillis, setMaxFormSize, accessLogsDirectory, compressionEnabled, staticRootResourcesBase,
+        requestTimeoutMillis, setMaxFormSize, accessLogsDirectory,
+            accessLogsRetainDays, compressionEnabled, staticRootResourcesBase,
         metricFactory);
   }
 

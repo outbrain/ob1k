@@ -72,11 +72,13 @@ public class JettyServer implements Server {
 
   public JettyServer(final String applicationName, final int httpPort, final SslContext sslContext, final String contextPath,
                      final int maxThreads, final Long httpConnectorIdleTimeout, final Long requestTimeoutMillis,
-                     final Integer maxFormSize, final String accessLogsDirectory, final boolean compressionEnabled,
+                     final Integer maxFormSize, final String accessLogsDirectory, int accessLogsRetainDays, final boolean compressionEnabled,
                      final String staticRootResourcesBase, final MetricFactory metricFactory) {
 
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.applicationName = applicationName;
+
+
     this.metricFactory = Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
     this.maxFormSize = maxFormSize;
     webAppContext = initWebAppContext(contextPath);
@@ -90,7 +92,7 @@ public class JettyServer implements Server {
     httpConnector = initHttpConnector(httpPort, httpConnectorIdleTimeout);
     httpSecureConnector = initHttpSecureConnector(sslContext);
 
-    initWebHandlers(accessLogsDirectory, staticRootResourcesBase, requestTimeoutMillis);
+    initWebHandlers(accessLogsDirectory, accessLogsRetainDays, staticRootResourcesBase, requestTimeoutMillis);
     initCompression(compressionEnabled);
 
     initSessionIdManager();
@@ -110,7 +112,7 @@ public class JettyServer implements Server {
     return httpConfiguration;
   }
 
-  private void initWebHandlers(final String accessLogsDirectory, final String staticRootResourcesBase, final Long requestTimeoutMillis) {
+  private void initWebHandlers(final String accessLogsDirectory, int accessLogsRetainDays, final String staticRootResourcesBase, final Long requestTimeoutMillis) {
     final HandlerCollection handlers = new HandlerCollection();
 
     final ContextHandlerCollection contextHandler = new ContextHandlerCollection();
@@ -121,7 +123,7 @@ public class JettyServer implements Server {
     contextHandler.setHandlers(handlersArray);
     handlers.addHandler(contextHandler);
 
-    final Handler accessLogHandler = initAccessLog(accessLogsDirectory);
+    final Handler accessLogHandler = initAccessLog(accessLogsDirectory, accessLogsRetainDays);
     if (accessLogHandler != null) {
       handlers.addHandler(accessLogHandler);
     }
@@ -150,7 +152,7 @@ public class JettyServer implements Server {
     return context;
   }
 
-  private Handler initAccessLog(final String accessLogsDirectory) {
+  private Handler initAccessLog(final String accessLogsDirectory, int retainDays) {
     if (null == accessLogsDirectory) {
       log.info("Access log is disabled.");
       return null;
@@ -161,7 +163,7 @@ public class JettyServer implements Server {
     final NCSARequestLog requestLog = new NCSARequestLog();
     requestLog.setFilename(accessLogsDirectory + "/access_log.yyyy_mm_dd.txt");
     requestLog.setFilenameDateFormat("yyyy_MM_dd");
-    requestLog.setRetainDays(90);
+    requestLog.setRetainDays(retainDays);
     requestLog.setAppend(true);
     requestLog.setExtended(true);
     requestLog.setLogCookies(true);
