@@ -1,8 +1,6 @@
 package com.outbrain.ob1k.cache.memcache;
 
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.*;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.internal.*;
@@ -18,124 +16,159 @@ import java.util.concurrent.Future;
  * Time: 11:34 AM
  */
 public class SpyFutureHelper {
-  public static <T> ComposableFuture<T> fromGet(final Future<Object> source) {
-    final GetFuture<Object> realFuture = (GetFuture<Object>) source;
-    final ComposablePromise<T> res = ComposableFutures.newPromise();
-    realFuture.addListener(new GetCompletionListener() {
+  public static interface GetFutureProducer<T> {
+    Future<T> createFuture();
+  }
+
+  public static <T> ComposableFuture<T> fromGet(final GetFutureProducer<T> source) {
+    return ComposableFutures.build(new Producer<T>() {
       @Override
-      public void onComplete(final GetFuture<?> future) throws Exception {
+      public void produce(final Consumer<T> consumer) {
         try {
-          @SuppressWarnings("unchecked")
-          final T value = (T) source.get();
-          res.set(value);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() == null ? e : e.getCause());
+          final GetFuture<T> realFuture = (GetFuture<T>) source.createFuture();
+          realFuture.addListener(new GetCompletionListener() {
+            @Override
+            public void onComplete(final GetFuture<?> future) throws Exception {
+              try {
+                final T value = realFuture.get();
+                consumer.consume(Try.fromValue(value));
+              } catch (final InterruptedException e) {
+                consumer.consume(Try.<T>fromError(e));
+              } catch (final ExecutionException e) {
+                consumer.consume(Try.<T>fromError(e.getCause() == null ? e : e.getCause()));
+              } catch (final Exception e) {
+                consumer.consume(Try.<T>fromError(e));
+              }
+            }
+          });
         } catch (final Exception e) {
-          res.setException(e);
+          consumer.consume(Try.<T>fromError(e));
         }
       }
     });
-
-    return res;
   }
 
-  public static <T> ComposableFuture<CASValue<T>> fromCASValue(final Future<CASValue<Object>> source) {
-    final OperationFuture<CASValue<Object>> realFuture = (OperationFuture<CASValue<Object>>) source;
-    final ComposablePromise<CASValue<T>> res = ComposableFutures.newPromise();
-    realFuture.addListener(new OperationCompletionListener() {
-      @Override
-      public void onComplete(final OperationFuture<?> future) throws Exception {
-        try {
-          @SuppressWarnings("unchecked")
-          final CASValue<T> value = (CASValue<T>) source.get();
-          res.set(value);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() == null ? e : e.getCause());
-        } catch (final Exception e) {
-          res.setException(e);
-        }
-      }
-    });
-
-    return res;
+  public static interface CASValueFutureProducer<T> {
+    Future<CASValue<T>> createFuture();
   }
 
-  public static ComposableFuture<CASResponse> fromCASResponse(final Future<CASResponse> source) {
-    final OperationFuture<CASResponse> realFuture = (OperationFuture<CASResponse>) source;
-    final ComposablePromise<CASResponse> res = ComposableFutures.newPromise();
-    realFuture.addListener(new OperationCompletionListener() {
+  public static <T> ComposableFuture<CASValue<T>> fromCASValue(final CASValueFutureProducer<T> source) {
+    return ComposableFutures.build(new Producer<CASValue<T>>() {
       @Override
-      public void onComplete(final OperationFuture<?> future) throws Exception {
-        try {
-          final CASResponse casResponse = source.get();
-          res.set(casResponse);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() == null ? e : e.getCause());
-        } catch (final Exception e) {
-          res.setException(e);
-        }
-      }
-    });
-
-    return res;
-  }
-
-  public static <K, V> ComposableFuture<Map<K, V>> fromBulkGet(final BulkFuture<Map<String, Object>> source, final Map<String, K> keysMap) {
-    final BulkGetFuture<Object> realFuture = (BulkGetFuture<Object>) source;
-    final ComposablePromise<Map<K, V>> res = ComposableFutures.newPromise();
-    realFuture.addListener(new BulkGetCompletionListener() {
-      @Override
-      public void onComplete(final BulkGetFuture<?> future) throws Exception {
-        try {
-          @SuppressWarnings("unchecked")
-          final Map<String, Object> values = source.get();
-          final HashMap<K, V> translatedValues = new HashMap<>();
-          for (final String key : values.keySet()) {
-            @SuppressWarnings("unchecked")
-            final V value = (V) values.get(key);
-            translatedValues.put(keysMap.get(key), value);
+      public void produce(final Consumer<CASValue<T>> consumer) {
+        final OperationFuture<CASValue<T>> realFuture = (OperationFuture<CASValue<T>>) source.createFuture();
+        realFuture.addListener(new OperationCompletionListener() {
+          @Override
+          public void onComplete(final OperationFuture<?> future) throws Exception {
+            try {
+              @SuppressWarnings("unchecked")
+              final CASValue<T> value = realFuture.get();
+              consumer.consume(Try.fromValue(value));
+            } catch (final InterruptedException e) {
+              consumer.consume(Try.<CASValue<T>>fromError(e));
+            } catch (final ExecutionException e) {
+              consumer.consume(Try.<CASValue<T>>fromError(e.getCause() == null ? e : e.getCause()));
+            } catch (final Exception e) {
+              consumer.consume(Try.<CASValue<T>>fromError(e));
+            }
           }
-
-          res.set(translatedValues);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() == null ? e : e.getCause());
-        } catch (final Exception e) {
-          res.setException(e);
-        }
+        });
       }
     });
-
-    return res;
   }
 
-  public static ComposableFuture<Boolean> fromOperation(final Future<Boolean> source) {
-    final OperationFuture<Boolean> realFuture = (OperationFuture<Boolean>) source;
-    final ComposablePromise<Boolean> res = ComposableFutures.newPromise();
-    realFuture.addListener(new OperationCompletionListener() {
+  public static interface CASFutureProducer {
+    Future<CASResponse> createFuture();
+  }
+
+  public static ComposableFuture<CASResponse> fromCASResponse(final CASFutureProducer source) {
+    return ComposableFutures.build(new Producer<CASResponse>() {
       @Override
-      public void onComplete(final OperationFuture<?> future) throws Exception {
+      public void produce(final Consumer<CASResponse> consumer) {
+        final OperationFuture<CASResponse> realFuture = (OperationFuture<CASResponse>) source.createFuture();
+        realFuture.addListener(new OperationCompletionListener() {
+          @Override
+          public void onComplete(final OperationFuture<?> future) throws Exception {
+            try {
+              final CASResponse casResponse = realFuture.get();
+              consumer.consume(Try.fromValue(casResponse));
+            } catch (final InterruptedException e) {
+              consumer.consume(Try.<CASResponse>fromError(e));
+            } catch (final ExecutionException e) {
+              consumer.consume(Try.<CASResponse>fromError(e.getCause() == null ? e : e.getCause()));
+            } catch (final Exception e) {
+              consumer.consume(Try.<CASResponse>fromError(e));
+            }
+          }
+        });
+      }
+    });
+  }
+
+  public static interface BulkGetFutureProducer<V> {
+    BulkFuture<Map<String, V>> createFuture();
+  }
+
+  public static <K, V> ComposableFuture<Map<K, V>> fromBulkGet(final BulkGetFutureProducer<V> source, final Map<String, K> keysMap) {
+    return ComposableFutures.build(new Producer<Map<K, V>>() {
+      @Override
+      public void produce(final Consumer<Map<K, V>> consumer) {
+        final BulkGetFuture<V> realFuture = (BulkGetFuture<V>) source.createFuture();
+        realFuture.addListener(new BulkGetCompletionListener() {
+          @Override
+          public void onComplete(final BulkGetFuture<?> future) throws Exception {
+            try {
+              final Map<String, V> values = realFuture.get();
+              final Map<K, V> translatedValues = new HashMap<>();
+              for (final String key : values.keySet()) {
+                final V value = values.get(key);
+                translatedValues.put(keysMap.get(key), value);
+              }
+
+              consumer.consume(Try.fromValue(translatedValues));
+            } catch (final InterruptedException e) {
+              consumer.consume(Try.<Map<K, V>>fromError(e));
+            } catch (final ExecutionException e) {
+              consumer.consume(Try.<Map<K, V>>fromError(e.getCause() == null ? e : e.getCause()));
+            } catch (final Exception e) {
+              consumer.consume(Try.<Map<K, V>>fromError(e));
+            }
+          }
+        });
+      }
+    });
+  }
+
+  public static interface OperationFutureProducer {
+    Future<Boolean> createFuture();
+  }
+
+  public static ComposableFuture<Boolean> fromOperation(final OperationFutureProducer source) {
+    return ComposableFutures.build(new Producer<Boolean>() {
+      @Override
+      public void produce(final Consumer<Boolean> consumer) {
         try {
-          final Boolean value = source.get();
-          res.set(value);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() == null ? e : e.getCause());
+          final OperationFuture<Boolean> realFuture = (OperationFuture<Boolean>) source.createFuture();
+          realFuture.addListener(new OperationCompletionListener() {
+            @Override
+            public void onComplete(final OperationFuture<?> future) throws Exception {
+              try {
+                final Boolean value = realFuture.get();
+                consumer.consume(Try.fromValue(value));
+              } catch (final InterruptedException e) {
+                consumer.consume(Try.<Boolean>fromError(e));
+              } catch (final ExecutionException e) {
+                consumer.consume(Try.<Boolean>fromError(e.getCause() == null ? e : e.getCause()));
+              } catch (final Exception e) {
+                consumer.consume(Try.<Boolean>fromError(e));
+              }
+            }
+          });
         } catch (final Exception e) {
-          res.setException(e);
+          consumer.consume(Try.<Boolean>fromError(e));
         }
       }
     });
-
-    return res;
   }
 
 }

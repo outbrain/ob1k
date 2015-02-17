@@ -53,14 +53,19 @@ public class BasicDaoQueryTest {
     final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
     final ComposableFuture<List<Map<String, Object>>> deployments = dao.list("select id,archived, source from Deployments");
 
-    deployments.onSuccess(new OnSuccessHandler<List<Map<String, Object>>>() {
+    deployments.consume(new Consumer<List<Map<String,Object>>>() {
       @Override
-      public void handle(final List<Map<String, Object>> results) {
-        int index = 0;
-        for (final Map<String, Object> line: results) {
-          System.out.println("row " + index++);
-          for (final String column : line.keySet()) {
-            System.out.println(" column: " + column + " value: " + line.get(column));
+      public void consume(final Try<List<Map<String, Object>>> results) {
+        if (!results.isSuccess()) {
+          System.out.println("got error: ");
+          results.getError().printStackTrace();
+        } else {
+          int index = 0;
+          for (final Map<String, Object> line : results.getValue()) {
+            System.out.println("row " + index++);
+            for (final String column : line.keySet()) {
+              System.out.println(" column: " + column + " value: " + line.get(column));
+            }
           }
         }
       }
@@ -81,18 +86,22 @@ public class BasicDaoQueryTest {
     final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
     final ComposableFuture<List<Deployment>> deployments = dao.list("select id,modulesRevision,archived,source,status from Deployments WHERE id >= 0", new DeploymentMapper());
 
-    deployments.onSuccess(new OnSuccessHandler<List<Deployment>>() {
+    deployments.consume(new Consumer<List<Deployment>>() {
       @Override
-      public void handle(final List<Deployment> results) {
-        int index = 0;
-        for (final Deployment line: results) {
-          System.out.println("row " + index++);
-          System.out.println(" id: " + line.id);
-          System.out.println(" source: " + line.source);
-          System.out.println(" status: " + line.status);
-          System.out.println(" archived: " + line.archived);
-          System.out.println(" modulesRevision: " + line.modulesRevision);
-          System.out.println(" fakeBool: " + line.fakeBool);
+      public void consume(final Try<List<Deployment>> results) {
+        if (!results.isSuccess()) {
+          results.getError().printStackTrace();
+        } else {
+          int index = 0;
+          for (final Deployment line : results.getValue()) {
+            System.out.println("row " + index++);
+            System.out.println(" id: " + line.id);
+            System.out.println(" source: " + line.source);
+            System.out.println(" status: " + line.status);
+            System.out.println(" archived: " + line.archived);
+            System.out.println(" modulesRevision: " + line.modulesRevision);
+            System.out.println(" fakeBool: " + line.fakeBool);
+          }
         }
       }
     });
@@ -111,18 +120,22 @@ public class BasicDaoQueryTest {
   public void testListWithMapping() throws ExecutionException, InterruptedException {
     final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
     final ComposableFuture<List<Deployment>> deployments = dao.list("select * from Deployments", new DeploymentMapper());
-    deployments.onSuccess(new OnSuccessHandler<List<Deployment>>() {
+    deployments.consume(new Consumer<List<Deployment>>() {
       @Override
-      public void handle(final List<Deployment> results) {
-        int index = 0;
-        for (final Deployment line: results) {
-          System.out.println("row " + index++);
-          System.out.println(" id: " + line.id);
-          System.out.println(" source: " + line.source);
-          System.out.println(" status: " + line.status);
-          System.out.println(" archived: " + line.archived);
-          System.out.println(" modulesRevision: " + line.modulesRevision);
-          System.out.println(" fakeBool: " + line.fakeBool);
+      public void consume(final Try<List<Deployment>> results) {
+        if (!results.isSuccess()) {
+          results.getError().printStackTrace();
+        } else {
+          int index = 0;
+          for (final Deployment line : results.getValue()) {
+            System.out.println("row " + index++);
+            System.out.println(" id: " + line.id);
+            System.out.println(" source: " + line.source);
+            System.out.println(" status: " + line.status);
+            System.out.println(" archived: " + line.archived);
+            System.out.println(" modulesRevision: " + line.modulesRevision);
+            System.out.println(" fakeBool: " + line.fakeBool);
+          }
         }
       }
     });
@@ -141,10 +154,14 @@ public class BasicDaoQueryTest {
   public void testSimpleUpdateQuery() throws ExecutionException, InterruptedException {
     final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
     final ComposableFuture<Long> rowsEffected = dao.execute("update Deployments set SOURCE = concat('*', SOURCE) where id = 1");
-    rowsEffected.onSuccess(new OnSuccessHandler<Long>() {
+    rowsEffected.consume(new Consumer<Long>() {
       @Override
-      public void handle(final Long rows) {
-        System.out.println(rows + " rows were effected.");
+      public void consume(final Try<Long> rows) {
+        if (rows.isSuccess()) {
+          System.out.println(rows.getValue() + " rows were effected.");
+        } else {
+          rows.getError().printStackTrace();
+        }
       }
     });
 
@@ -237,5 +254,16 @@ public class BasicDaoQueryTest {
       dao.shutdown();
     }
 
+  }
+
+  @Test
+  public void testBadQuery() throws Exception {
+    final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+    try {
+      dao.list("select * from bad_table_name").get();
+    } catch (final ExecutionException e) {
+      final String message = e.getCause().getMessage();
+      System.out.println("message: " + message);
+    }
   }
 }

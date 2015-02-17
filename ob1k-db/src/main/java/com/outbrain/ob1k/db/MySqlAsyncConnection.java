@@ -9,7 +9,6 @@ import com.github.mauricio.async.db.util.NettyUtils;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
@@ -18,9 +17,10 @@ import scala.Some;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -44,7 +44,8 @@ public class MySqlAsyncConnection {
     final Option<String> empty = Option.apply(null);
     final Option<String> dbOption = database != null ? new Some<>(database) : empty;
     final Option<String> passOption = password != null ? new Some<>(password) : empty;
-    return new Configuration(userName, host, port, passOption, dbOption, CharsetUtil.UTF_8, 16777216, PooledByteBufAllocator.DEFAULT);
+    return new Configuration(userName, host, port, passOption, dbOption, CharsetUtil.UTF_8, 16777216,
+        PooledByteBufAllocator.DEFAULT, Duration.apply(2, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS));
   }
 
   MySQLConnection getInnerConnection() {
@@ -52,12 +53,22 @@ public class MySqlAsyncConnection {
   }
 
   public ComposableFuture<QueryResult> sendQuery(final String query) {
-    return ScalaFutureHelper.from(conn.sendQuery(query));
+    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
+      @Override
+      public Future<QueryResult> provide() {
+        return conn.sendQuery(query);
+      }
+    });
   }
 
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
     final Buffer<Object> scalaValues = JavaConversions.asScalaBuffer(values);
-    return ScalaFutureHelper.from(conn.sendPreparedStatement(query, scalaValues));
+    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
+      @Override
+      public Future<QueryResult> provide() {
+        return conn.sendPreparedStatement(query, scalaValues);
+      }
+    });
   }
 
   public ComposableFuture<MySqlAsyncConnection> connect() {
@@ -65,11 +76,16 @@ public class MySqlAsyncConnection {
       return ComposableFutures.fromValue(this);
     }
 
-    final Future<Connection> connectedConn = conn.connect();
-    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(connectedConn);
-    return composableFuture.continueWith(new ResultHandler<Connection, MySqlAsyncConnection>() {
+    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<Connection>() {
       @Override
-      public MySqlAsyncConnection handle(final ComposableFuture<Connection> result) throws ExecutionException {
+      public Future<Connection> provide() {
+        return conn.connect();
+      }
+    });
+
+    return composableFuture.continueOnSuccess(new SuccessHandler<Connection, MySqlAsyncConnection>() {
+      @Override
+      public MySqlAsyncConnection handle(final Connection result) {
         final MySQLConnection connection = (MySQLConnection) result;
         if (connection == conn) {
           return MySqlAsyncConnection.this;
@@ -98,11 +114,16 @@ public class MySqlAsyncConnection {
   }
 
   public ComposableFuture<MySqlAsyncConnection> disconnect() {
-    final Future<Connection> connectedConn = conn.disconnect();
-    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(connectedConn);
+    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<Connection>() {
+      @Override
+      public Future<Connection> provide() {
+        return conn.disconnect();
+      }
+    });
+
     return composableFuture.continueOnSuccess(new SuccessHandler<Connection, MySqlAsyncConnection>() {
       @Override
-      public MySqlAsyncConnection handle(final Connection result) throws ExecutionException {
+      public MySqlAsyncConnection handle(final Connection result) {
         final MySQLConnection connection = (MySQLConnection) result;
         if (connection == conn) {
           return MySqlAsyncConnection.this;

@@ -16,10 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
@@ -31,6 +28,8 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromTry;
 
 /**
  * Created by guyk on 7/9/14
@@ -97,12 +96,41 @@ public class CqlSession {
   private ComposableFuture<ResultSet> executeImpl(final Statement statement, final List<TagMetrics> tagMetrics) {
     statement.setRetryPolicy(new RetryPolicyWithMetrics(retryPolicy, tagMetrics));
     final Iterable<Timer.Context> timerContexts = measureOnStart(tagMetrics);
-    final ResultSetFuture resultSetFuture = session.executeAsync(statement);
-    return fromListenableFuture(resultSetFuture, tagMetrics).continueWith(new FutureResultHandler<ResultSet, ResultSet>() {
+    return ComposableFutures.build(new Producer<ResultSet>() {
       @Override
-      public ComposableFuture<ResultSet> handle(final ComposableFuture<ResultSet> result) {
+      public void produce(final Consumer<ResultSet> consumer) {
+        final ResultSetFuture resultSetFuture = session.executeAsync(statement);
+
+        resultSetFuture.addListener(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              final ResultSet result = resultSetFuture.get();
+              consumer.consume(Try.fromValue(result));
+            } catch (final InterruptedException e) {
+              Thread.currentThread().interrupt();
+              consumer.consume(Try.<ResultSet>fromError(e));
+            } catch (final ExecutionException e) {
+              final Throwable finalCause = Exceptions.getFinalCause(e);
+              if (finalCause instanceof NoHostAvailableException) {
+                final String tags = Joiner.on(',').join(tagMetrics);
+                final Map<InetSocketAddress, Throwable> errorsPerHost = ((NoHostAvailableException) finalCause).getErrors();
+                for (final Map.Entry<InetSocketAddress, Throwable> entry : errorsPerHost.entrySet()) {
+                  logger.error("host " + entry.getKey() + " failed to perform statement " + tags + ": " +
+                      entry.getValue().getMessage(), entry.getValue().getMessage());
+                }
+              }
+
+              consumer.consume(Try.<ResultSet>fromError(e.getCause() != null ? e.getCause() : e));
+            }
+          }
+        }, ComposableFutures.getExecutor());
+      }
+    }).continueWith(new FutureResultHandler<ResultSet, ResultSet>() {
+      @Override
+      public ComposableFuture<ResultSet> handle(final Try<ResultSet> result) {
         measureOnDone(timerContexts);
-        return result;
+        return fromTry(result);
       }
     });
   }
@@ -123,33 +151,5 @@ public class CqlSession {
     }
   }
 
-  private static <T> ComposableFuture<T> fromListenableFuture(final ListenableFuture<T> source, final List<TagMetrics> tagMetrics) {
-    final ComposablePromise<T> res = ComposableFutures.newPromise(false);
-    source.addListener(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          final T result = source.get();
-          res.set(result);
-        } catch (final InterruptedException e) {
-          Thread.currentThread().interrupt();
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          final Throwable finalCause = Exceptions.getFinalCause(e);
-          if (finalCause instanceof NoHostAvailableException) {
-            final String tags = Joiner.on(',').join(tagMetrics);
-            final Map<InetSocketAddress, Throwable> errorsPerHost = ((NoHostAvailableException) finalCause).getErrors();
-            for (final Map.Entry<InetSocketAddress, Throwable> entry : errorsPerHost.entrySet()) {
-              logger.error("host " + entry.getKey() + " failed to perform statement " + tags + ": " +
-                  entry.getValue().getMessage(), entry.getValue().getMessage());
-            }
-          }
-          res.setException(e.getCause() != null ? e.getCause() : e);
-        }
-      }
-    }, ComposableFutures.getExecutor());
-
-    return res;
-  }
 }
 

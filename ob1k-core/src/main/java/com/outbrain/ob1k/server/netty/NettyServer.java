@@ -133,7 +133,7 @@ public class NettyServer implements Server {
   }
 
   @Override
-  public void addListener(Listener listener) {
+  public void addListener(final Listener listener) {
     listeners.add(listener);
   }
 
@@ -142,7 +142,7 @@ public class NettyServer implements Server {
   }
 
   @Override
-  public void removeListener(Listener listener) {
+  public void removeListener(final Listener listener) {
     listeners.remove(listener);
   }
 

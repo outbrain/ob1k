@@ -7,8 +7,6 @@ import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.concurrent.ComposableExecutorService;
-import com.outbrain.ob1k.concurrent.ComposableThreadPool;
 import com.outbrain.ob1k.server.BeanContext;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
@@ -31,10 +29,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * User: aronen
@@ -106,14 +101,12 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     }
   }
 
-  private static ComposableThreadPool createExecutorService(final ThreadPoolConfig config, final SyncRequestQueueObserver queueObserver) {
-    final int queueCapacity = config.maxSize * 2; // TODO make this configurable
+  private static Executor createExecutorService(final ThreadPoolConfig config, final SyncRequestQueueObserver queueObserver) {
+    final int queueCapacity = config.maxSize * 2; // TODO make this configurable ?
     final BlockingQueue<Runnable> requestQueue = new ObservableBlockingQueue<>(new LinkedBlockingQueue<>(queueCapacity), queueObserver);
-    final ComposableThreadPool threadPool = new ComposableThreadPool(config.minSize, config.maxSize, 30, TimeUnit.SECONDS, requestQueue);
-    threadPool.setThreadFactory(new DefaultThreadFactory("syncReqPool"));
-    threadPool.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
 
-    return threadPool;
+    return new ThreadPoolExecutor(config.minSize, config.maxSize, 30, TimeUnit.SECONDS, requestQueue,
+        new DefaultThreadFactory("syncReqPool"), new ThreadPoolExecutor.AbortPolicy());
   }
 
   @Override
@@ -384,7 +377,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   }
 
   private static void registerServices(final List<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
-                                       final ComposableExecutorService executorService) {
+                                       final Executor executorService) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
       if (desc.endpointsBinding != null) {
         registry.register(desc.name, desc.service, desc.endpointsBinding, desc.bindPrefix, executorService);
@@ -400,7 +393,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   public Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     final SyncRequestQueueObserver queueObserver = new SyncRequestQueueObserver(activeChannels, metricFactory);
-    ComposableExecutorService executorService = null;
+    Executor executorService = null;
     if (threadPoolConfig != null) {
       executorService = createExecutorService(threadPoolConfig, queueObserver);
     }

@@ -5,7 +5,8 @@ import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.RequestContext;
 import com.outbrain.ob1k.SyncRequestContext;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.OnResultHandler;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -31,9 +32,9 @@ public class MetricsTimerFilter<T> implements AsyncFilter<T, AsyncRequestContext
     final Timer.Context time = createTimer(ctx);
 
     final ComposableFuture<T> futureResult = ctx.invokeAsync();
-    futureResult.onResult(new OnResultHandler<T>() {
+    futureResult.consume(new Consumer<T>() {
       @Override
-      public void handle(final ComposableFuture<T> result) {
+      public void consume(final Try<T> result) {
         time.stop();
       }
     });

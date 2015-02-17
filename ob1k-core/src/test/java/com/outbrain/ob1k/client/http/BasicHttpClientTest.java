@@ -26,10 +26,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.from;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
 import static com.outbrain.ob1k.client.http.HttpClient.param;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 
 /**
  * User: aronen
@@ -83,7 +81,8 @@ public class BasicHttpClientTest {
   @Test
   public void testNoContent_withMsgPackPayload() throws InterruptedException, ExecutionException {
     final HttpClient client = new HttpClient();
-    final ComposableFuture<Object> f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent", Msg.class, new Object[0], ContentType.MESSAGE_PACK.responseEncoding());
+    final ComposableFuture<Object> f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent",
+        Msg.class, new Object[0], ContentType.MESSAGE_PACK.responseEncoding());
 
     final Object response = f1.get();
     Assert.assertNull("Response should be null", response);
@@ -132,14 +131,18 @@ public class BasicHttpClientTest {
     final String password = "$RFVbgt5^YHNmju7";
     final HttpClient.Header authorization = new HttpClient.Header("Authorization", "Basic " + Base64.encode((username + ":" + password).getBytes()));
     final ComposableFuture<Response> resp = client.httpGet("http://lb-30001.chidc1.outbrain.com:81/haproxy?stats;csv;norefresh", authorization);
-    resp.onSuccess(new OnSuccessHandler<Response>() {
+    resp.consume(new Consumer<Response>() {
       @Override
-      public void handle(final Response httpResponse) {
-        try {
-          final String body = httpResponse.getResponseBody();
-          System.out.println("body: \n" + body);
-        } catch (final IOException e) {
-          e.printStackTrace();
+      public void consume(final Try<Response> httpResponse) {
+        if (httpResponse.isSuccess()) {
+          try {
+            final String body = httpResponse.getValue().getResponseBody();
+            System.out.println("body: \n" + body);
+          } catch (final IOException e) {
+            e.printStackTrace();
+          }
+        } else {
+          httpResponse.getError().printStackTrace();
         }
       }
     });
@@ -206,9 +209,9 @@ public class BasicHttpClientTest {
       }
     });
 
-    combined.onResult(new OnResultHandler<List<Response>>() {
+    combined.consume(new Consumer<List<Response>>() {
       @Override
-      public void handle(final ComposableFuture<List<Response>> result) {
+      public void consume(final Try<List<Response>> result) {
         System.out.println("got result in other handler.");
       }
     });
@@ -311,7 +314,7 @@ public class BasicHttpClientTest {
   }
 
   private ComposableFuture<String> calcY(final String result) {
-    return from(new Callable<String>() {
+    return submit(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return result + ", phase III";
@@ -320,7 +323,7 @@ public class BasicHttpClientTest {
   }
 
   private ComposableFuture<String> calcX() {
-    return from(new Callable<String>() {
+    return submit(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return "phase I";

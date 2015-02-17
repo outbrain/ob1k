@@ -2,6 +2,7 @@ package com.outbrain.ob1k.server.registry;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.concurrent.Executor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -14,7 +15,6 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.concurrent.ComposableExecutorService;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
@@ -63,7 +63,7 @@ public class ServiceRegistry {
   }
 
   public void register(final String name, final Service service, final boolean bindPrefix,
-                       final ComposableExecutorService executorService) {
+                       final Executor executorService) {
     register(name, service, null, null, null, bindPrefix, executorService);
   }
 
@@ -80,7 +80,7 @@ public class ServiceRegistry {
   }
 
   public void register(final String name, final Service service, final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
-                       final boolean bindPrefix, final ComposableExecutorService executorService) {
+                       final boolean bindPrefix, final Executor executorService) {
 
     if (contextPath == null) {
       throw new RuntimeException("Can't add service before context path is set.");
@@ -254,8 +254,8 @@ public class ServiceRegistry {
 
 
   public void register(final String name, final Service service, final List<AsyncFilter> asyncFilters,
-                       final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters, final boolean bindPrefix,
-                       final ComposableExecutorService executorService) {
+                       final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
+                       final boolean bindPrefix, final Executor executorService) {
 
     final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors = getEndpointsDescriptor(service,
             executorService, asyncFilters, syncFilters, streamFilters);
@@ -263,7 +263,7 @@ public class ServiceRegistry {
   }
 
   private Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> getEndpointsDescriptor(final Service service,
-                                                                final ComposableExecutorService executorService,
+                                                                final Executor executorService,
                                                                 final List<AsyncFilter> asyncFilters,
                                                                 final List<SyncFilter> syncFilters,
                                                                 final List<StreamFilter> streamFilters) {

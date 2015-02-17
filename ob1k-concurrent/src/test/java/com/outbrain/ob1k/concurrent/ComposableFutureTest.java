@@ -161,7 +161,7 @@ public class ComposableFutureTest {
 
     for (int i = 0; i < ITERATIONS; i++) {
       final long seed = i;
-      final ComposableFuture<Long> f1 = from(delegate, new Callable<Long>() {
+      final ComposableFuture<Long> f1 = submit(delegate, new Callable<Long>() {
         @Override
         public Long call() throws Exception {
           return computeHash(seed);
@@ -220,36 +220,31 @@ public class ComposableFutureTest {
             System.out.println("in first phase");
             return "lala";
           }
-        }, 100, TimeUnit.MILLISECONDS).
-        continueWith(new FutureResultHandler<String, String>() {
+        }, 100, TimeUnit.MILLISECONDS).continueWith(new FutureResultHandler<String, String>() {
           @Override
-          public ComposableFuture<String> handle(final ComposableFuture<String> result) {
+          public ComposableFuture<String> handle(final Try<String> result) {
             System.out.println("in second phase, throwing exception");
             return fromError(new RuntimeException("bhaaaaa"));
           }
-        }).
-        continueOnSuccess(new SuccessHandler<String, String>() {
+        }).continueOnSuccess(new SuccessHandler<String, String>() {
           @Override
           public String handle(final String result) {
             System.out.println("in third phase, ****** shouldn't be here !!!!!  ******** returning second lala");
             return "second lala";
           }
-        }).
-        continueOnError(new ErrorHandler<String>() {
+        }).continueOnError(new ErrorHandler<String>() {
           @Override
           public String handle(final Throwable error) {
             System.out.println("in forth, returning third lala. error type is: " + error.getClass().getName());
             return "third lala";
           }
-        }).
-        continueOnError(new ErrorHandler<String>() {
+        }).continueOnError(new ErrorHandler<String>() {
           @Override
           public String handle(final Throwable error) {
             System.out.println("***** shouldn't be here *****");
             return "baaaaddddd";
           }
-        }).
-        continueOnSuccess(new SuccessHandler<String, String>() {
+        }).continueOnSuccess(new SuccessHandler<String, String>() {
           @Override
           public String handle(final String result) throws ExecutionException {
             System.out.println("got: " + result + " throwing exception.");
@@ -257,20 +252,16 @@ public class ComposableFutureTest {
           }
         });
 
-        res.onSuccess(new OnSuccessHandler<String>() {
+        res.consume(new Consumer<String>() {
           @Override
-          public void handle(final String element) {
-            System.out.println("should be here !!!!");
+          public void consume(final Try<String> element) {
+            if (element.isSuccess()) {
+              System.out.println("should be here !!!!");
+            } else {
+              System.out.println("got exception of type: " + element.getError().getClass().getName());
+            }
           }
         });
-
-        res.onError(new OnErrorHandler() {
-          @Override
-          public void handle(final Throwable error) {
-            System.out.println("got exception of type: " + error.getClass().getName());
-          }
-        });
-
 
     try {
       final String result = res.get();
@@ -346,7 +337,7 @@ public class ComposableFutureTest {
 
   @Test
   public void testSlowFuture() {
-    final ScheduledComposableFuture<String> f1 = schedule(new Callable<String>() {
+    final ComposableFuture<String> f1 = schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return "slow";
@@ -366,7 +357,7 @@ public class ComposableFutureTest {
       Assert.fail(e.getMessage());
     }
 
-    final ScheduledComposableFuture<String> f4 = schedule(new Callable<String>() {
+    final ComposableFuture<String> f4 = schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return "slow";
@@ -383,7 +374,7 @@ public class ComposableFutureTest {
       Assert.assertTrue((t4 - t3) < 100);
     }
 
-    final ScheduledComposableFuture<String> f6 = schedule(new Callable<String>() {
+    final ComposableFuture<String> f6 = schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
         return "slow";
@@ -426,7 +417,7 @@ public class ComposableFutureTest {
       }
     }, 3, TimeUnit.SECONDS);
 
-    final Iterable<Long> events = toObservable(Arrays.asList(first, second, third)).toBlocking().toIterable();
+    final Iterable<Long> events = toHotObservable(Arrays.asList(first, second, third), true).toBlocking().toIterable();
     long prevEvent = 0;
     int counter = 0;
     for(final Long event: events) {

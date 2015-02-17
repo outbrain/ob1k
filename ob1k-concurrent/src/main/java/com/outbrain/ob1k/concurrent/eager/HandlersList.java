@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.concurrent;
+package com.outbrain.ob1k.concurrent.eager;
 
 import java.util.ArrayList;
 import java.util.List;

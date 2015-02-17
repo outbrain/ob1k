@@ -1,6 +1,8 @@
-package com.outbrain.ob1k.concurrent;
+package com.outbrain.ob1k.concurrent.stream;
 
-import com.outbrain.ob1k.concurrent.handlers.OnResultHandler;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import rx.Observable;
 import rx.Subscriber;
 
@@ -9,9 +11,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by aronen on 10/27/14.
+ * translates a set of futures into a stream.
+ * each future produces a single value into the stream or ends it with an error.
+ *
+ * @author aronen
  */
-public class FuturesToStreamHandler<T> implements Observable.OnSubscribe<T>, OnResultHandler<T> {
+public class FuturesToStreamHandler<T> implements Observable.OnSubscribe<T>, Consumer<T> {
   private final List<ComposableFuture<T>> futures;
   private final List<Subscriber<? super T>> subscribers;
   private final AtomicInteger completed;
@@ -25,7 +30,7 @@ public class FuturesToStreamHandler<T> implements Observable.OnSubscribe<T>, OnR
     this.failOnError = failOnError;
 
     for (final ComposableFuture<T> future : futures) {
-      future.onResult(this);
+      future.consume(this);
     }
   }
 
@@ -39,7 +44,7 @@ public class FuturesToStreamHandler<T> implements Observable.OnSubscribe<T>, OnR
   }
 
   @Override
-  public void handle(final ComposableFuture<T> result) {
+  public void consume(final Try<T> result) {
     final boolean lastResult = completed.incrementAndGet() == futures.size();
     if (lastResult) {
       done = true;
@@ -48,7 +53,7 @@ public class FuturesToStreamHandler<T> implements Observable.OnSubscribe<T>, OnR
     if (result.isSuccess()) {
       for (final Subscriber<? super T> subscriber: subscribers) {
         try {
-          subscriber.onNext(result.get());
+          subscriber.onNext(result.getValue());
         } catch (final Exception e) {
           // should never get here...
           subscriber.onError(e);

@@ -154,18 +154,6 @@ public class LocalAsyncCacheTest {
     }
   }
 
-  @Test
-  public void testCAS() throws Exception {
-    final LocalAsyncCache<String, String> cache = new LocalAsyncCache<>(300, 100, TimeUnit.SECONDS);
-    final Boolean res1 = cache.setAsync("1", "first").get(); // unconditional set.
-    final Boolean res2 = cache.setAsync("1", "first", "second").get();
-    final Boolean res3 = cache.setAsync("1", "first", "third").get();
-
-    Assert.assertEquals(res1, Boolean.TRUE);
-    Assert.assertEquals(res2, Boolean.TRUE);
-    Assert.assertEquals(res3, Boolean.FALSE);
-  }
-
   public static class Box {
     public final int number;
 

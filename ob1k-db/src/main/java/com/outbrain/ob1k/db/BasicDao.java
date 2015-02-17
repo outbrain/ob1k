@@ -77,6 +77,12 @@ public class BasicDao {
   }
 
   public BasicDao(final String host, final int port, final String database, final String userName, final String password,
+                  final int maxConnections, final long maxIdleTimeMs, final int maxQueueSize,
+                  final long validationIntervalMs, final MetricFactory metricFactory) {
+    _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, maxIdleTimeMs,
+        maxQueueSize, validationIntervalMs, metricFactory);
+  }
+  public BasicDao(final String host, final int port, final String database, final String userName, final String password,
                   final MetricFactory metricFactory) {
     _pool = new MySqlConnectionPool(host, port, database, userName, password, metricFactory);
   }
@@ -127,11 +133,11 @@ public class BasicDao {
     return _list(queryRes, mapper);
   }
 
-  public <T> ComposableFuture<List<T>> list(final String tableName, final String idColumnName, final List<Object> ids, final ResultSetMapper<T> mapper) {
+  public <T> ComposableFuture<List<T>> list(final String tableName, final String idColumnName, final List<?> ids, final ResultSetMapper<T> mapper) {
     return list(createListByIDsQuery(tableName, idColumnName, ids), mapper);
   }
 
-  private String createListByIDsQuery(final String tableName, final String idColumnName, final List<Object> ids) {
+  private String createListByIDsQuery(final String tableName, final String idColumnName, final List<?> ids) {
     final StringBuilder query = new StringBuilder("select * from ");
     query.append(tableName);
     query.append(" where ");
@@ -145,7 +151,7 @@ public class BasicDao {
   }
 
   public <T> ComposableFuture<List<T>> list(final MySqlAsyncConnection conn, final String tableName, final String idColumnName,
-      final List<Object> ids, final ResultSetMapper<T> mapper) {
+      final List<?> ids, final ResultSetMapper<T> mapper) {
     final ComposableFuture<QueryResult> queryRes = conn.sendQuery(createListByIDsQuery(tableName, idColumnName, ids));
     return _list(queryRes, mapper);
   }
@@ -256,14 +262,22 @@ public class BasicDao {
     return execute(conn, "delete from " + tableName + " where " + idColumnName + " = " + id);
   }
 
-  public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final List<Object> ids) {
-    final Joiner joiner = Joiner.on(',');
-    final StringBuilder builder = new StringBuilder();
-    builder.append("[");
-    joiner.appendTo(builder, ids);
-    builder.append("]");
+  public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final List<?> ids) {
+    return execute(createDeleteCommand(tableName, idColumnName, ids));
+  }
 
-    return execute("delete from " + tableName + " where " + idColumnName + " in " + builder.toString());
+  public ComposableFuture<Long> delete(final MySqlAsyncConnection conn, final String tableName, final String idColumnName, final List<?> ids) {
+    return execute(conn, createDeleteCommand(tableName, idColumnName, ids));
+  }
+
+  private String createDeleteCommand(final String tableName, final String idColumnName, final List<?> ids) {
+    final StringBuilder builder = new StringBuilder("delete from ");
+    builder.append(tableName).append(" where ").append(idColumnName).append(" in (");
+    final Joiner joiner = Joiner.on(',');
+    joiner.appendTo(builder, ids);
+    builder.append(")");
+
+    return builder.toString();
   }
 
   public <T> ComposableFuture<Long> save(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
@@ -282,9 +296,9 @@ public class BasicDao {
     // setting the columns part (col1, col2, ...)
     command.append("(");
     final T first = entries.get(0);
-    final Set<String> columns = mapper.map(first).keySet();
+    final List<String> columnNames = new ArrayList<>(mapper.map(first).keySet());
     final Joiner joiner = Joiner.on(',');
-    joiner.appendTo(command, columns);
+    joiner.appendTo(command, columnNames);
     command.append(") ");
 
     command.append(" values ");
@@ -295,7 +309,15 @@ public class BasicDao {
         command.append(",");
 
       command.append(" (");
-      joiner.appendTo(command, mapper.map(entry).values());
+      final List<String> values = new ArrayList<>();
+      final Map<String, Object> elements = mapper.map(entry);
+      for (final String column : columnNames) {
+        final Object value = elements.get(column);
+        final String queryValue = value instanceof String ? ("'" + value  + "'") : value.toString();
+        values.add(queryValue);
+      }
+
+      joiner.appendTo(command, values);
       command.append(") ");
     }
 

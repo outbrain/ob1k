@@ -10,12 +10,12 @@ import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.transcoders.Transcoder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -63,11 +63,14 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<V> getAsync(final K key) {
-    try {
-      return SpyFutureHelper.fromGet(spyClient.asyncGet(keyTranslator.translateKey(key)));
-    } catch (final Exception e) {
-      return fromError(e);
-    }
+    return SpyFutureHelper.fromGet(new SpyFutureHelper.GetFutureProducer<V>() {
+      @Override
+      public Future<V> createFuture() {
+        @SuppressWarnings("unchecked")
+        final Transcoder<V> transcoder = (Transcoder<V>) spyClient.getTranscoder();
+        return spyClient.asyncGet(keyTranslator.translateKey(key), transcoder);
+      }
+    });
   }
 
   @Override
@@ -81,8 +84,15 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
         keysMap.put(stringKey, key);
       }
 
-      final BulkFuture<Map<String, Object>> res = spyClient.asyncGetBulk(stringKeys);
-      return SpyFutureHelper.fromBulkGet(res, keysMap);
+      return SpyFutureHelper.fromBulkGet(new SpyFutureHelper.BulkGetFutureProducer<V>() {
+        @Override
+        public BulkFuture<Map<String, V>> createFuture() {
+          @SuppressWarnings("unchecked")
+          final Transcoder<V> transcoder = (Transcoder<V>) spyClient.getTranscoder();
+          return spyClient.asyncGetBulk(stringKeys, transcoder);
+        }
+      }, keysMap);
+
     } catch (final Exception e) {
       return fromError(e);
     }
@@ -90,29 +100,10 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
-    try {
-      final Future<Boolean> setRes = spyClient.set(keyTranslator.translateKey(key), expirationSpyUnits, value);
-      return SpyFutureHelper.fromOperation(setRes);
-    } catch (final Exception e) {
-      return fromError(e);
-    }
-  }
-
-  @Override
-  public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
-    return casUpdate(key, new EntryMapper<K, V>() {
+    return SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
       @Override
-      public V map(final K key, final V value) {
-        if (oldValue.equals(value)) {
-          return newValue;
-        } else {
-          return null;
-        }
-      }
-    }).continueOnSuccess(new SuccessHandler<CASResponse, Boolean>() {
-      @Override
-      public Boolean handle(final CASResponse result) {
-        return result == CASResponse.OK;
+      public Future<Boolean> createFuture() {
+        return spyClient.set(keyTranslator.translateKey(key), expirationSpyUnits, value);
       }
     });
   }
@@ -138,8 +129,16 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
   private ComposableFuture<CASResponse> casUpdate(final K key, final EntryMapper<K, V> mapper) {
     try {
       final String cacheKey = keyTranslator.translateKey(key);
-      final Future<CASValue<Object>> getFutureValue = spyClient.asyncGets(cacheKey);
-      return SpyFutureHelper.<V>fromCASValue(getFutureValue).continueOnSuccess(new FutureSuccessHandler<CASValue<V>, CASResponse>() {
+      final ComposableFuture<CASValue<V>> getFutureValue = SpyFutureHelper.fromCASValue(new SpyFutureHelper.CASValueFutureProducer<V>() {
+        @Override
+        public Future<CASValue<V>> createFuture() {
+          @SuppressWarnings("unchecked")
+          final Transcoder<V> transcoder = (Transcoder<V>) spyClient.getTranscoder();
+          return spyClient.asyncGets(cacheKey, transcoder);
+        }
+      });
+
+      return getFutureValue.continueOnSuccess(new FutureSuccessHandler<CASValue<V>, CASResponse>() {
         @Override
         public ComposableFuture<CASResponse> handle(final CASValue<V> result) {
           final V newValue = result == null ? mapper.map(key, null) : mapper.map(key, result.getValue());
@@ -147,24 +146,32 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
             return fromValue(CASResponse.OBSERVE_ERROR_IN_ARGS);
           }
 
-          try {
-            if (result != null) {
-              return SpyFutureHelper.fromCASResponse(spyClient.asyncCAS(cacheKey, result.getCas(), newValue));
-            } else {
-              final Future<Boolean> addResponse = spyClient.add(cacheKey, expirationSpyUnits, newValue);
-              return SpyFutureHelper.fromOperation(addResponse).continueOnSuccess(new SuccessHandler<Boolean, CASResponse>() {
-                @Override
-                public CASResponse handle(final Boolean result) throws ExecutionException {
-                  if (result == Boolean.TRUE) {
-                    return CASResponse.OK;
-                  } else {
-                    return CASResponse.EXISTS;
-                  }
+          if (result != null) {
+            return SpyFutureHelper.fromCASResponse(new SpyFutureHelper.CASFutureProducer() {
+              @Override
+              public Future<CASResponse> createFuture() {
+                return spyClient.asyncCAS(cacheKey, result.getCas(), newValue);
+              }
+            });
+
+          } else {
+            final ComposableFuture<Boolean> addResponse = SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
+              @Override
+              public Future<Boolean> createFuture() {
+                return spyClient.add(cacheKey, expirationSpyUnits, newValue);
+              }
+            });
+
+            return addResponse.continueOnSuccess(new SuccessHandler<Boolean, CASResponse>() {
+              @Override
+              public CASResponse handle(final Boolean result) {
+                if (result == Boolean.TRUE) {
+                  return CASResponse.OK;
+                } else {
+                  return CASResponse.EXISTS;
                 }
-              });
-            }
-          } catch (final Exception e) {
-            return fromError(e);
+              }
+            });
           }
         }
       });
@@ -186,10 +193,11 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> deleteAsync(final K key) {
-    try {
-      return SpyFutureHelper.fromOperation(spyClient.delete(keyTranslator.translateKey(key)));
-    } catch (final Exception e) {
-      return fromError(e);
-    }
+    return SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
+      @Override
+      public Future<Boolean> createFuture() {
+        return spyClient.delete(keyTranslator.translateKey(key));
+      }
+    });
   }
 }

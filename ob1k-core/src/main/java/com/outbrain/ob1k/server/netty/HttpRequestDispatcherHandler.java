@@ -10,14 +10,12 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.outbrain.ob1k.common.marshalling.ChunkHeader;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.ob1k.server.util.QueueObserver;
 import com.outbrain.swinfra.metrics.api.Counter;
@@ -28,8 +26,6 @@ import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.OnResultHandler;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
@@ -158,37 +154,41 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   }
 
   public void handleAsyncResponse(final ChannelHandlerContext ctx, final ComposableFuture<Object> response) {
-    response.onResult(new OnResultHandler<Object>() {
+    final ComposableFuture<Object> finalResponse;
+    if (requestTimeoutMs > 0) {
+      final ComposableFuture<Object> timeout = ComposableFutures.build(new Producer<Object>() {
+        @Override
+        public void produce(final Consumer<Object> consumer) {
+          ctx.channel().eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() {
+              consumer.consume(Try.fromError(new TimeoutException("calculating response took too long.")));
+            }
+          }, requestTimeoutMs, TimeUnit.MILLISECONDS);
+        }
+      });
+
+      finalResponse = ComposableFutures.any(response, timeout);
+    } else {
+      finalResponse = response;
+    }
+
+    finalResponse.consume(new Consumer<Object>() {
       @Override
-      public void handle(final ComposableFuture<Object> result) {
+      public void consume(final Try<Object> result) {
         try {
-          final Object res = result.get();
-          handleOK(res, request, ctx);
-        } catch (final InterruptedException error) {
-          Thread.currentThread().interrupt();
-          handleInternalError(error, request, ctx);
-        } catch (final ExecutionException error) {
-          Throwable cause = error.getCause();
-          if (cause instanceof InvocationTargetException) {
-            cause = cause.getCause();
+          if (result.isSuccess()) {
+            handleOK(result.getValue(), request, ctx);
+          } else {
+            handleInternalError(result.getError(), request, ctx);
           }
-          handleInternalError(cause, request, ctx);
         } catch (final IOException error) {
           handleInternalError(error, request, ctx);
         }
       }
     });
 
-    if (requestTimeoutMs > 0) {
-      ctx.channel().eventLoop().schedule(new Runnable() {
-        @Override
-        public void run() {
-          if (!response.isDone()) {
-            ((ComposablePromise)response).setException(new TimeoutException("calculating response took too long."));
-          }
-        }
-      }, requestTimeoutMs, TimeUnit.MILLISECONDS);
-    }
+
   }
 
   public void handleStreamResponse(final ChannelHandlerContext ctx, final Observable<Object> response, final boolean rawStream) {

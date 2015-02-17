@@ -1,11 +1,7 @@
 package com.outbrain.ob1k.concurrent.combiners;
 
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.OnErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.OnSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 
 import java.util.ArrayList;
@@ -15,7 +11,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
@@ -26,6 +24,25 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
  * @author aronen on 9/2/14.
  */
 public class Combiner {
+
+  public static <T> ComposableFuture<T> any(final Iterable<ComposableFuture<T>> elements) {
+    return ComposableFutures.build(new Producer<T>() {
+      @Override
+      public void produce(final Consumer<T> consumer) {
+        final AtomicBoolean done = new AtomicBoolean();
+        for (final ComposableFuture<T> future : elements) {
+          future.consume(new Consumer<T>() {
+            @Override
+            public void consume(final Try<T> result) {
+              if (done.compareAndSet(false, true)) {
+                consumer.consume(result);
+              }
+            }
+          });
+        }
+      }
+    });
+  }
 
   public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> elements) {
     final Map<Integer, ComposableFuture<T>> elementsMap = new HashMap<>();
@@ -82,104 +99,105 @@ public class Combiner {
   public static <K, T> ComposableFuture<Map<K, T>> first(final Map<K, ComposableFuture<T>> elements, final int numOfSuccess,
                                                          final boolean failOnError, final Long timeout, final TimeUnit timeUnit) {
 
-    final ComposablePromise<Map<K, T>> promise = ComposableFutures.newPromise();
     if (elements.isEmpty()) {
       final Map<K, T> empty = new HashMap<>();
       return fromValue(empty);
     }
 
-    @SuppressWarnings("unchecked")
-    final KeyValue<K, T>[] results = new KeyValue[elements.size()];
+    return ComposableFutures.build(new Producer<Map<K, T>>() {
+      @Override
+      public void produce(final Consumer<Map<K, T>> consumer) {
+        final AtomicReferenceArray<KeyValue<K, T>> results = new AtomicReferenceArray<>(elements.size());
+        final AtomicReference<Status> status = new AtomicReference<>(new Status(elements.size(), numOfSuccess, 0, 0, false));
+        int counter = 0;
 
-    final AtomicReference<Status> status = new AtomicReference<>(new Status(elements.size(), numOfSuccess, 0, 0, false));
-    int counter = 0;
+        if (timeout != null) {
+          schedule(new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+              while (true) {
+                final Status currentStatus = status.get();
+                if (currentStatus.isDone())
+                  break;
 
-    if (timeout != null) {
-      schedule(new Callable<Object>() {
-        @Override
-        public Object call() throws Exception {
-          while (true) {
-            final Status currentStatus = status.get();
-            if (currentStatus.isDone())
-              break;
+                final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                    currentStatus.results, currentStatus.successfulResults, true);
 
-            final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                currentStatus.results, currentStatus.successfulResults, true);
-
-            final boolean success = status.compareAndSet(currentStatus, newStatus);
-            if (success) {
-              promise.set(collectResults(results));
-              break;
-            }
-          }
-          return null;
-        }
-      }, timeout, timeUnit);
-    }
-
-    for (final Map.Entry<K, ComposableFuture<T>> element : elements.entrySet()) {
-      final ComposableFuture<T> future = element.getValue();
-      final K key = element.getKey();
-      final int index = counter;
-      counter++;
-
-      future.onSuccess(new OnSuccessHandler<T>() {
-        @Override
-        public void handle(final T element) {
-          results[index] = new KeyValue<>(key, element);
-
-          while (true) {
-            final Status currentStatus = status.get();
-            if (currentStatus.isDone())
-              break;
-
-            final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                currentStatus.results + 1, currentStatus.successfulResults + 1, false);
-
-            final boolean success = status.compareAndSet(currentStatus, newStatus);
-            if (success) {
-              if (newStatus.isDone()) {
-                promise.set(collectResults(results));
-              }
-              break;
-            }
-          }
-        }
-      });
-
-      future.onError(new OnErrorHandler() {
-        @Override
-        public void handle(final Throwable error) {
-          while (true) {
-            final Status currentStatus = status.get();
-            if (currentStatus.isDone())
-              break;
-
-            final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                    currentStatus.results + 1, currentStatus.successfulResults, failOnError);
-
-            final boolean success = status.compareAndSet(currentStatus, newStatus);
-            if (success) {
-              if (failOnError) {
-                promise.setException(error);
-              } else {
-                if (newStatus.isDone()) {
-                  promise.set(collectResults(results));
+                final boolean success = status.compareAndSet(currentStatus, newStatus);
+                if (success) {
+                  consumer.consume(Try.fromValue(collectResults(results)));
+                  break;
                 }
               }
-              break;
+              return null;
             }
-          }
+          }, timeout, timeUnit);
         }
-      });
-    }
 
-    return promise;
+        for (final Map.Entry<K, ComposableFuture<T>> element : elements.entrySet()) {
+          final ComposableFuture<T> future = element.getValue();
+          final K key = element.getKey();
+          final int index = counter;
+          counter++;
+
+          future.consume(new Consumer<T>() {
+            @Override
+            public void consume(final Try<T> result) {
+              if (result.isSuccess()) {
+                final T element = result.getValue();
+                results.set(index, new KeyValue<>(key, element));
+
+                while (true) {
+                  final Status currentStatus = status.get();
+                  if (currentStatus.isDone())
+                    break;
+
+                  final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                      currentStatus.results + 1, currentStatus.successfulResults + 1, false);
+
+                  final boolean success = status.compareAndSet(currentStatus, newStatus);
+                  if (success) {
+                    if (newStatus.isDone()) {
+                      consumer.consume(Try.fromValue(collectResults(results)));
+                    }
+                    break;
+                  }
+                }
+
+              } else {
+                final Throwable error = result.getError();
+                while (true) {
+                  final Status currentStatus = status.get();
+                  if (currentStatus.isDone())
+                    break;
+
+                  final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                      currentStatus.results + 1, currentStatus.successfulResults, failOnError);
+
+                  final boolean success = status.compareAndSet(currentStatus, newStatus);
+                  if (success) {
+                    if (failOnError) {
+                      consumer.consume(Try.<Map<K, T>>fromError(error));
+                    } else {
+                      if (newStatus.isDone()) {
+                        consumer.consume(Try.fromValue(collectResults(results)));
+                      }
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+    });
   }
 
-  private static <K, T> Map<K, T> collectResults(final KeyValue<K, T>[] elements) {
+  private static <K, T> Map<K, T> collectResults(final AtomicReferenceArray<KeyValue<K, T>> elements) {
     final Map<K, T> result = new HashMap<>();
-    for (final KeyValue<K, T> element : elements) {
+    for (int i=0; i< elements.length(); i++) {
+      final KeyValue<K, T> element = elements.get(i);
       if (element != null && element.value != null) {
         result.put(element.key, element.value);
       }

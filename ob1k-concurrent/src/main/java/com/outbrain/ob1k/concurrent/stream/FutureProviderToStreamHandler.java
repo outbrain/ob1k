@@ -1,8 +1,9 @@
-package com.outbrain.ob1k.concurrent;
+package com.outbrain.ob1k.concurrent.stream;
 
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
-import com.outbrain.ob1k.concurrent.handlers.OnErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.OnSuccessHandler;
 import rx.Observable;
 import rx.Subscriber;
 
@@ -33,25 +34,22 @@ public class FutureProviderToStreamHandler<T> implements Observable.OnSubscribe<
   }
 
   private void handleNextFuture(final ComposableFuture<T> nextFuture) {
-    nextFuture.onSuccess(new OnSuccessHandler<T>() {
+    nextFuture.consume(new Consumer<T>() {
       @Override
-      public void handle(final T element) {
-        subscriber.onNext(element);
-        final boolean next = provider.moveNext();
-        if (next) {
-          handleNextFuture(provider.current());
+      public void consume(final Try<T> result) {
+        if (result.isSuccess()) {
+          subscriber.onNext(result.getValue());
+          final boolean next = provider.moveNext();
+          if (next) {
+            handleNextFuture(provider.current());
+          } else {
+            subscriber.onCompleted();
+          }
         } else {
-          subscriber.onCompleted();
+          subscriber.onError(result.getError());
         }
       }
     });
-
-    nextFuture.onError(new OnErrorHandler() {
-      @Override
-      public void handle(final Throwable error) {
-        subscriber.onError(error);
-      }
-    });
-  }
+ }
 
 }

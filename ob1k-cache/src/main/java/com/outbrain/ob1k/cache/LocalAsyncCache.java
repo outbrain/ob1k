@@ -7,23 +7,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import com.outbrain.ob1k.cache.memcache.MemcacheClient;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
-import com.outbrain.ob1k.concurrent.handlers.OnErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.OnSuccessHandler;
+import com.outbrain.ob1k.concurrent.handlers.*;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromNull;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
 
@@ -114,60 +112,45 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   }
 
   private ComposableFuture<V> loadElement(final K key) {
-    final ComposableFuture<V> loadedElement = loader.load(cacheName, key);
-    loadedElement.onError(new OnErrorHandler() {
+    final ComposableFuture<V> loadedElement = loader.load(cacheName, key).materialize();
+    return loadedElement.continueOnError(new FutureErrorHandler<V>() {
       @Override
-      public void handle(final Throwable error) {
+      public ComposableFuture<V> handle(final Throwable error) {
         loadingCache.asMap().remove(key, loadedElement);
+        return fromError(error);
       }
     });
-
-    return loadedElement;
   }
 
   private Map<K, ComposableFuture<V>> loadElements(final Iterable<? extends K> keys) {
-    final Map<K, ComposableFuture<V>> futureMap = new HashMap<>();
+    final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).materialize();
+    final Map<K, ComposableFuture<V>> result = new HashMap<>();
     for (final K key : keys) {
-      futureMap.put(key, ComposableFutures.<V>newPromise());
-    }
-
-    final ComposableFuture<? extends Map<K, V>> loaded = loader.load(cacheName, keys);
-    loaded.onSuccess(new OnSuccessHandler<Map<K, V>>() {
-      @Override
-      public void handle(final Map<K, V> results) {
-        for (final K key : results.keySet()) {
-          final V value = results.get(key);
-          final ComposablePromise<V> promise = (ComposablePromise<V>) futureMap.get(key);
-          promise.set(value);
+      result.put(key, loaded.continueOnError(new FutureErrorHandler<Map<K, V>>() {
+        @Override
+        public ComposableFuture<Map<K, V>> handle(final Throwable error) {
+          loadingCache.asMap().remove(key);
+          return fromError(error);
         }
-
-        final Set<K> existingResults = results.keySet();
-        for (final K key : keys) {
-          if (!existingResults.contains(key)) {
-            final ComposablePromise<V> promise = (ComposablePromise<V>) futureMap.get(key);
+      }).continueOnSuccess(new FutureSuccessHandler<Map<K, V>, V>() {
+        @Override
+        public ComposableFuture<V> handle(final Map<K, V> result) {
+          final V res = result.get(key);
+          if (res != null) {
+            return fromValue(res);
+          } else {
+            loadingCache.asMap().remove(key);
             if (failOnMissingEntries) {
-              promise.setException(new RuntimeException("result is missing from loader response."));
+              return fromError(new RuntimeException("result is missing from loader response."));
             } else {
-              promise.set(null);
+              return fromNull();
             }
-            loadingCache.asMap().remove(key, promise);
           }
         }
-      }
-    });
+      }));
+    }
 
-    loaded.onError(new OnErrorHandler() {
-      @Override
-      public void handle(final Throwable error) {
-        for (final K key : futureMap.keySet()) {
-          final ComposablePromise<V> future = (ComposablePromise<V>) futureMap.get(key);
-          future.setException(error);
-          loadingCache.asMap().remove(key, future);
-        }
-      }
-    });
-
-    return futureMap;
+    return result;
   }
 
   @Override
@@ -236,34 +219,36 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> setAsync(final K key, final V oldValue, final V newValue) {
-    final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
-    return fromValue(map.replace(key, fromValue(oldValue), fromValue(newValue)));
-  }
-
-  @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
     final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
     try {
-      for (int i=0; i< maxIterations; i++) {
-        final ComposableFuture<V> currentFuture = map.get(key);
-        if (!currentFuture.isDone()) {
-          return fromValue(false);
-        }
-
-        final V currentValue = currentFuture.get();
-        final V newValue = mapper.map(key, currentValue);
-        if (newValue == null) {
-          return fromValue(false);
-        }
-
-        final boolean success = map.replace(key, currentFuture, fromValue(newValue));
-        if (success) {
-          return fromValue(true);
-        }
+      if (maxIterations == 0) {
+        return fromValue(false);
       }
 
-      return fromValue(false);
+      final ComposableFuture<V> currentFuture = map.get(key);
+      return currentFuture.continueOnSuccess(new FutureSuccessHandler<V, Boolean>() {
+        @Override
+        public ComposableFuture<Boolean> handle(final V currentValue) {
+          try {
+            final V newValue = mapper.map(key, currentValue);
+            if (newValue == null) {
+              return fromValue(false);
+            }
+
+            final boolean success = map.replace(key, currentFuture, fromValue(newValue));
+            if (success) {
+              return fromValue(true);
+            } else {
+              return setAsync(key, mapper, maxIterations - 1);
+            }
+          } catch (final Exception e) {
+            // in case mapper throws exception.
+            return fromError(e);
+          }
+        }
+      });
+
     } catch (final Exception e) {
       return fromValue(false);
     }

@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.concurrent.handlers;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.Try;
 
 import java.util.concurrent.ExecutionException;
 
@@ -10,5 +11,5 @@ import java.util.concurrent.ExecutionException;
  * Time: 2:05 PM
  */
 public interface ResultHandler<T, R> {
-  R handle(ComposableFuture<T> result) throws ExecutionException;
+  R handle(Try<T> result) throws ExecutionException;
 }

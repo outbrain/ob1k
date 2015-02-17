@@ -1,9 +1,7 @@
 package com.outbrain.ob1k.client.http;
 
 import com.ning.http.client.ListenableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.ComposablePromise;
+import com.outbrain.ob1k.concurrent.*;
 
 import java.util.concurrent.ExecutionException;
 
@@ -14,20 +12,23 @@ import java.util.concurrent.ExecutionException;
  */
 public class ComposableFutureAdaptor {
   public static <T> ComposableFuture<T> fromListenableFuture(final ListenableFuture<T> source) {
-    final ComposablePromise<T> res = ComposableFutures.newPromise(false);
-    source.addListener(new Runnable() {
-      @Override public void run() {
-        try {
-          final T result = source.get();
-          res.set(result);
-        } catch (final InterruptedException e) {
-          res.setException(e);
-        } catch (final ExecutionException e) {
-          res.setException(e.getCause() != null ? e.getCause() : e);
-        }
+    return ComposableFutures.build(new Producer<T>() {
+      @Override
+      public void produce(final Consumer<T> consumer) {
+        source.addListener(new Runnable() {
+          @Override public void run() {
+            try {
+              final T result = source.get();
+              consumer.consume(Try.fromValue(result));
+            } catch (final InterruptedException e) {
+              consumer.consume(Try.<T>fromError(e));
+            } catch (final ExecutionException e) {
+              final Throwable error = e.getCause() != null ? e.getCause() : e;
+              consumer.consume(Try.<T>fromError(error));
+            }
+          }
+        }, ComposableFutures.getExecutor());
       }
-    }, ComposableFutures.getExecutor());
-
-    return res;
+    });
   }
 }

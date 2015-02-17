@@ -7,7 +7,8 @@ import com.outbrain.ob1k.SyncRequestContext;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.OnResultHandler;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
@@ -28,9 +29,9 @@ public class HitsCounterFilter<T> implements AsyncFilter<T, AsyncRequestContext>
   @Override
   public ComposableFuture<T> handleAsync(final AsyncRequestContext ctx) {
     final ComposableFuture<T> futureResult = ctx.invokeAsync();
-    futureResult.onResult(new OnResultHandler<T>() {
+    futureResult.consume(new Consumer<T>() {
       @Override
-      public void handle(ComposableFuture<T> result) {
+      public void consume(final Try<T> result) {
         getTotalCounter(ctx).inc();
         if (result.isSuccess()) {
           getSuccessCounter(ctx).inc();
@@ -44,7 +45,7 @@ public class HitsCounterFilter<T> implements AsyncFilter<T, AsyncRequestContext>
   }
 
   @Override
-  public T handleSync(SyncRequestContext ctx) throws ExecutionException {
+  public T handleSync(final SyncRequestContext ctx) throws ExecutionException {
     try {
       final T res = ctx.invokeSync();
       getSuccessCounter(ctx).inc();
