@@ -3,6 +3,9 @@ package com.outbrain.ob1k.cache;
 import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
+import com.outbrain.swinfra.metrics.api.Counter;
+import com.outbrain.swinfra.metrics.api.Gauge;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,11 +28,40 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private final String cacheName;
   private final ConcurrentMap<K, ComposablePromise<V>> futureValues;
 
+  private final Counter cacheHits;
+  private final Counter cacheMiss;
+  private final Counter cacheErrors;
+  private final Counter loaderErrors;
+
   public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName) {
+    this(cache, loader, cacheName, null);
+  }
+
+  public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory) {
     this.cache = cache;
     this.loader = loader;
     this.cacheName = cacheName;
     this.futureValues = new ConcurrentHashMap<>();
+
+    if (metricFactory != null) {
+      metricFactory.registerGauge("LoadingCacheDelegate." + cacheName, "mapSize", new Gauge<Integer>() {
+        @Override
+        public Integer getValue() {
+          return futureValues.size();
+        }
+      });
+
+      cacheHits = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "hits");
+      cacheMiss = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "miss");
+      cacheErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheErrors");
+      loaderErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderErrors");
+
+    } else {
+      cacheHits = null;
+      cacheMiss = null;
+      cacheErrors = null;
+      loaderErrors = null;
+    }
   }
 
   @Override
@@ -51,6 +83,9 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             if (res.isSuccess()) {
               final V result = res.getValue();
               if (result == null) {
+                if (cacheMiss != null) {
+                  cacheMiss.inc();
+                }
                 final ComposableFuture<V> loadedResult = loader.load(cacheName, key);
                 loadedResult.consume(new Consumer<V>() {
                   @Override
@@ -64,15 +99,24 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                         }
                       });
                     } else {
+                      if (loaderErrors != null) {
+                        loaderErrors.inc();
+                      }
                       promise.setException(loadedRes.getError());
                       futureValues.remove(key);
                     }
                   }
                 });
               } else {
+                if (cacheHits != null) {
+                  cacheHits.inc();
+                }
                 promise.set(result);
               }
             } else {
+              if (cacheErrors != null) {
+                cacheErrors.inc();
+              }
               promise.setException(res.getError());
               futureValues.remove(key);
             }
