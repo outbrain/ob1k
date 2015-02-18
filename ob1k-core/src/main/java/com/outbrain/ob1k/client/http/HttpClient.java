@@ -13,7 +13,6 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -26,7 +25,7 @@ import java.util.concurrent.ExecutionException;
  * Date: 6/16/13
  * Time: 3:41 PM
  */
-public class HttpClient implements Closeable {
+public class HttpClient {
   private final AsyncHttpClient asyncHttpClient;
   private final RequestBuilder builder;
 
@@ -82,11 +81,6 @@ public class HttpClient implements Closeable {
       final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setAsyncHttpClientProviderConfig(nettyConfig).build();
       return new NettyAsyncHttpProvider(config);
     }
-  }
-
-  @Override
-  public void close() {
-    asyncHttpClient.close();
   }
 
   public ComposableFuture<Response> httpGet(final String url) {

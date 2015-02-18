@@ -15,24 +15,16 @@ import java.util.Map;
 class HttpInvocationHandler implements InvocationHandler {
   private static final Logger logger = LoggerFactory.getLogger(HttpInvocationHandler.class);
 
-  private final HttpClient client;
   private final Map<Method, AbstractClientEndpoint> endpoints;
   private final List<String> targets;
 
-  HttpInvocationHandler(final List<String> targets, final HttpClient client, final Map<Method, AbstractClientEndpoint> endpoints) {
-    this.client = client;
+  HttpInvocationHandler(final List<String> targets, final Map<Method, AbstractClientEndpoint> endpoints) {
     this.targets = targets;
     this.endpoints = endpoints;
   }
 
   @Override
   public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
-    if ("close".equals(method.getName()) && method.getParameterTypes().length == 0) {
-      client.close();
-      logger.debug("client {} is closed.", chooseTarget());
-      return null;
-    }
-
     final String target = chooseTarget();
     final AbstractClientEndpoint endpoint = endpoints.get(method);
     return endpoint.invoke(target, args);
