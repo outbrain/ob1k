@@ -431,12 +431,15 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       }
     });
 
-    latch.await(timeout, unit);
-    final Try<T> currentValue = this.value.get();
-    if (currentValue.isSuccess()) {
-      return currentValue.getValue();
+    if (latch.await(timeout, unit)) {
+      final Try<T> currentValue = this.value.get();
+      if (currentValue.isSuccess()) {
+        return currentValue.getValue();
+      } else {
+        throw new ExecutionException(currentValue.getError());
+      }
     } else {
-      throw new ExecutionException(currentValue.getError());
+      throw new TimeoutException("Timeout occurred while waiting for value (" + timeout + unit + ")");
     }
   }
 
