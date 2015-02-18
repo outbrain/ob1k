@@ -2,6 +2,8 @@ package com.outbrain.ob1k.client.http;
 
 import com.google.common.base.Objects;
 import com.ning.http.client.*;
+import com.ning.http.client.providers.netty.NettyAsyncHttpProvider;
+import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.client.ClientBuilder;
@@ -52,16 +54,34 @@ public class HttpClient implements Closeable {
 
   public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                     final int requestTimeout, final boolean compression, final boolean useRawUrl) {
+    this(registry, reties, connectionTimeout, requestTimeout, compression, useRawUrl, false);
+  }
+
+  public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
+                    final int requestTimeout, final boolean compression, final boolean useRawUrl,
+                    final boolean followRedirect) {
+
     final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().
         setConnectionTimeoutInMs(connectionTimeout).
         setMaxRequestRetry(reties).
         setRequestTimeoutInMs(requestTimeout).
         setCompressionEnabled(compression).
         setUseRawUrl(useRawUrl).
+        setFollowRedirects(followRedirect).
         build();
 
-    asyncHttpClient = new AsyncHttpClient(config);
+    final AsyncHttpProvider provider = HttpProviderHolder.INSTANCE;
+    asyncHttpClient = new AsyncHttpClient(provider, config);
     this.builder = new RequestBuilder(registry);
+  }
+
+  private static class HttpProviderHolder {
+    static AsyncHttpProvider INSTANCE = createProvider();
+    static AsyncHttpProvider createProvider() {
+      final NettyAsyncHttpProviderConfig nettyConfig = new NettyAsyncHttpProviderConfig();
+      final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setAsyncHttpClientProviderConfig(nettyConfig).build();
+      return new NettyAsyncHttpProvider(config);
+    }
   }
 
   @Override
