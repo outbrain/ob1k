@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
-import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.server.build.*;
@@ -108,9 +107,6 @@ public class BasicServerRpcTest {
       }
 
     } finally {
-      if (client != null)
-        Clients.close(client);
-
       if (server != null)
         server.stop();
     }
@@ -187,9 +183,6 @@ public class BasicServerRpcTest {
       }
 
     } finally {
-      if (client != null)
-        Clients.close(client);
-
       if (server != null)
         server.stop();
     }
@@ -219,13 +212,10 @@ public class BasicServerRpcTest {
         final TestEntity response2 = res2.get();
         Assert.assertEquals(response2.getOthers().get(0).getValue1(), 1);
         Assert.assertEquals(response2.getOthers().get(0).getValue2(), "2");
-      } catch (ExecutionException e) {
+      } catch (final ExecutionException e) {
         e.printStackTrace();
       }
     } finally {
-      if (client != null)
-        Clients.close(client);
-
       if (server != null)
         server.stop();
     }
@@ -289,9 +279,6 @@ public class BasicServerRpcTest {
       }
 
     } finally {
-      if (client != null)
-        Clients.close(client);
-
       if (server != null)
         server.stop();
     }
@@ -314,9 +301,6 @@ public class BasicServerRpcTest {
       }
 
     } finally {
-      if (client != null)
-        Clients.close(client);
-
       if (server != null)
         server.stop();
     }
@@ -327,7 +311,7 @@ public class BasicServerRpcTest {
     private int serverStartedCallCount = 0;
 
     @Override
-    public void serverStarted(Server server) {
+    public void serverStarted(final Server server) {
       serverStartedCallCount++;
     }
   }

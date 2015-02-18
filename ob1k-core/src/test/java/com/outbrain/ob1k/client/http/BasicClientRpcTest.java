@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
@@ -23,7 +22,6 @@ import junit.framework.Assert;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -51,10 +49,10 @@ public class BasicClientRpcTest {
   private static ServiceFilter createCachingFilter() {
     return new CachingFilter<String, String>(new CachingFilter.CacheKeyGenerator<String>() {
       @Override
-      public String createKey(Object[] params) {
+      public String createKey(final Object[] params) {
         return params[0].toString();
       }
-    },10, 1, TimeUnit.SECONDS);
+    }, 10, 1, TimeUnit.SECONDS);
   }
 
   @BeforeClass
@@ -81,9 +79,9 @@ public class BasicClientRpcTest {
             builder.addService(new ParamsService(), "/params");
             builder.defineService(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindingProvider() {
               @Override
-              public void configureService(RawServiceBuilderPhase builder) {
-               builder.addEndpoint("getNextCode", "/next", createCachingFilter());
-               builder.addEndpoint("getRandomCode", "/random");
+              public void configureService(final RawServiceBuilderPhase builder) {
+                builder.addEndpoint("getNextCode", "/next", createCachingFilter());
+                builder.addEndpoint("getRandomCode", "/random");
               }
             });
           }
@@ -284,30 +282,26 @@ public class BasicClientRpcTest {
   @Test
   public void testCachingFilters() throws Exception {
     final IFilteredService client = createFilteredClient(port);
-    try {
-      final String res1 = client.getNextCode("haim").get();
-      final String res2 = client.getNextCode("haim").get();
+    final String res1 = client.getNextCode("haim").get();
+    final String res2 = client.getNextCode("haim").get();
 
-      Thread.sleep(2000);
+    Thread.sleep(2000);
 
-      final String res3 = client.getNextCode("haim").get();
+    final String res3 = client.getNextCode("haim").get();
 
-      Assert.assertEquals(res1, res2);
-      Assert.assertNotSame(res2, res3);
+    Assert.assertEquals(res1, res2);
+    Assert.assertNotSame(res2, res3);
 
-      final String res4 = client.getRandomCode("moshe").get();
-      final String res5 = client.getRandomCode("moshe").get();
+    final String res4 = client.getRandomCode("moshe").get();
+    final String res5 = client.getRandomCode("moshe").get();
 
-      Thread.sleep(2000);
+    Thread.sleep(2000);
 
-      final String res6 = client.getRandomCode("moshe").get();
+    final String res6 = client.getRandomCode("moshe").get();
 
-      Assert.assertEquals(res4, res5);
-      Assert.assertNotSame(res5, res6);
+    Assert.assertEquals(res4, res5);
+    Assert.assertNotSame(res5, res6);
 
-    } finally {
-      Clients.close(client);
-    }
   }
 
 
@@ -343,8 +337,8 @@ public class BasicClientRpcTest {
         addFilter(new BangFilter()).
         bindEndpoint("helloFilter", new QFilter()).
         setRequestTimeout(120000). // heavily loaded testing environment.
-            addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
-            build();
+        addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
+        build();
   }
 
   private final static class QFilter implements AsyncFilter<String, AsyncClientRequestContext> {
