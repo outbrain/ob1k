@@ -81,7 +81,7 @@ public class BasicHttpClientTest {
   @Test
   public void testNoContent_withMsgPackPayload() throws InterruptedException, ExecutionException {
     final HttpClient client = new HttpClient();
-    final ComposableFuture f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent",
+    final ComposableFuture<Object> f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent",
         Msg.class, new Object[0], ContentType.MESSAGE_PACK.responseEncoding());
 
     final Object response = f1.get();
@@ -100,17 +100,11 @@ public class BasicHttpClientTest {
   @Test
   @Ignore
   public void testSimpleGet() throws InterruptedException, ExecutionException {
-    final HttpClient client1 = new HttpClient();
-    final ComposableFuture<Response> f1 = client1.httpGet("http://www.google.com/search", param("q", "outbrain"));
+    final HttpClient client = new HttpClient();
+    final ComposableFuture<Response> f1 = client.httpGet("http://www.google.com/search", param("q", "outbrain"));
 
-    final HttpClient client2 = new HttpClient();
-    final ComposableFuture<Response> f2 = client2.httpGet("http://www.google.com/search", param("q", "outbrain"));
-
-    final Response response1 = f1.get();
-    Assert.assertEquals(200, response1.getStatusCode());
-
-    final Response response2 = f2.get();
-    Assert.assertEquals(200, response2.getStatusCode());
+    final Response response = f1.get();
+    Assert.assertEquals(response.getStatusCode(), 200);
   }
 
   @Test
