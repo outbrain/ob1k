@@ -112,6 +112,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                   cacheHits.inc();
                 }
                 promise.set(result);
+                futureValues.remove(key);
               }
             } else {
               if (cacheErrors != null) {
@@ -168,7 +169,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                 if (result.containsKey(key)) {
                   final ComposablePromise<V> promise = futureValues.get(key);
                   promise.set(result.get(key));
-                  futureValues.remove(key, promise);
+                  futureValues.remove(key);
                 } else {
                   missingFromCacheKeys.add(key);
                 }
