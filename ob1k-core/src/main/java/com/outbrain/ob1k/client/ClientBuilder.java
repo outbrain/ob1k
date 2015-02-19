@@ -18,6 +18,7 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.server.MethodParamNamesExtractor;
 import rx.Observable;
 
+import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
@@ -147,10 +148,10 @@ public class ClientBuilder<T extends Service> {
     final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(type, client,
         asyncFilters, syncFilters, streamFilters, clientType, endpointDescriptors);
 
-    final HttpInvocationHandler handler = new HttpInvocationHandler(targets, endpoints);
+    final HttpInvocationHandler handler = new HttpInvocationHandler(targets, client, endpoints);
 
     @SuppressWarnings("unchecked")
-    final T res = (T) Proxy.newProxyInstance(loader, new Class[] {type}, handler);
+    final T res = (T) Proxy.newProxyInstance(loader, new Class[] {type, Closeable.class}, handler);
     return res;
   }
 
