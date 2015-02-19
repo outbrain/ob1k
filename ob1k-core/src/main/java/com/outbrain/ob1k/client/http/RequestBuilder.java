@@ -46,7 +46,7 @@ public class RequestBuilder {
 
     if (requestParams != null) {
       for (final HttpClient.Param param : requestParams) {
-        requestBuilder.addQueryParameter(param.key, param.value);
+        requestBuilder.addQueryParam(param.key, param.value);
       }
     }
 
@@ -66,7 +66,7 @@ public class RequestBuilder {
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareGet(url);
     if (requestParams != null) {
       for (final Map.Entry<String, String> param : requestParams.entrySet()) {
-        requestBuilder.addQueryParameter(param.getKey(), param.getValue());
+        requestBuilder.addQueryParam(param.getKey(), param.getValue());
       }
     }
 

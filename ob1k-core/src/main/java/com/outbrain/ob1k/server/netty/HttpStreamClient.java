@@ -1,11 +1,7 @@
 package com.outbrain.ob1k.server.netty;
 
 import com.ning.http.client.*;
-import com.ning.http.client.providers.netty.NettyResponse;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -14,7 +10,7 @@ import java.util.concurrent.ExecutionException;
  * a client that returns a stream of messages.
  */
 public class HttpStreamClient {
-  public static void main(final String[] args) throws IOException {
+  public static void main(final String[] args) {
     final AsyncHttpClient asyncHttpClient = new AsyncHttpClient();
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = asyncHttpClient.prepareGet("http://localhost:8080/stream?name=asy");
     requestBuilder.addHeader("TE", "chunked, trailers");
