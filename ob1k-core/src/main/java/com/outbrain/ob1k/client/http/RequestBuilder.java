@@ -32,6 +32,15 @@ public class RequestBuilder {
     return requestBuilder;
   }
 
+  public AsyncHttpClient.BoundRequestBuilder buildPutRequest(final AsyncHttpClient client, final String url, final String body, final String contentType) throws UnsupportedEncodingException {
+    final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePut(url);
+    requestBuilder.setBody(body);
+    requestBuilder.setContentLength(body.getBytes("UTF8").length);
+    requestBuilder.setBodyEncoding("UTF8");
+    requestBuilder.setHeader("Content-Type", contentType);
+    return requestBuilder;
+  }
+
   public AsyncHttpClient.BoundRequestBuilder buildPostRequestWithParams(final AsyncHttpClient client, final String url,
                                                                         final String contentType, final Object[] requestParams) throws IOException {
     final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, requestParams);
