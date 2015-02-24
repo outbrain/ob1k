@@ -341,6 +341,24 @@ public class HttpClient implements Closeable {
         });
     }
 
+    public ComposableFuture<Response> httpPut(final String url, final String body, final ContentType contentType, final Header... headers) {
+        try {
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+                    builder.buildPutRequest(asyncHttpClient, url, body, contentType.requestEncoding());
+
+            if (headers != null && headers.length > 0) {
+                for (final Header header : headers) {
+                    requestBuilder.addHeader(header.key, header.value);
+                }
+            }
+
+            final ListenableFuture<Response> future = requestBuilder.execute();
+            return ComposableFutureAdaptor.fromListenableFuture(future);
+        } catch (final IOException e) {
+            return ComposableFutures.fromError(e);
+        }
+    }
+
     public ComposableFuture httpDelete(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
                                        final Object[] params) {
         try {
