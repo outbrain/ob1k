@@ -12,7 +12,7 @@
   <artifactId>ob1k-example</artifactId>
   <packaging>jar</packaging>
 
-  <name>Ob1k/Example</name>
+  <name>ob1k-example</name>
 
   <dependencies>
     <dependency>
@@ -21,17 +21,8 @@
       <version>${parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>ob1k-concurrent</artifactId>
-      <version>${parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

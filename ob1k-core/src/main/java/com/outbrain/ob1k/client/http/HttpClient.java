@@ -9,6 +9,7 @@ import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import rx.Observable;
 import rx.subjects.PublishSubject;
@@ -27,8 +28,10 @@ import java.util.concurrent.ExecutionException;
  * Time: 3:41 PM
  */
 public class HttpClient implements Closeable {
+    public static final int MAX_CONNECTIONS_PER_HOST = 100;
     private final AsyncHttpClient asyncHttpClient;
     private final RequestBuilder builder;
+    private final MetricFactory metricFactory;
 
     public HttpClient() {
         this(ClientBuilder.RETRIES, ClientBuilder.CONNECTION_TIMEOUT, ClientBuilder.REQUEST_TIMEOUT);
@@ -44,17 +47,18 @@ public class HttpClient implements Closeable {
 
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                       final int requestTimeout, final boolean compression) {
-        this(registry, reties, connectionTimeout, requestTimeout, compression, false, false);
+        this(registry, reties, connectionTimeout, requestTimeout, compression, false, false, MAX_CONNECTIONS_PER_HOST, null);
     }
 
     public HttpClient(final int reties, final int connectionTimeout, final int requestTimeout,
                       final boolean compression, final boolean useRawUrl) {
-        this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, compression, useRawUrl, false);
+        this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, compression, useRawUrl,
+            false, MAX_CONNECTIONS_PER_HOST, null);
     }
 
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                       final int requestTimeout, final boolean compression, final boolean useRawUrl,
-                      final boolean followRedirect) {
+                      final boolean followRedirect, final int maxConnectionsPerHost, final MetricFactory metricFactory) {
 
         final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().
             setConnectTimeout(connectionTimeout).
@@ -64,10 +68,12 @@ public class HttpClient implements Closeable {
             setDisableUrlEncodingForBoundedRequests(useRawUrl).
             setAsyncHttpClientProviderConfig(NettyConfigHolder.INSTANCE).
             setFollowRedirect(followRedirect).
+            setMaxConnectionsPerHost(maxConnectionsPerHost).
             build();
 
         this.asyncHttpClient = new AsyncHttpClient(config);
         this.builder = new RequestBuilder(registry);
+        this.metricFactory = metricFactory;
     }
 
     private static class NettyConfigHolder {
@@ -127,9 +133,14 @@ public class HttpClient implements Closeable {
                     requestBuilder.addHeader(header.key, header.value);
                 }
             }
+            final Request request = requestBuilder.build();
 
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future);
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory);
         } catch (final Exception e) {
             return ComposableFutures.fromError(e);
         }
@@ -148,13 +159,18 @@ public class HttpClient implements Closeable {
         });
     }
 
-    public ComposableFuture httpGet(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
-                                    final Object[] params) {
+    public ComposableFuture httpGet(final String url, final Type respType, final String contentType,
+                                    final List<String> methodParamNames, final Object[] params) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames,
-                params, contentType);
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future).continueOnSuccess(new SuccessHandler<Response, Object>() {
+            final Request request =
+                builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType).build();
+
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory).continueOnSuccess(new SuccessHandler<Response, Object>() {
                 @Override
                 public Object handle(final Response response) throws ExecutionException {
                     try {
@@ -207,9 +223,14 @@ public class HttpClient implements Closeable {
                     requestBuilder.addHeader(header.key, header.value);
                 }
             }
+            final Request request = requestBuilder.build();
 
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future);
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory);
         } catch (final IOException e) {
             return ComposableFutures.fromError(e);
         }
@@ -225,9 +246,15 @@ public class HttpClient implements Closeable {
 
     public <T> ComposableFuture<Response> httpPost(final String url, final T body, final ContentType contentType) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = this.builder.buildPostRequestWithParams(asyncHttpClient, url, contentType.requestEncoding(), new Object[]{body});
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future);
+            final Request request =
+                builder.buildPostRequestWithParams(asyncHttpClient, url, contentType.requestEncoding(), new Object[]{body}).build();
+
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory);
         } catch (final IOException e) {
             return ComposableFutures.fromError(e);
         }
@@ -237,19 +264,26 @@ public class HttpClient implements Closeable {
         return httpPost(url, respType, body, contentType, true, (Header[]) null);
     }
 
-    public <T, R> ComposableFuture<R> httpPost(final String url, final Class<R> respType, final T body, final ContentType contentType, final boolean failOnError, final Header... headers) {
+    public <T, R> ComposableFuture<R> httpPost(final String url, final Class<R> respType, final T body,
+                                               final ContentType contentType, final boolean failOnError,
+                                               final Header... headers) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = this.builder.buildPostRequestWithParams(asyncHttpClient, url, contentType.requestEncoding(), new Object[]{body});
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+                this.builder.buildPostRequestWithParams(asyncHttpClient, url, contentType.requestEncoding(), new Object[]{body});
+
             if (headers != null && headers.length > 0) {
                 for (final Header header : headers) {
                     requestBuilder.addHeader(header.key, header.value);
                 }
             }
+            final Request request = requestBuilder.build();
 
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            final ComposableFuture<Response> futureResp = ComposableFutureAdaptor.fromListenableFuture(future);
-
-            return futureResp.continueOnSuccess(new SuccessHandler<Response, R>() {
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory).continueOnSuccess(new SuccessHandler<Response, R>() {
                 @Override
                 public R handle(final Response response) throws ExecutionException {
                     try {
@@ -298,53 +332,58 @@ public class HttpClient implements Closeable {
     public ComposableFuture httpPost(final String url, final Type respType, final Object[] params, final String contentType) {
         final ComposableFuture<Response> result;
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
-                builder.buildPostRequestWithParams(asyncHttpClient, url, contentType, params);
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            result = ComposableFutureAdaptor.fromListenableFuture(future);
+            final Request request =
+                builder.buildPostRequestWithParams(asyncHttpClient, url, contentType, params).build();
+
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory).continueOnSuccess(new SuccessHandler<Response, Object>() {
+                @Override
+                public Object handle(final Response response) throws ExecutionException {
+                    try {
+                        return builder.unmarshallResponse(response, respType);
+                    } catch (final IOException e) {
+                        throw new ExecutionException(e);
+                    }
+                }
+            });
         } catch (final IOException e) {
             return ComposableFutures.fromError(e);
         }
-
-        return result.continueOnSuccess(new SuccessHandler<Response, Object>() {
-            @Override
-            public Object handle(final Response response) throws ExecutionException {
-                try {
-                    return builder.unmarshallResponse(response, respType);
-                } catch (final IOException e) {
-                    throw new ExecutionException(e);
-                }
-            }
-        });
     }
 
     public ComposableFuture httpPut(final String url, final Type respType, final Object[] params, final String contentType) {
-        final ComposableFuture<Response> result;
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
-                builder.buildPutRequestWithParams(asyncHttpClient, url, contentType, params);
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            result = ComposableFutureAdaptor.fromListenableFuture(future);
+            final Request request =
+                builder.buildPutRequestWithParams(asyncHttpClient, url, contentType, params).build();
+
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory).continueOnSuccess(new SuccessHandler<Response, Object>() {
+                @Override
+                public Object handle(final Response response) throws ExecutionException {
+                    try {
+                        return builder.unmarshallResponse(response, respType);
+                    } catch (final IOException e) {
+                        throw new ExecutionException(e);
+                    }
+                }
+            });
         } catch (final IOException e) {
             return ComposableFutures.fromError(e);
         }
-
-        return result.continueOnSuccess(new SuccessHandler<Response, Object>() {
-            @Override
-            public Object handle(final Response response) throws ExecutionException {
-                try {
-                    return builder.unmarshallResponse(response, respType);
-                } catch (final IOException e) {
-                    throw new ExecutionException(e);
-                }
-            }
-        });
     }
 
     public ComposableFuture<Response> httpPut(final String url, final String body, final ContentType contentType, final Header... headers) {
         try {
             final AsyncHttpClient.BoundRequestBuilder requestBuilder =
-                    builder.buildPutRequest(asyncHttpClient, url, body, contentType.requestEncoding());
+                builder.buildPutRequest(asyncHttpClient, url, body, contentType.requestEncoding());
 
             if (headers != null && headers.length > 0) {
                 for (final Header header : headers) {
@@ -352,20 +391,30 @@ public class HttpClient implements Closeable {
                 }
             }
 
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future);
+            final Request request = requestBuilder.build();
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory);
         } catch (final IOException e) {
             return ComposableFutures.fromError(e);
         }
     }
 
-    public ComposableFuture httpDelete(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
-                                       final Object[] params) {
+    public ComposableFuture httpDelete(final String url, final Type respType, final String contentType,
+                                       final List<String> methodParamNames, final Object[] params) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames,
-                params, contentType);
-            final ListenableFuture<Response> future = requestBuilder.execute();
-            return ComposableFutureAdaptor.fromListenableFuture(future).continueOnSuccess(new SuccessHandler<Response, Object>() {
+            final Request request =
+                builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType).build();
+
+            return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
+                @Override
+                public ListenableFuture<Response> provide() {
+                    return asyncHttpClient.executeRequest(request);
+                }
+            }, request, metricFactory).continueOnSuccess(new SuccessHandler<Response, Object>() {
                 @Override
                 public Object handle(final Response response) throws ExecutionException {
                     try {
