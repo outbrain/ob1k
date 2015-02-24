@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
@@ -30,7 +31,15 @@ public class ServiceDispatcher {
       throws InvocationTargetException, IllegalAccessException, IOException {
 
     final String path = request.getPath();
-    final AbstractServerEndpoint endpoint = registry.findEndpoint(path, request.getMethod(), request.getPathParams());
+    final HttpRequestMethodType methodType;
+
+    try { // If someone tries to send request with invalid/unsupported method type, translating the exception
+      methodType = request.getMethod();
+    } catch (final IllegalArgumentException e) {
+      throw new UnsupportedOperationException("Unsupported http method type");
+    }
+
+    final AbstractServerEndpoint endpoint = registry.findEndpoint(path, methodType, request.getPathParams());
     if (endpoint == null) {
       throw new IllegalArgumentException("No matching service/method found for path: " + path);
     }

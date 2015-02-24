@@ -46,7 +46,7 @@ public class NettyRequest implements Request {
 
   @Override
   public HttpRequestMethodType getMethod() {
-    return HttpRequestMethodType.valueOf(inner.getMethod().name());
+    return HttpRequestMethodType.valueOf(inner.getMethod().name().toUpperCase());
   }
 
   @Override
