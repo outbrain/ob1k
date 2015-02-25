@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class HttpClient implements Closeable {
     public static final int MAX_CONNECTIONS_PER_HOST = 100;
+    public static final int TOTAL_MAX_CONNECTIONS = MAX_CONNECTIONS_PER_HOST * 2;
     private final AsyncHttpClient asyncHttpClient;
     private final RequestBuilder builder;
     private final MetricFactory metricFactory;
@@ -47,18 +48,20 @@ public class HttpClient implements Closeable {
 
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                       final int requestTimeout, final boolean compression) {
-        this(registry, reties, connectionTimeout, requestTimeout, compression, false, false, MAX_CONNECTIONS_PER_HOST, null);
+        this(registry, reties, connectionTimeout, requestTimeout, compression, false, false,
+            MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
     }
 
     public HttpClient(final int reties, final int connectionTimeout, final int requestTimeout,
                       final boolean compression, final boolean useRawUrl) {
         this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, compression, useRawUrl,
-            false, MAX_CONNECTIONS_PER_HOST, null);
+            false, MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
     }
 
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                       final int requestTimeout, final boolean compression, final boolean useRawUrl,
-                      final boolean followRedirect, final int maxConnectionsPerHost, final MetricFactory metricFactory) {
+                      final boolean followRedirect, final int maxConnectionsPerHost, final int totalMaxConnections,
+                      final MetricFactory metricFactory) {
 
         final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().
             setConnectTimeout(connectionTimeout).
@@ -69,6 +72,7 @@ public class HttpClient implements Closeable {
             setAsyncHttpClientProviderConfig(NettyConfigHolder.INSTANCE).
             setFollowRedirect(followRedirect).
             setMaxConnectionsPerHost(maxConnectionsPerHost).
+            setMaxConnections(totalMaxConnections).
             build();
 
         this.asyncHttpClient = new AsyncHttpClient(config);

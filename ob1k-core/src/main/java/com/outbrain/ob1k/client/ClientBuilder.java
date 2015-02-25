@@ -50,6 +50,7 @@ public class ClientBuilder<T extends Service> {
     private int connectionTimeout = CONNECTION_TIMEOUT;
     private boolean followRedirect = false;
     private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
+    private int totalMaxConnections = HttpClient.TOTAL_MAX_CONNECTIONS;
     private int requestTimeout = REQUEST_TIMEOUT;
     private ContentType clientType = ContentType.JSON; // default content type.
     private boolean compression = false;
@@ -153,6 +154,15 @@ public class ClientBuilder<T extends Service> {
 
     public ClientBuilder<T> setMaxConnectionsPerHost(final int maxConnectionsPerHost) {
         this.maxConnectionsPerHost = maxConnectionsPerHost;
+        if (maxConnectionsPerHost > totalMaxConnections) {
+            this.totalMaxConnections = maxConnectionsPerHost * 2;
+        }
+
+        return this;
+    }
+
+    public ClientBuilder<T> setTotalMaxConnections(final int maxConnections) {
+        this.totalMaxConnections = maxConnections;
         return this;
     }
 
@@ -163,7 +173,7 @@ public class ClientBuilder<T extends Service> {
     private T createHttpClient() {
         final ClassLoader loader = ClientBuilder.class.getClassLoader();
         final HttpClient client = new HttpClient(createRegistry(type), retries, connectionTimeout, requestTimeout,
-            compression, false, followRedirect, maxConnectionsPerHost, metricFactory);
+            compression, false, followRedirect, maxConnectionsPerHost, totalMaxConnections, metricFactory);
 
         final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(type, client,
             asyncFilters, syncFilters, streamFilters, clientType, endpointDescriptors);
