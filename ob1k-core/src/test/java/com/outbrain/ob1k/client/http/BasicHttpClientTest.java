@@ -81,7 +81,7 @@ public class BasicHttpClientTest {
     @Test
     public void testNoContent_withMsgPackPayload() throws InterruptedException, ExecutionException {
         final HttpClient client = new HttpClient();
-        final ComposableFuture<Object> f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent",
+        final ComposableFuture f1 = client.httpPost("http://localhost:" + port + "/ello/noMsgPackContent",
             Msg.class, new Object[0], ContentType.MESSAGE_PACK.responseEncoding());
 
         final Object response = f1.get();

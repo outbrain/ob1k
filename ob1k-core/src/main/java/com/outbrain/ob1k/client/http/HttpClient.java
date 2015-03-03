@@ -306,7 +306,9 @@ public class HttpClient implements Closeable {
         return httpPost(url, respType, body, contentType, (Header[]) null);
     }
 
-    public <R> ComposableFuture<R> httpPost(final String url, final Class<R> respType, final String body, final ContentType contentType, final Header... headers) {
+    public <R> ComposableFuture<R> httpPost(final String url, final Class<R> respType, final String body,
+                                            final ContentType contentType, final Header... headers) {
+
         final ComposableFuture<Response> result = httpPost(url, body, contentType, (Header[]) headers);
         return result.continueOnSuccess(new SuccessHandler<Response, R>() {
             @Override
@@ -447,11 +449,11 @@ public class HttpClient implements Closeable {
         }
     }
 
-    public Observable httpGetStreaming(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
-                                       final Object[] params) {
+    public Observable httpGetStreaming(final String url, final Type respType, final String contentType,
+                                       final List<String> methodParamNames, final Object[] params) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames,
-                params, contentType);
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+                builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType);
 
             final PublishSubject<Object> result = PublishSubject.create();
             final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
@@ -466,6 +468,7 @@ public class HttpClient implements Closeable {
         try {
             final AsyncHttpClient.BoundRequestBuilder requestBuilder =
                 builder.buildPutRequestWithParams(asyncHttpClient, url, contentType, params);
+
             final PublishSubject<Object> result = PublishSubject.create();
             final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
             requestBuilder.execute(handler);
@@ -476,11 +479,11 @@ public class HttpClient implements Closeable {
         }
     }
 
-    public Observable httpDeleteStreaming(final String url, final Type respType, final String contentType, final List<String> methodParamNames,
-                                          final Object[] params) {
+    public Observable httpDeleteStreaming(final String url, final Type respType, final String contentType,
+                                          final List<String> methodParamNames, final Object[] params) {
         try {
-            final AsyncHttpClient.BoundRequestBuilder requestBuilder = builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames,
-                params, contentType);
+            final AsyncHttpClient.BoundRequestBuilder requestBuilder =
+                builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType);
 
             final PublishSubject<Object> result = PublishSubject.create();
             final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
