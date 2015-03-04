@@ -18,8 +18,7 @@ import java.util.SortedMap;
  *
  * @author Eran Harel
  */
-public class EndpointMappingService implements Service {
-
+public class EndpointMappingService implements IEndpointMappingService {
   private final ServiceRegistry registry;
 
   public EndpointMappingService(final ServiceRegistry registry) {
