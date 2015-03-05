@@ -1,6 +1,9 @@
 #Ob1k - The RPC Framework
+
+[![Build Status](https://travis-ci.org/outbrain/ob1k.svg?branch=master)](https://travis-ci.org/outbrain/ob1k)
+
 Ob1k is an asynchronous rpc framework for rapid development of async, high performance services.
-More documentation and examples to be come soon.
+More documentation and examples to come soon.
 
 ##Usage
 Add dependency to ob1k-core in your pom:
@@ -19,4 +22,4 @@ And read the examples :)
 [ob1k-example](https://github.com/outbrain/ob1k/tree/master/ob1k-example/src/main/java/com/outbrain/ob1k/example/)
 
 ##Links
-[Ob1k Presentation Slide](http://www.slideshare.net/eranharel/ob1k-presentation-at-javail)
+[Ob1k Presentation Slides](http://www.slideshare.net/eranharel/ob1k-presentation-at-javail)

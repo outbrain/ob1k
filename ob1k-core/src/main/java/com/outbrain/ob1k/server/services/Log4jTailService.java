@@ -1,7 +1,5 @@
 package com.outbrain.ob1k.server.services;
 
-import com.outbrain.ob1k.Request;
-import com.outbrain.ob1k.Service;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -14,9 +12,8 @@ import rx.subjects.ReplaySubject;
  *
  * @author Eran Harel
  */
-public class Log4jTailService implements Service {
-
-  public Observable<String> handle(final Request request) {
+public class Log4jTailService implements ILogService {
+  public Observable<String> handle() {
     return TailAppender.instance.publishSubject;
   }
 

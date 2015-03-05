@@ -2,7 +2,7 @@
 <!--suppress ALL --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.42-SNAPSHOT</version>
+  <version>0.48-SNAPSHOT</version>
   <artifactId>ob1k</artifactId>
   <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
@@ -68,12 +68,13 @@
   </properties>
 
   <distributionManagement>
+    <!--
     <repository>
       <id>nexus-3rdparty</id>
       <name>3rd party repository</name>
       <url>http://mavenrepo:8081/nexus/content/repositories/thirdparty</url>
     </repository>
-
+    -->
     <!-- Temp Bintray repo
     <repository>
       <id>bintray-harel-eran-Ob1k-com.outbrain.swinfra</id>
