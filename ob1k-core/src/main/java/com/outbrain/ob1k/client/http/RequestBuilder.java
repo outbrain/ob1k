@@ -32,6 +32,10 @@ public class RequestBuilder {
     return requestBuilder;
   }
 
+  public AsyncHttpClient.BoundRequestBuilder buildHeadRequest(final AsyncHttpClient client, final String url) {
+    return client.prepareHead(url);
+  }
+
   public AsyncHttpClient.BoundRequestBuilder buildPutRequest(final AsyncHttpClient client, final String url, final String body, final String contentType) throws UnsupportedEncodingException {
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePut(url);
     requestBuilder.setBody(body);
