@@ -9,7 +9,7 @@ import org.scalatest.Matchers._
 import org.scalatest.junit.JUnitRunner
 
 import scala.concurrent.duration._
-import scala.util.{Try, Success}
+import scala.util.Success
 
 /**
  * Created by slevin on 2/27/15.
@@ -17,15 +17,12 @@ import scala.util.{Try, Success}
 @RunWith(classOf[JUnitRunner])
 class ComposableFutureTest extends FlatSpec {
 
-  private def chainedFuturesWithFailure: ComposableFuture[String] = {
-    val future = for {
-      first <- ComposableFuture.schedule("a", 100 millis)
-      second <- ComposableFuture.fromValue(first + "b")
-      third <- ComposableFuture.fromValue(second + "c")
-      forth <- ComposableFuture.submit(if (third == "abc") throw new scala.RuntimeException(third) else "hmm..?")
-    } yield third
-    future
-  }
+  private def chainedFuturesWithFailure: ComposableFuture[String] = for {
+    first <- ComposableFuture.schedule("a", 100 millis)
+    second <- ComposableFuture.fromValue(first + "b")
+    third <- ComposableFuture.fromValue(second + "c")
+    forth <- ComposableFuture.submit(if (third == "abc") throw new scala.RuntimeException(third) else "hmm..?")
+  } yield third
 
   "recursive" should "be called repeatedly until predicate is true" in {
     val atomicInt = new AtomicInteger
@@ -42,11 +39,9 @@ class ComposableFutureTest extends FlatSpec {
   }
 
   "Future with timeout" should "fail after timeout has elapsed" in {
-    val lock = new Object()
+    def oneWayTicket() = { val lock = new Object(); lock.synchronized(lock.wait()) }
 
-    def wait() = { lock.synchronized({lock.wait();}) }
-
-    ComposableFuture.submit(wait()).timeoutAfter(1 millis).get() shouldBe 'failure
+    ComposableFuture.submit(oneWayTicket()).timeoutAfter(1 millis).get() shouldBe 'failure
   }
 
   "Retry with timeouts" should "succeed if any is sufficient, and fail if all exhausted" in {
