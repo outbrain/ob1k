@@ -20,19 +20,13 @@ object ComposablePromise {
     ComposablePromise(composablePromise)
   }
 
-  def apply[T](): ComposablePromise[T] = {
-    JavaComposableFutures.newPromise[T]()
+  private def apply[T](composablePromise: JavaComposablePromise[T]): ComposablePromise[T] = new ComposablePromise[T] {
+    override val promise = composablePromise
   }
 
-  def apply[T](executor: Executor): ComposablePromise[T] = {
-    JavaComposableFutures.newPromise[T](executor)
-  }
+  def apply[T](): ComposablePromise[T] = JavaComposableFutures.newPromise[T]()
 
-  private def apply[T](composablePromise: JavaComposablePromise[T]): ComposablePromise[T] = {
-    new ComposablePromise[T] {
-      override val promise = composablePromise
-    }
-  }
+  def apply[T](executor: Executor): ComposablePromise[T] = JavaComposableFutures.newPromise[T](executor)
 }
 
 trait ComposablePromise[T] {

@@ -26,9 +26,8 @@ object ComposableFuture {
     else Failure(javaTry.getError)
   }
 
-  implicit def toScalaComposableFuture[T](composableFuture: JavaComposableFuture[T]): ComposableFuture[T] = {
+  implicit def toScalaComposableFuture[T](composableFuture: JavaComposableFuture[T]): ComposableFuture[T] =
     ComposableFuture(composableFuture)
-  }
 
   implicit class ComposableFutureExtensions[T](future: ComposableFuture[T]) {
 
@@ -55,26 +54,22 @@ object ComposableFuture {
     /**
      * Retries this future for a given amount of times in case it fails.
      */
-    def retry(count: Int): ComposableFuture[T] = {
-      JavaComposableFutures.retry(count, new FutureAction[T] {
-        override def execute(): JavaComposableFuture[T] = future.future
-      })
-    }
+    def retry(count: Int): ComposableFuture[T] = JavaComposableFutures.retry(count, new FutureAction[T] {
+      override def execute(): JavaComposableFuture[T] = future.future
+    })
   }
 
-  def fromValue[T](value: T): ComposableFuture[T] = {
-    ComposableFuture(JavaComposableFutures.fromValueLazy(value))
+  private def apply[T](aFuture: JavaComposableFuture[T]): ComposableFuture[T] = new ComposableFuture[T] {
+    override val future = aFuture
   }
 
-  def fromError[T <: Throwable, U](error: T): ComposableFuture[U] = {
-    ComposableFuture(JavaComposableFutures.fromErrorLazy(error))
-  }
+  def fromValue[T](value: T): ComposableFuture[T] = JavaComposableFutures.fromValueLazy(value)
 
-  def fromTry[T](aTry: Try[T]): ComposableFuture[T] = {
-    ComposableFuture(aTry match {
-                       case Success(s) => JavaComposableFutures.fromValueLazy(s)
-                       case Failure(e) => JavaComposableFutures.fromErrorLazy(e)
-                     })
+  def fromError[T](error: Throwable): ComposableFuture[T] = JavaComposableFutures.fromErrorLazy[T](error)
+
+  def fromTry[T](aTry: Try[T]): ComposableFuture[T] = aTry match {
+    case Success(s) => JavaComposableFutures.fromValueLazy[T](s)
+    case Failure(e) => JavaComposableFutures.fromErrorLazy[T](e)
   }
 
   /**
@@ -127,12 +122,6 @@ object ComposableFuture {
       override def call(): T = task
     }, delay.toNanos, TimeUnit.NANOSECONDS)
   }
-
-  private def apply[T](aFuture: JavaComposableFuture[T]): ComposableFuture[T] = {
-    new ComposableFuture[T] {
-      override val future = aFuture
-    }
-  }
 }
 
 trait ComposableFuture[T] {
@@ -141,11 +130,9 @@ trait ComposableFuture[T] {
 
   protected val future: JavaComposableFuture[T]
 
-  def map[V](f: T => V): ComposableFuture[V] = {
-    future.continueOnSuccess[V](new SuccessHandler[T, V] {
-      override def handle(result: T): V = f(result)
-    })
-  }
+  def map[V](f: T => V): ComposableFuture[V] = future.continueOnSuccess[V](new SuccessHandler[T, V] {
+    override def handle(result: T): V = f(result)
+  })
 
   def flatMap[V](f: T => ComposableFuture[V]): ComposableFuture[V] = {
     future.continueOnSuccess(new FutureSuccessHandler[T, V] {
@@ -158,13 +145,12 @@ trait ComposableFuture[T] {
     })
   }
 
-  def consume(processResult: Try[T] => Unit): Unit = {
-    future.consume(new Consumer[T] {
-      override def consume(result: JavaTry[T]): Unit = {
-        processResult(result)
-      }
-    })
-  }
+  def consume(processResult: Try[T] => Unit): Unit = future.consume(new Consumer[T] {
+    override def consume(result: JavaTry[T]): Unit = {
+      processResult(result)
+    }
+  })
+
 
   def foreach(f: T => Unit): Unit = consume {_ foreach f}
 
@@ -174,16 +160,14 @@ trait ComposableFuture[T] {
    */
   def timeoutAfter(duration: Duration): ComposableFuture[T] = duration match {
     case Duration.Inf => this
-    case timeout => ComposableFuture(future.withTimeout(timeout.toNanos, TimeUnit.NANOSECONDS))
+    case timeout => future.withTimeout(timeout.toNanos, TimeUnit.NANOSECONDS)
   }
 
-  def recover(pf: PartialFunction[Throwable, T]): ComposableFuture[T] = {
-    future.continueOnError(new ErrorHandler[T] {
-      override def handle(error: Throwable): T = {
-        Try(pf(error)).orElse(Failure(error)).get
-      }
-    })
-  }
+  def recover(pf: PartialFunction[Throwable, T]): ComposableFuture[T] = future.continueOnError(new ErrorHandler[T] {
+    override def handle(error: Throwable): T = {
+      Try(pf(error)).orElse(Failure(error)).get
+    }
+  })
 
   def recoverWith(pf: PartialFunction[Throwable, ComposableFuture[T]]): ComposableFuture[T] = {
     future.continueOnError(new FutureErrorHandler[T] {
