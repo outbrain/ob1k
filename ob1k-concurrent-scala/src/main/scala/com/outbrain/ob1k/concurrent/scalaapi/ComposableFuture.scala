@@ -168,8 +168,14 @@ trait ComposableFuture[T] {
 
   def foreach(f: T => Unit): Unit = consume {_ foreach f}
 
-  def timeoutAfter(duration: Duration): ComposableFuture[T] = ComposableFuture(future.withTimeout(duration.toNanos,
-                                                                                                  TimeUnit.NANOSECONDS))
+  /**
+   * Sets a timeout for getting a result from this future.
+   * If the timeout value is Duration.Inf this method does nothing.
+   */
+  def timeoutAfter(duration: Duration): ComposableFuture[T] = duration match {
+    case Duration.Inf => this
+    case timeout => ComposableFuture(future.withTimeout(timeout.toNanos, TimeUnit.NANOSECONDS))
+  }
 
   def recover(pf: PartialFunction[Throwable, T]): ComposableFuture[T] = {
     future.continueOnError(new ErrorHandler[T] {
