@@ -9,7 +9,7 @@ import org.scalatest.Matchers._
 import org.scalatest.junit.JUnitRunner
 
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Try, Success}
 
 /**
  * Created by slevin on 2/27/15.
@@ -46,8 +46,14 @@ class ComposableFutureTest extends FlatSpec {
 
     def wait() = { lock.synchronized({lock.wait();}) }
 
-    val future = ComposableFuture.submit(wait()).timeoutAfter(1 millis)
+    ComposableFuture.submit(wait()).timeoutAfter(1 millis).get() shouldBe 'failure
+  }
 
-    future.get() shouldBe 'failure
+  "Retry with timeouts" should "succeed if any is sufficient, and fail if all exhausted" in {
+    def wait() = Thread.sleep(5.milli.toMillis)
+
+    ComposableFuture.submit(wait()).retryWithTimeouts(1 millis, 3 millis).get() shouldBe 'failure
+
+    ComposableFuture.submit(wait()).retryWithTimeouts(2 millis, 10 seconds).get() shouldBe 'success
   }
 }

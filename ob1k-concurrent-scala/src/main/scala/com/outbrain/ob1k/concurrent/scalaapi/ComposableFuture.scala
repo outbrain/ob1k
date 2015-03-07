@@ -7,7 +7,6 @@ import com.outbrain.ob1k.concurrent.handlers._
 import com.outbrain.ob1k.concurrent.{ComposableFuture => JavaComposableFuture, ComposableFutures =>
 JavaComposableFutures, Consumer, Try => JavaTry}
 
-import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
@@ -29,6 +28,38 @@ object ComposableFuture {
 
   implicit def toScalaComposableFuture[T](composableFuture: JavaComposableFuture[T]): ComposableFuture[T] = {
     ComposableFuture(composableFuture)
+  }
+
+  implicit class ComposableFutureExtensions[T](future: ComposableFuture[T]) {
+
+    /**
+     * Sets an initial timeout for this future, and retries it with further timeouts in case it fails due to a timeout.
+     */
+    def retryWithTimeouts(initialTimeout: Duration, moreTimeouts: Duration*): ComposableFuture[T] = {
+
+      def tryHarder(chain: => ComposableFuture[T], timeouts: Duration*) = timeouts.toList match {
+        case Nil =>
+          chain
+        case timeout :: rest =>
+          chain.recoverWith({
+            case e: Throwable
+              if e.isInstanceOf[TimeoutException] ||
+                Option(e.getCause).exists(_.isInstanceOf[TimeoutException]) =>
+              future.timeoutAfter(timeout)
+          })
+      }
+
+      tryHarder(future.timeoutAfter(initialTimeout), moreTimeouts: _*)
+    }
+
+    /**
+     * Retries this future for a given amount of times in case it fails.
+     */
+    def retry(count: Int): ComposableFuture[T] = {
+      JavaComposableFutures.retry(count, new FutureAction[T] {
+        override def execute(): JavaComposableFuture[T] = future.future
+      })
+    }
   }
 
   def fromValue[T](value: T): ComposableFuture[T] = {
@@ -95,42 +126,6 @@ object ComposableFuture {
     JavaComposableFutures.scheduleLazy(new Callable[T] {
       override def call(): T = task
     }, delay.toNanos, TimeUnit.NANOSECONDS)
-  }
-
-  /**
-   * Creates a future whose results is the result of a given computation block if it succeeds, or the results of
-   * retrying this computation block for several times.
-   *
-   * @param computation A computation block
-   * @param count The number of retries to perform in case of failure
-   * @tparam T
-   * @return A future that holds the results of the computation block, or its retries
-   */
-  def retry[T](computation: => ComposableFuture[T], count: Int): ComposableFuture[T] = {
-    JavaComposableFutures.retry(count, new FutureAction[T] {
-      override def execute(): JavaComposableFuture[T] = computation.future
-    })
-  }
-
-  /**
-   * Creates a future whose results is the result of a given computation block if it succeeds, or if it times out,
-   * the results of retrying it with varying timeouts
-   *
-   * @param computation A computation block
-   * @param duration The durations which will be used as timeouts in case of failure
-   * @tparam T
-   * @return A future that holds the result of the computation block, or its retires
-   */
-  @tailrec
-  def retryIfTimedout[T](computation: => ComposableFuture[T], duration: Duration*): ComposableFuture[T] = {
-    duration.toList match {
-      case Nil =>
-        computation
-      case timeout :: rest =>
-        retryIfTimedout(computation.recoverWith({ case e: TimeoutException => computation.timeoutAfter(timeout)}),
-                        rest: _*)
-    }
-
   }
 
   private def apply[T](aFuture: JavaComposableFuture[T]): ComposableFuture[T] = {
