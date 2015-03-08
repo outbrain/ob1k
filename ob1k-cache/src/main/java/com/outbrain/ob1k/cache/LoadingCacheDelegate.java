@@ -197,8 +197,15 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                                     final ComposablePromise<V> promise = futureValues.get(key);
                                     promise.set(result.get(key));
                                     futureValues.remove(key);
+
+                                    if (cacheHits != null) {
+                                        cacheHits.inc();
+                                    }
                                 } else {
                                     missingFromCacheKeys.add(key);
+                                    if (cacheMiss != null) {
+                                        cacheMiss.inc();
+                                    }
                                 }
                             }
 
@@ -210,6 +217,10 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                                 final ComposablePromise<V> promise = futureValues.get(key);
                                 promise.setException(res.getError());
                                 futureValues.remove(key);
+                            }
+
+                            if (cacheErrors != null) {
+                                cacheErrors.inc();
                             }
                         }
                     }
@@ -246,6 +257,10 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                             final ComposablePromise<V> promise = futureValues.get(key);
                             promise.setException(loadedRes.getError());
                             futureValues.remove(key);
+                        }
+
+                        if (loaderErrors != null) {
+                            loaderErrors.inc();
                         }
                     }
                 }
