@@ -5,7 +5,7 @@ import java.util.concurrent.{Callable, TimeUnit, TimeoutException}
 import com.google.common.base.{Predicate, Supplier}
 import com.outbrain.ob1k.concurrent.handlers._
 import com.outbrain.ob1k.concurrent.{ComposableFuture => JavaComposableFuture, ComposableFutures =>
-JavaComposableFutures, Consumer, Try => JavaTry}
+JavaComposableFutures, Try => JavaTry, Producer, Consumer}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.Duration
@@ -24,6 +24,13 @@ object ComposableFuture {
   implicit def toScalaTry[T](javaTry: JavaTry[T]): Try[T] = {
     if (javaTry.isSuccess) Success(javaTry.getValue)
     else Failure(javaTry.getError)
+  }
+
+  implicit def toJavaTry[T](scalaTry: Try[T]): JavaTry[T] = {
+    scalaTry match {
+      case Success(value) => JavaTry.fromValue(value)
+      case Failure(error) => JavaTry.fromError(error)
+    }
   }
 
   implicit def toScalaComposableFuture[T](composableFuture: JavaComposableFuture[T]): ComposableFuture[T] =
@@ -77,7 +84,7 @@ object ComposableFuture {
    *
    * @param oracle A function that provides the futures to chain
    * @param predicate A predicate to satisfy
-   * @tparam T
+   * @tparam T the future type
    * @return A future which is the futures chained until the predicate was true.
    */
   def recursive[T](oracle: => ComposableFuture[T], predicate: T => Boolean): ComposableFuture[T] = {
@@ -96,11 +103,37 @@ object ComposableFuture {
    * Combines futures' values into a single future which contains the result of the future completed first.
    *
    * @param futures futures to combine
-   * @tparam T
+   * @tparam T the common type param of all futures.
    * @return A combined future
    */
   def any[T](futures: ComposableFuture[T]*): ComposableFuture[T] = {
     JavaComposableFutures.any[T](futures.toList.map(_.future))
+  }
+
+  def first[K, T](futures: Map[K, ComposableFuture[T]], numOfSuccess: Int): ComposableFuture[Map[K, T]] = {
+    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future), numOfSuccess).map {
+      import scala.collection.JavaConverters._
+      _.asScala.toMap
+    }
+  }
+
+  /**
+   * constructs a future that returns at most the first numOfSuccess successful values or whatever values
+   * that was returned in the specified duration.
+   * the input futures are given as a map so the response can indicate which of the futures actually returned.
+   *
+   * @param futures the input futures
+   * @param numOfSuccess the min number of success values to wait for.
+   * @param maxDuration the max time duration to wait for.
+   * @tparam K the map key type
+   * @tparam T the future type
+   * @return a future of a map containing the accumulated results. 
+   */
+  def first[K, T](futures: Map[K, ComposableFuture[T]], numOfSuccess: Int, maxDuration: Duration): ComposableFuture[Map[K, T]] = {
+    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future), numOfSuccess, maxDuration.toNanos, TimeUnit.NANOSECONDS).map {
+      import scala.collection.JavaConverters._
+      _.asScala.toMap
+    }
   }
 
   def submit[T](task: => T, useExecutor: Boolean = true): ComposableFuture[T] = {
@@ -110,14 +143,29 @@ object ComposableFuture {
   }
 
   /**
+   * constructs a new ComposableFuture using a producer function.
+   * producer can supply a value(or an error) to a consumer function(Try[T] => Unit)
+   * and should supply it at-most once.
+   *
+   * @param producer the producer function.
+   * @tparam T the type of the future
+   * @return the constructed future.
+   */
+  def build[T](producer: (Try[T] => Unit) => Unit): ComposableFuture[T] = {
+    JavaComposableFutures.buildLazy[T](new Producer[T] {
+      override def produce(consumer: Consumer[T]): Unit = producer(consumer.consume(_))
+    })
+  }
+
+  /**
    * Creates a future that holds the result of a delayed execution of a task.
    *
    * @param task The task to be executed by the future.
    * @param delay The delay with which to execute the task.
-   * @tparam T
+   * @tparam T the future type
    * @return A future that holds the result of task's execution.
    */
-  def schedule[T](task: => T, delay: Duration): JavaComposableFuture[T] = {
+  def schedule[T](task: => T, delay: Duration): ComposableFuture[T] = {
     JavaComposableFutures.scheduleLazy(new Callable[T] {
       override def call(): T = task
     }, delay.toNanos, TimeUnit.NANOSECONDS)
@@ -152,7 +200,9 @@ trait ComposableFuture[T] {
   })
 
 
-  def foreach(f: T => Unit): Unit = consume {_ foreach f}
+  def foreach(f: T => Unit): Unit = consume {
+    _ foreach f
+  }
 
   /**
    * Sets a timeout for getting a result from this future.
