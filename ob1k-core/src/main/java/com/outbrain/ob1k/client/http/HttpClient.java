@@ -1,7 +1,11 @@
 package com.outbrain.ob1k.client.http;
 
 import com.google.common.base.Objects;
-import com.ning.http.client.*;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.ListenableFuture;
+import com.ning.http.client.Request;
+import com.ning.http.client.Response;
 import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -42,6 +46,11 @@ public class HttpClient implements Closeable {
         this(reties, connectionTimeout, requestTimeout, false);
     }
 
+    public HttpClient(final int reties, final int connectionTimeout, final int requestTimeout, final MetricFactory metricFactory) {
+        this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, false, false,
+                false, MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, metricFactory);
+    }
+
     public HttpClient(final int reties, final int connectionTimeout, final int requestTimeout, final boolean compression) {
         this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, compression);
     }
@@ -49,13 +58,13 @@ public class HttpClient implements Closeable {
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
                       final int requestTimeout, final boolean compression) {
         this(registry, reties, connectionTimeout, requestTimeout, compression, false, false,
-            MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
+                MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
     }
 
     public HttpClient(final int reties, final int connectionTimeout, final int requestTimeout,
                       final boolean compression, final boolean useRawUrl) {
         this(new RequestMarshallerRegistry(), reties, connectionTimeout, requestTimeout, compression, useRawUrl,
-            false, MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
+                false, MAX_CONNECTIONS_PER_HOST, TOTAL_MAX_CONNECTIONS, null);
     }
 
     public HttpClient(final RequestMarshallerRegistry registry, final int reties, final int connectionTimeout,
@@ -354,7 +363,6 @@ public class HttpClient implements Closeable {
      * @return the (future)response of the http request, un-marshaled into a java object
      */
     public ComposableFuture httpPost(final String url, final Type respType, final Object[] params, final String contentType) {
-        final ComposableFuture<Response> result;
         try {
             final Request request =
                 builder.buildPostRequestWithParams(asyncHttpClient, url, contentType, params).build();
