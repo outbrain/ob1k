@@ -72,7 +72,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
             if (body == null || body.isEmpty()) {
                 return new Object[0];
             }
-            return parseBodyRequestParams(body, request.getPathParams(), method);
+            return parseBodyRequestParams(body, paramNames, request.getPathParams(), method);
         } else {
             throw new IllegalArgumentException("http method not supported.");
         }
@@ -177,33 +177,50 @@ public class JsonRequestMarshaller implements RequestMarshaller {
         return result;
     }
 
-    private Object[] parseBodyRequestParams(final String json, final Map<String, String> pathParams, final Method method) throws IOException {
-        final JsonParser jp = factory.createParser(json);
-        JsonToken token;
+    private Object[] parseBodyRequestParams(final String json, final String[] paramNames,
+                                            final Map<String, String> pathParams, final Method method) throws IOException {
         final List<Object> results = new ArrayList<>();
         final Type[] types = method.getGenericParameterTypes();
+
         int index = 0;
-        for (final String pathParam : pathParams.values()) {
-            results.add(PathParamMarshaller.unMarshell(pathParam, (Class) types[index]));
-            index++;
-        }
-        token = jp.nextToken();
-        if (token == JsonToken.START_ARRAY) {
-            token = jp.nextToken();
-            while (true) {
-                if (token == JsonToken.END_ARRAY)
-                    break;
-
-                final Object res = mapper.readValue(jp, getJacksonType(types[index]));
-                results.add(res);
+        for (final String paramName: paramNames) {
+            if (pathParams.containsKey(paramName)) {
+                results.add(PathParamMarshaller.unMarshell(pathParams.get(paramName), (Class) types[index]));
                 index++;
-
-                token = jp.nextToken();
+            } else {
+                break;
             }
-        } else {
-            // string contains just a single object read it completely and finish.
+        }
+
+        if (results.size() < pathParams.size()) {
+            throw new IOException("path params should be bounded to be a prefix of the method parameters list.");
+        }
+
+        final int numOfBodyParams = types.length - results.size();
+        if (numOfBodyParams == 1) {
+            // in case of single body param we assume a single object with no wrapping array.
+            // we read it completely and finish.
             final Object param = mapper.readValue(json, getJacksonType(types[index]));
             results.add(param);
+        } else if (numOfBodyParams > 1) {
+            final JsonParser jp = factory.createParser(json);
+            JsonToken token = jp.nextToken();
+            if (token == JsonToken.START_ARRAY) {
+                token = jp.nextToken();
+                while (true) {
+                    if (token == JsonToken.END_ARRAY)
+                        break;
+
+                    final Object res = mapper.readValue(jp, getJacksonType(types[index]));
+                    results.add(res);
+                    index++;
+
+                    token = jp.nextToken();
+                }
+            } else {
+                // we have multiple objects to unmarshall and no array of objects.
+                throw new IOException("can't unmarshall request. got a single object in the body but expected multiple objects in an array");
+            }
         }
 
         return results.toArray();
