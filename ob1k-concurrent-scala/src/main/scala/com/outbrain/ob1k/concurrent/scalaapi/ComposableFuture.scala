@@ -5,7 +5,7 @@ import java.util.concurrent.{Callable, TimeUnit, TimeoutException}
 import com.google.common.base.{Predicate, Supplier}
 import com.outbrain.ob1k.concurrent.handlers._
 import com.outbrain.ob1k.concurrent.{ComposableFuture => JavaComposableFuture, ComposableFutures =>
-JavaComposableFutures, Try => JavaTry, Producer, Consumer}
+JavaComposableFutures, Consumer, Producer, Try => JavaTry}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.Duration
@@ -129,8 +129,13 @@ object ComposableFuture {
    * @tparam T the future type
    * @return a future of a map containing the accumulated results. 
    */
-  def first[K, T](futures: Map[K, ComposableFuture[T]], numOfSuccess: Int, maxDuration: Duration): ComposableFuture[Map[K, T]] = {
-    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future), numOfSuccess, maxDuration.toNanos, TimeUnit.NANOSECONDS).map {
+  def first[K, T](futures: Map[K, ComposableFuture[T]],
+                  numOfSuccess: Int,
+                  maxDuration: Duration): ComposableFuture[Map[K, T]] = {
+    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future),
+                                      numOfSuccess,
+                                      maxDuration.toNanos,
+                                      TimeUnit.NANOSECONDS).map {
       import scala.collection.JavaConverters._
       _.asScala.toMap
     }
@@ -170,6 +175,20 @@ object ComposableFuture {
       override def call(): T = task
     }, delay.toNanos, TimeUnit.NANOSECONDS)
   }
+
+  /**
+   * Creates a future that holds the result of a delayed execution of a computation.
+   *
+   * @param computation The computation to be executed by the future.
+   * @param delay The delay with which to execute the computation.
+   * @tparam T the future type
+   * @return A future that holds the result of computation's execution.
+   */
+  def scheduleWith[T](computation: => ComposableFuture[T], delay: Duration): ComposableFuture[T] = {
+    JavaComposableFutures.scheduleFuture(new Callable[JavaComposableFuture[T]] {
+      override def call(): JavaComposableFuture[T] = computation.future
+    }, delay.toNanos, TimeUnit.NANOSECONDS)
+  }
 }
 
 trait ComposableFuture[T] {
@@ -200,9 +219,7 @@ trait ComposableFuture[T] {
   })
 
 
-  def foreach(f: T => Unit): Unit = consume {
-    _ foreach f
-  }
+  def foreach(f: T => Unit): Unit = consume {_ foreach f}
 
   /**
    * Sets a timeout for getting a result from this future.
@@ -226,6 +243,8 @@ trait ComposableFuture[T] {
       }
     })
   }
+
+  def materialize(): ComposableFuture[T] = future.materialize()
 
   def get(atMost: Duration = Duration.Inf): Try[T] = atMost match {
     case Duration.Inf => Try(future.get())
