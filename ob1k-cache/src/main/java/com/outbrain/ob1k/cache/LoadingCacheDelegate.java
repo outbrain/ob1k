@@ -91,7 +91,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     return;
                 }
 
-                final ComposableFuture<V> cachedResult = cache.getAsync(key);
+                final ComposableFuture<V> cachedResult = cache.getAsync(key).withTimeout(duration, timeUnit);
                 cachedResult.consume(new Consumer<V>() {
                     @Override
                     public void consume(final Try<V> res) {
@@ -185,7 +185,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     }
                 }
 
-                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys);
+                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit);
                 cachedResults.consume(new Consumer<Map<K, V>>() {
                     @Override
                     public void consume(final Try<Map<K, V>> res) {
