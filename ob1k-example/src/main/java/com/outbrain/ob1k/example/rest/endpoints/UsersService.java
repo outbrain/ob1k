@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+
 /**
  * Simple endpoint which exposes Users resource
  * and provides restful access
@@ -31,63 +33,47 @@ public class UsersService implements Service {
   }};
 
   public ComposableFuture<List<User>> getAll() {
-
     final List<User> usersList = new ArrayList<>();
 
     for (final User user : users.values()) {
-
       usersList.add(user);
     }
 
-    return ComposableFutures.fromValue(usersList);
+    return fromValue(usersList);
   }
 
   public ComposableFuture<User> fetchUser(final int id) {
-
     final User user = users.containsKey(id) ? users.get(id) : new User();
-
-    return ComposableFutures.fromValue(user);
+    return fromValue(user);
   }
 
   public ComposableFuture<UserActions> createUser(final User userData) {
-
     final int id = userIdCounter.getAndIncrement();
     final User user = new User(id, userData.getName(), userData.getAddress(), userData.getProfession());
 
     users.put(id, user);
-
     logger.info("Created user: " + user.toString());
-
-    return ComposableFutures.fromValue(new UserActions(id, UserActions.Actions.CREATE));
+    return fromValue(new UserActions(id, UserActions.Actions.CREATE));
   }
 
   public ComposableFuture<UserActions> updateUser(final int id, final User userData) {
-
     final User user = users.get(id);
-
     if (user == null) {
-
-      return ComposableFutures.fromValue(new UserActions(id, UserActions.Actions.ERROR));
+      return fromValue(new UserActions(id, UserActions.Actions.ERROR));
     }
 
     user.updateFrom(userData);
-
     logger.info("Updated user: " + user.getId());
-
-    return ComposableFutures.fromValue(new UserActions(id, UserActions.Actions.UPDATE));
+    return fromValue(new UserActions(id, UserActions.Actions.UPDATE));
   }
 
   public ComposableFuture<UserActions> deleteUser(final int id) {
-
     if (!users.containsKey(id)) {
-
-      return ComposableFutures.fromValue(new UserActions(id, UserActions.Actions.ERROR));
+      return fromValue(new UserActions(id, UserActions.Actions.ERROR));
     }
 
     users.remove(id);
-
     logger.info("Deleted user: " + id);
-
-    return ComposableFutures.fromValue(new UserActions(id, UserActions.Actions.DELETE));
+    return fromValue(new UserActions(id, UserActions.Actions.DELETE));
   }
 }

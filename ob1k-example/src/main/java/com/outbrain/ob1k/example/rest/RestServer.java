@@ -30,7 +30,6 @@ public class RestServer {
   private static final int PORT = 8080;
 
   public static void main(final String[] args) {
-
     final Server server = buildServer(PORT);
     server.start();
 
@@ -38,31 +37,18 @@ public class RestServer {
   }
 
   private static Server buildServer(final int port) {
-
-    return ServerBuilder.newBuilder().configurePorts(new PortsProvider() {
-      @Override
-      public void configure(final ChoosePortPhase builder) {
+    return ServerBuilder.newBuilder().configurePorts(builder -> {
         builder.setPort(port);
-      }
-    }).setContextPath("/api").withServices(new RawServiceProvider() {
-      @Override
-      public void addServices(final AddRawServicePhase builder) {
-        builder.defineService(new UsersService(), "/users", new ServiceBindingProvider() {
-          @Override
-          public void configureService(final RawServiceBuilderPhase builder) {
-            builder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
-            builder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
-          }
+    }).setContextPath("/api").withServices(builder -> {
+        builder.defineService(new UsersService(), "/users", serviceBuilder -> {
+            serviceBuilder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
+            serviceBuilder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
+            serviceBuilder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
+            serviceBuilder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
+            serviceBuilder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
         });
-      }
-    }).configureExtraParams(new ExtraParamsProvider() {
-      @Override
-      public void configureExtraParams(final ExtraParamsPhase builder) {
+    }).configureExtraParams(builder -> {
         builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
-      }
     }).build();
   }
 }
