@@ -79,9 +79,9 @@ public class BasicDao {
     }
 
     public BasicDao(final String host, final int port, final String database, final String userName, final String password,
-                    final int maxConnections, final long maxIdleTimeMs, final int maxQueueSize,
+                    final int maxConnections, final long connectTimeoutSeconds, final long maxIdleTimeMs, final int maxQueueSize,
                     final long validationIntervalMs, final MetricFactory metricFactory) {
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, maxIdleTimeMs,
+        _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, connectTimeoutSeconds, maxIdleTimeMs,
             maxQueueSize, validationIntervalMs, metricFactory);
     }
 

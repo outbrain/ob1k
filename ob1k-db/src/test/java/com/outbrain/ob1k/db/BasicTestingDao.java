@@ -18,18 +18,18 @@ import scala.util.Success;
 import scala.util.Try;
 
 /**
- * Created by aronen on 8/25/14.
- *
  * a dao for testing.
  * it configures the connection pool to use a single connection without auto commit.
  * all operations are performed on that single connection and when it is discarded the connection is rolled back
+ *
+ * @author aronen 8/25/14.
  */
 public class BasicTestingDao extends BasicDao implements AutoCloseable {
-  public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password) throws Exception {
+  public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutSeconds) throws Exception {
     // using a single connection in the pool so that every command will run on it.
       super(new MySqlConnectionPool(
             new NonCommittingSingleConnectionFactory(
-                MySqlAsyncConnection.createConfiguration(host, port, database, userName, password)),
+                MySqlAsyncConnection.createConfiguration(host, port, database, userName, password, connectTimeoutSeconds)),
             1, null));
   }
 

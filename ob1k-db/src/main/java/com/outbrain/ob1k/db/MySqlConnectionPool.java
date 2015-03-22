@@ -46,16 +46,16 @@ public class MySqlConnectionPool {
 
   public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
                              final String password, final int maxConnections, final MetricFactory metricFactory) {
-    this(host, port, database, userName, password, maxConnections, DEFAULT_MAX_IDLE_TIME, maxConnections * 2,
+    this(host, port, database, userName, password, maxConnections, 2 /* sec */, DEFAULT_MAX_IDLE_TIME, maxConnections * 2,
         DEFAULT_VALIDATION_INTERVAL, metricFactory);
   }
 
   public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
-                             final String password, final int maxConnections, final long maxIdleTimeMs,
+                             final String password, final int maxConnections, final long connectTimeoutSeconds, final long maxIdleTimeMs,
                              final int maxQueueSize, final long validationIntervalMs, final MetricFactory metricFactory) {
 
     final MySQLConnectionFactory connFactory =
-        new MySQLConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, database, userName, password));
+        new MySQLConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, database, userName, password, connectTimeoutSeconds));
     final PoolConfiguration configuration = new PoolConfiguration(maxConnections, maxIdleTimeMs, maxQueueSize, validationIntervalMs);
     _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
 

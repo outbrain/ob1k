@@ -203,7 +203,7 @@ public class BasicDaoQueryTest {
     @Ignore
     @Test
     public void testGetDeploymentBySource() {
-        try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null)) {
+        try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2/*sec*/)) {
             final Deployment deployment =
                 insertDeployment(dao, 666L, "test123").
                     continueOnSuccess(new FutureSuccessHandler<Long, Deployment>() {
@@ -228,7 +228,7 @@ public class BasicDaoQueryTest {
     @Ignore
     public void testInsertAndGetId() throws Exception {
 //    final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null);
-        final BasicDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null);
+        final BasicDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2/*sec*/);
         final ComposableFuture<Map<String, Object>> resMap = dao.get("select LAST_INSERT_ID()");
 
         final Object res = dao.executeAndGetId("insert into Deployments set source='test125', archived=false, prepareOnly=false, jsonScmRevision=100").get();
