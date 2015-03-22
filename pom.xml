@@ -68,6 +68,19 @@
     <metrics.version>2.1.2</metrics.version>
   </properties>
 
+  <profiles>
+    <profile>
+      <id>JDK 8 Build</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <!-- without this the build fails due to these self closing HTML elements which are not not allowed in Java 8 javadocs -->
+        <additionalparam>-Xdoclint:none</additionalparam>
+      </properties>
+    </profile>
+  </profiles>
+
   <distributionManagement>
     <!--
     <repository>
