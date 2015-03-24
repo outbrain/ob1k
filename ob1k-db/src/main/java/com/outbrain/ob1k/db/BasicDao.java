@@ -33,7 +33,7 @@ public class BasicDao {
 
     /**
      * Warning - Use only when the connection string is in host:port format without schema and other parameter.
-     * example: devdb.il.outbrain.com:3308
+     * example: mydb.company.com:3308
      *
      * @param connectionString - host:port
      * @param database         the database schema name.
