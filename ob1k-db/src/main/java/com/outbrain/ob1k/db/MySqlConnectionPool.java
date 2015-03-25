@@ -26,31 +26,31 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  * Date: 9/22/13
  * Time: 5:59 PM
  */
-public class MySqlConnectionPool {
+class MySqlConnectionPool implements DbConnectionPool {
   private static final Logger logger = LoggerFactory.getLogger(MySqlConnectionPool.class);
-  public static final int DEFAULT_MAX_IDLE_TIME = 15 * 60 * 1000;
-  public static final int DEFAULT_VALIDATION_INTERVAL = 30 * 1000;
+  private static final int DEFAULT_MAX_IDLE_TIME = 15 * 60 * 1000;
+  private static final int DEFAULT_VALIDATION_INTERVAL = 30 * 1000;
 
   private final ConnectionPool<MySQLConnection> _pool;
 
-  public MySqlConnectionPool(final MySQLConnectionFactory connFactory, final int maxConnections, final MetricFactory metricFactory) {
+  MySqlConnectionPool(final MySQLConnectionFactory connFactory, final int maxConnections, final MetricFactory metricFactory) {
     final PoolConfiguration configuration = new PoolConfiguration(maxConnections, DEFAULT_MAX_IDLE_TIME, 10, DEFAULT_VALIDATION_INTERVAL);
     _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
     initializeMetrics(metricFactory, _pool);
   }
 
-  public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
+  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
                              final String password, final MetricFactory metricFactory) {
     this(host, port, database, userName, password, 10, metricFactory);
   }
 
-  public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
+  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
                              final String password, final int maxConnections, final MetricFactory metricFactory) {
     this(host, port, database, userName, password, maxConnections, 2 /* sec */, DEFAULT_MAX_IDLE_TIME, maxConnections * 2,
         DEFAULT_VALIDATION_INTERVAL, metricFactory);
   }
 
-  public MySqlConnectionPool(final String host, final int port, final String database, final String userName,
+  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
                              final String password, final int maxConnections, final long connectTimeoutSeconds, final long maxIdleTimeMs,
                              final int maxQueueSize, final long validationIntervalMs, final MetricFactory metricFactory) {
 
@@ -87,6 +87,7 @@ public class MySqlConnectionPool {
     }
   }
 
+  @Override
   public ComposableFuture<QueryResult> sendQuery(final String query) {
     return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
       @Override
@@ -96,6 +97,7 @@ public class MySqlConnectionPool {
     });
   }
 
+  @Override
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
     final Buffer<Object> scalaValues = JavaConversions.asScalaBuffer(values);
     return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
@@ -136,6 +138,7 @@ public class MySqlConnectionPool {
     });
   }
 
+  @Override
   public <T> ComposableFuture<T> withConnection(final TransactionHandler<T> handler) {
     final ComposableFuture<MySqlAsyncConnection> futureConn = take();
     return futureConn.continueOnSuccess(new FutureSuccessHandler<MySqlAsyncConnection, T>() {
@@ -156,6 +159,7 @@ public class MySqlConnectionPool {
     });
   }
 
+  @Override
   public <T> ComposableFuture<T> withTransaction(final TransactionHandler<T> handler) {
     final ComposableFuture<MySqlAsyncConnection> futureConn = take();
     return futureConn.continueOnSuccess(new FutureSuccessHandler<MySqlAsyncConnection, T>() {
@@ -212,6 +216,7 @@ public class MySqlConnectionPool {
     });
   }
 
+  @Override
   public ComposableFuture<Boolean> close() {
     final ComposableFuture<AsyncObjectPool<MySQLConnection>> future = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<AsyncObjectPool<MySQLConnection>>() {
       @Override

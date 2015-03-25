@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import scala.Option;
@@ -25,9 +24,9 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
  * Time: 4:15 PM
  */
 public class BasicDao {
-    private final MySqlConnectionPool _pool;
+    private final DbConnectionPool _pool;
 
-    public BasicDao(final MySqlConnectionPool pool) {
+    public BasicDao(final DbConnectionPool pool) {
         this._pool = pool;
     }
 
