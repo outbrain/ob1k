@@ -10,6 +10,7 @@ import com.github.mauricio.async.db.mysql.MySQLConnection;
 import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
+import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -27,10 +28,15 @@ import scala.util.Try;
 public class BasicTestingDao extends BasicDao implements AutoCloseable {
   public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutSeconds) throws Exception {
     // using a single connection in the pool so that every command will run on it.
-      super(new MySqlConnectionPool(
-            new NonCommittingSingleConnectionFactory(
-                MySqlAsyncConnection.createConfiguration(host, port, database, userName, password, connectTimeoutSeconds)),
-            1, null));
+      super(createTestConnnectionPool(host, port, database, userName, password, connectTimeoutSeconds));
+  }
+
+  private static DbConnectionPool createTestConnnectionPool(String host, int port, String database, String userName, String password, long connectTimeoutSeconds) throws Exception {
+    return MySqlConnectionPoolBuilder.newBuilder(createNonCommittingSingleConnectionFactory(host, port, database, userName, password, connectTimeoutSeconds)).maxConnections(1).build();
+  }
+
+  private static NonCommittingSingleConnectionFactory createNonCommittingSingleConnectionFactory(String host, int port, String database, String userName, String password, long connectTimeoutSeconds) throws Exception {
+    return new NonCommittingSingleConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, Option.apply(database), userName, Option.apply(password), connectTimeoutSeconds));
   }
 
   @Override

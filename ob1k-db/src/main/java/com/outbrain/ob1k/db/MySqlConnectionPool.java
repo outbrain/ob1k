@@ -28,39 +28,14 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  */
 class MySqlConnectionPool implements DbConnectionPool {
   private static final Logger logger = LoggerFactory.getLogger(MySqlConnectionPool.class);
-  private static final int DEFAULT_MAX_IDLE_TIME = 15 * 60 * 1000;
-  private static final int DEFAULT_VALIDATION_INTERVAL = 30 * 1000;
 
   private final ConnectionPool<MySQLConnection> _pool;
 
-  MySqlConnectionPool(final MySQLConnectionFactory connFactory, final int maxConnections, final MetricFactory metricFactory) {
-    final PoolConfiguration configuration = new PoolConfiguration(maxConnections, DEFAULT_MAX_IDLE_TIME, 10, DEFAULT_VALIDATION_INTERVAL);
-    _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
+  MySqlConnectionPool(final MySQLConnectionFactory connFactory, final PoolConfiguration poolConfiguration, final MetricFactory metricFactory) {
+    _pool = new ConnectionPool<>(connFactory, poolConfiguration, ScalaFutureHelper.ctx);
     initializeMetrics(metricFactory, _pool);
   }
 
-  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
-                             final String password, final MetricFactory metricFactory) {
-    this(host, port, database, userName, password, 10, metricFactory);
-  }
-
-  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
-                             final String password, final int maxConnections, final MetricFactory metricFactory) {
-    this(host, port, database, userName, password, maxConnections, 2 /* sec */, DEFAULT_MAX_IDLE_TIME, maxConnections * 2,
-        DEFAULT_VALIDATION_INTERVAL, metricFactory);
-  }
-
-  MySqlConnectionPool(final String host, final int port, final String database, final String userName,
-                             final String password, final int maxConnections, final long connectTimeoutSeconds, final long maxIdleTimeMs,
-                             final int maxQueueSize, final long validationIntervalMs, final MetricFactory metricFactory) {
-
-    final MySQLConnectionFactory connFactory =
-        new MySQLConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, database, userName, password, connectTimeoutSeconds));
-    final PoolConfiguration configuration = new PoolConfiguration(maxConnections, maxIdleTimeMs, maxQueueSize, validationIntervalMs);
-    _pool = new ConnectionPool<>(connFactory, configuration, ScalaFutureHelper.ctx);
-
-    initializeMetrics(metricFactory, _pool);
-  }
 
   private static void initializeMetrics(final MetricFactory metricFactory, final ConnectionPool<MySQLConnection> pool) {
     if (metricFactory != null) {

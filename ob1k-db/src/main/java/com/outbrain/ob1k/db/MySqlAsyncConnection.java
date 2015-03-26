@@ -35,16 +35,9 @@ public class MySqlAsyncConnection {
     this.conn = conn;
   }
 
-  public MySqlAsyncConnection(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutSeconds) {
-    final Configuration conf = createConfiguration(host, port, database, userName, password, connectTimeoutSeconds);
-    conn = new MySQLConnection(conf, CharsetMapper.Instance(), NettyUtils.DefaultEventLoopGroup(), ScalaFutureHelper.ctx);
-  }
-
-  public static Configuration createConfiguration(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutSeconds) {
+  public static Configuration createConfiguration(final String host, final int port, final Option<String> database, final String userName, final Option<String> password, final long connectTimeoutSeconds) {
     final Option<String> empty = Option.apply(null);
-    final Option<String> dbOption = database != null ? new Some<>(database) : empty;
-    final Option<String> passOption = password != null ? new Some<>(password) : empty;
-    return new Configuration(userName, host, port, passOption, dbOption, CharsetUtil.UTF_8, 16777216,
+    return new Configuration(userName, host, port, password, database, CharsetUtil.UTF_8, 16777216,
         PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutSeconds, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS));
   }
 

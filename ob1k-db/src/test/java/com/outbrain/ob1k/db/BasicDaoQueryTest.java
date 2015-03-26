@@ -67,7 +67,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testSimpleQuery() throws ExecutionException, InterruptedException {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Map<String, Object>>> deployments = dao.list("select id,archived, source from Deployments");
 
         deployments.consume(new Consumer<List<Map<String, Object>>>() {
@@ -100,7 +100,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testSimpleQueryWithMapping() throws ExecutionException, InterruptedException {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Deployment>> deployments = dao.list("select id,modulesRevision,archived,source,status from Deployments WHERE id >= 0", new DeploymentMapper());
 
         deployments.consume(new Consumer<List<Deployment>>() {
@@ -135,7 +135,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testListWithMapping() throws ExecutionException, InterruptedException {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Deployment>> deployments = dao.list("select * from Deployments", new DeploymentMapper());
         deployments.consume(new Consumer<List<Deployment>>() {
             @Override
@@ -169,7 +169,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testSimpleUpdateQuery() throws ExecutionException, InterruptedException {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<Long> rowsEffected = dao.execute("update Deployments set SOURCE = concat('*', SOURCE) where id = 1");
         rowsEffected.consume(new Consumer<Long>() {
             @Override
@@ -238,8 +238,7 @@ public class BasicDaoQueryTest {
     @Test
     @Ignore
     public void testSaveAndGetId() throws Exception {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null);
-//        final BasicDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final Deployment deployment = new Deployment();
         deployment.source = "test125";
         deployment.archived = false;
@@ -255,7 +254,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testTransaction() {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
 
         final ComposableFuture<Boolean> finalRes = dao.withTransaction(new TransactionHandler<Boolean>() {
             @Override
@@ -293,7 +292,7 @@ public class BasicDaoQueryTest {
 
     @Test
     public void testBadQuery() throws Exception {
-        final BasicDao dao = new BasicDao("localhost", 3306, "test", "aronen", null, null);
+        final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         try {
             dao.list("select * from bad_table_name").get();
         } catch (final ExecutionException e) {

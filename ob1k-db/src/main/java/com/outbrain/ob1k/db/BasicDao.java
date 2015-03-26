@@ -1,15 +1,5 @@
 package com.outbrain.ob1k.db;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import com.outbrain.swinfra.metrics.api.MetricFactory;
-import scala.Option;
-import scala.collection.Iterator;
-import scala.collection.JavaConversions;
-
 import com.github.mauricio.async.db.QueryResult;
 import com.github.mauricio.async.db.ResultSet;
 import com.github.mauricio.async.db.RowData;
@@ -17,80 +7,24 @@ import com.google.common.base.Joiner;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import scala.Option;
+import scala.collection.Iterator;
+import scala.collection.JavaConversions;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
- * User: aronen
- * Date: 9/22/13
- * Time: 4:15 PM
+ * @author Asy Ronen
+ * @author Eran Harel
  */
 public class BasicDao {
     private final DbConnectionPool _pool;
 
     public BasicDao(final DbConnectionPool pool) {
         this._pool = pool;
-    }
-
-    /**
-     * Warning - Use only when the connection string is in host:port format without schema and other parameter.
-     * example: mydb.company.com:3308
-     *
-     * @param connectionString - host:port
-     * @param database         the database schema name.
-     * @param userName         user name for login.
-     * @param password         password for login.
-     */
-    public BasicDao(final String connectionString, final String database, final String userName, final String password, final MetricFactory metricFactory) {
-        final String[] arr = connectionString.split(":");
-        final String host = arr[0];
-        final int port = Integer.parseInt(arr[1]);
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, metricFactory);
-    }
-
-    public BasicDao(final String connectionString, final String database, final String userName, final String password) {
-        this(connectionString, database, userName, password, null);
-    }
-
-    /**
-     * Warning - Use only when the connection string is in host:port format without schema and other parameter.
-     * example: devdb.il.outbrain.com:3308
-     *
-     * @param connectionString - host:port
-     * @param database         the database schema name.
-     * @param userName         user name for login.
-     * @param password         password for login.
-     */
-    public BasicDao(final String connectionString, final String database, final String userName, final String password,
-                    final int maxConnections, final MetricFactory metricFactory) {
-        final String[] arr = connectionString.split(":");
-        final String host = arr[0];
-        final int port = Integer.parseInt(arr[1]);
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, metricFactory);
-    }
-
-    public BasicDao(final String connectionString, final String database, final String userName, final String password,
-                    final int maxConnections) {
-        this(connectionString, database, userName, password, maxConnections, null);
-    }
-
-    public BasicDao(final String host, final int port, final String database, final String userName, final String password,
-                    final int maxConnections, final MetricFactory metricFactory) {
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, metricFactory);
-    }
-
-    public BasicDao(final String host, final int port, final String database, final String userName, final String password,
-                    final int maxConnections, final long connectTimeoutSeconds, final long maxIdleTimeMs, final int maxQueueSize,
-                    final long validationIntervalMs, final MetricFactory metricFactory) {
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, maxConnections, connectTimeoutSeconds, maxIdleTimeMs,
-            maxQueueSize, validationIntervalMs, metricFactory);
-    }
-
-    public BasicDao(final String host, final int port, final String database, final String userName, final String password,
-                    final MetricFactory metricFactory) {
-        _pool = new MySqlConnectionPool(host, port, database, userName, password, metricFactory);
-    }
-
-    public BasicDao(final String host, final int port, final String database, final String userName, final String password) {
-        this(host, port, database, userName, password, null);
     }
 
     public ComposableFuture<List<Map<String, Object>>> list(final String query) {
