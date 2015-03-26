@@ -15,6 +15,7 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.util.HashedWheelTimer;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 
@@ -96,6 +97,20 @@ public class HttpClient implements Closeable {
             final NioClientSocketChannelFactory channelFactory = new NioClientSocketChannelFactory();
 
             nettyConfig.setSocketChannelFactory(channelFactory);
+
+            final HashedWheelTimer timer = new HashedWheelTimer();
+            timer.start();
+            nettyConfig.setNettyTimer(timer);
+
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    channelFactory.shutdown();
+                    channelFactory.releaseExternalResources();
+                    timer.stop();
+                }
+            });
+
             return nettyConfig;
         }
     }

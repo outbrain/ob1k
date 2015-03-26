@@ -129,6 +129,27 @@ public class BasicClientRpcTest {
     }
   }
 
+  @Test
+  public void testMultipleClientsSharedThreads() throws Exception {
+    final List<IHelloService> clients = new ArrayList<>();
+    final int numOfThreadsBefore = Thread.activeCount();
+
+    for (int i=0; i< 100; i++) {
+      final IHelloService client = createClient(ContentType.JSON, port);
+      clients.add(client);
+    }
+
+    final int numOfThreads = Thread.activeCount();
+
+    for (final IHelloService client : clients) {
+      Clients.close(client);
+    }
+
+    Assert.assertTrue((numOfThreads - numOfThreadsBefore) < 100);
+
+    System.out.println("walla...");
+  }
+
   private List<TestBean> createBeans() {
     final List<String> habits = new ArrayList<>();
     habits.add("eating");
