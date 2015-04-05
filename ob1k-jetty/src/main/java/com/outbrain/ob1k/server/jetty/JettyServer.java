@@ -290,6 +290,9 @@ public class JettyServer implements Server {
       wac.setTempDirectory(new File(tmpDirPath));
     }
 
+    // disable directory listing
+    wac.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+
     return wac;
   }
 
