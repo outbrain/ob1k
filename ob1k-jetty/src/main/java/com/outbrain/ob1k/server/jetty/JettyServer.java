@@ -1,8 +1,10 @@
 package com.outbrain.ob1k.server.jetty;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -35,6 +37,7 @@ import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.eclipse.jetty.util.MultiException;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ThreadPool;
@@ -72,8 +75,9 @@ public class JettyServer implements Server {
 
   public JettyServer(final String applicationName, final int httpPort, final SslContext sslContext, final String contextPath,
                      final int maxThreads, final Long httpConnectorIdleTimeout, final Long requestTimeoutMillis,
-                     final Integer maxFormSize, final String accessLogsDirectory, int accessLogsRetainDays, final boolean compressionEnabled,
-                     final String staticRootResourcesBase, final MetricFactory metricFactory) {
+                     final Integer maxFormSize, final String accessLogsDirectory, final int accessLogsRetainDays,
+                     final boolean compressionEnabled, final String staticRootResourcesBase, final Class<?> appServerClass,
+                     final MetricFactory metricFactory) {
 
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.applicationName = applicationName;
@@ -81,7 +85,7 @@ public class JettyServer implements Server {
 
     this.metricFactory = Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
     this.maxFormSize = maxFormSize;
-    webAppContext = initWebAppContext(contextPath);
+    webAppContext = initWebAppContext(contextPath, appServerClass);
     server = new org.eclipse.jetty.server.Server(initThreadPool(maxThreads, metricFactory));
     log.info("Embedded Jetty server version: {}", org.eclipse.jetty.server.Server.getVersion());
 
@@ -112,7 +116,9 @@ public class JettyServer implements Server {
     return httpConfiguration;
   }
 
-  private void initWebHandlers(final String accessLogsDirectory, int accessLogsRetainDays, final String staticRootResourcesBase, final Long requestTimeoutMillis) {
+  private void initWebHandlers(final String accessLogsDirectory, final int accessLogsRetainDays,
+                               final String staticRootResourcesBase, final Long requestTimeoutMillis) {
+
     final HandlerCollection handlers = new HandlerCollection();
 
     final ContextHandlerCollection contextHandler = new ContextHandlerCollection();
@@ -152,7 +158,7 @@ public class JettyServer implements Server {
     return context;
   }
 
-  private Handler initAccessLog(final String accessLogsDirectory, int retainDays) {
+  private Handler initAccessLog(final String accessLogsDirectory, final int retainDays) {
     if (null == accessLogsDirectory) {
       log.info("Access log is disabled.");
       return null;
@@ -269,15 +275,27 @@ public class JettyServer implements Server {
     server.addBean(mbContainer);
   }
 
-  private WebAppContext initWebAppContext(final String contextPath) {
+  private WebAppContext initWebAppContext(final String contextPath, final Class<?> appServerClass) {
     log.info("contextPath=[{}]", contextPath);
-    final String warPath = System.getProperty("com.outbrain.application.war.path", "src/main/webapp/");
-    log.info("warPath=[{}]", warPath);
+
     final WebAppContext wac = new WebAppContext();
-    wac.setWar(warPath);
     wac.setContextPath(contextPath);
     wac.setCompactPath(true);
     wac.setThrowUnavailableOnStartupException(true);
+
+    if (appServerClass != null) {
+      final URL location = appServerClass.getProtectionDomain().getCodeSource().getLocation();
+      try {
+        wac.setBaseResource(Resource.newResource(location));
+      } catch (final IOException e) {
+        throw new RuntimeException("cant create server, app server class is unreachable.");
+      }
+    } else {
+      final String warPath = System.getProperty("com.outbrain.application.war.path", "src/main/webapp/");
+      log.info("warPath=[{}]", warPath);
+      wac.setWar(warPath);
+
+    }
 
     if (maxFormSize != null) {
       wac.setMaxFormContentSize(maxFormSize);
@@ -333,12 +351,12 @@ public class JettyServer implements Server {
   }
 
   @Override
-  public void addListener(Listener listener) {
+  public void addListener(final Listener listener) {
     listeners.add(listener);
   }
 
   @Override
-  public void removeListener(Listener listener) {
+  public void removeListener(final Listener listener) {
     listeners.remove(listener);
   }
 
@@ -365,6 +383,15 @@ public class JettyServer implements Server {
         }
       }
     });
+  }
+
+  public static void main(final String[] args) {
+    final URL file1 = JettyServer.class.getProtectionDomain().getCodeSource().getLocation();
+    System.out.println("this jar: " + file1);
+
+    final URL file2 = WebAppContext.class.getProtectionDomain().getCodeSource().getLocation();
+    System.out.println("jetty jar: " + file2);
+
   }
 
 }

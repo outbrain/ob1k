@@ -7,6 +7,8 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 /**
  * Created by aronen on 9/8/14.
+ *
+ * a builder for a jetty based embedded server.
  */
 public class ServerBuilder {
 
@@ -25,6 +27,7 @@ public class ServerBuilder {
   protected String logDirectory;
   private Integer setMaxFormSize;
   private int accessLogsRetainDays;
+  private Class<?> appServerClass;
 
   public ServerBuilder configurationPorts(final int httpPort, final Integer securePort) {
     this.port = httpPort;
@@ -104,12 +107,31 @@ public class ServerBuilder {
     return this;
   }
 
+  public ServerBuilder setCompressionEnabled(final boolean enableCompression) {
+    this.compressionEnabled = enableCompression;
+    return this;
+  }
+
+  public ServerBuilder setAppServerClass(final Class<?> cls) {
+    this.appServerClass = cls;
+    return this;
+  }
+
+  public ServerBuilder setStaticRootResourceBase(final String staticResourceBase) {
+    this.staticRootResourcesBase = staticResourceBase;
+    return this;
+  }
+
+  public ServerBuilder setHttpConnectorIdleTimeout(final long timeout) {
+    this.httpConnectorIdleTimeout = timeout;
+    return this;
+  }
+
   public Server build() {
     final String accessLogsDirectory = accessLogEnabled ? logDirectory : null;
     return new JettyServer(applicationName, port, sslContext, contextPath, maxThreads, httpConnectorIdleTimeout,
-        requestTimeoutMillis, setMaxFormSize, accessLogsDirectory,
-            accessLogsRetainDays, compressionEnabled, staticRootResourcesBase,
-        metricFactory);
+        requestTimeoutMillis, setMaxFormSize, accessLogsDirectory, accessLogsRetainDays, compressionEnabled,
+        staticRootResourcesBase,appServerClass, metricFactory);
   }
 
 
