@@ -284,17 +284,13 @@ public class JettyServer implements Server {
     wac.setThrowUnavailableOnStartupException(true);
 
     if (appServerClass != null) {
-      final URL location = appServerClass.getProtectionDomain().getCodeSource().getLocation();
-      try {
-        wac.setBaseResource(Resource.newResource(location));
-      } catch (final IOException e) {
-        throw new RuntimeException("cant create server, app server class is unreachable.");
-      }
+      final String warPath = appServerClass.getProtectionDomain().getCodeSource().getLocation().getPath();
+      log.info("warPath=[{}]", warPath);
+      wac.setWar(warPath);
     } else {
       final String warPath = System.getProperty("com.outbrain.application.war.path", "src/main/webapp/");
       log.info("warPath=[{}]", warPath);
       wac.setWar(warPath);
-
     }
 
     if (maxFormSize != null) {
@@ -383,15 +379,6 @@ public class JettyServer implements Server {
         }
       }
     });
-  }
-
-  public static void main(final String[] args) {
-    final URL file1 = JettyServer.class.getProtectionDomain().getCodeSource().getLocation();
-    System.out.println("this jar: " + file1);
-
-    final URL file2 = WebAppContext.class.getProtectionDomain().getCodeSource().getLocation();
-    System.out.println("jetty jar: " + file2);
-
   }
 
 }
