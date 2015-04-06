@@ -2,7 +2,7 @@
 <!--suppress ALL --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.62-SNAPSHOT</version>
+  <version>0.62</version>
   <artifactId>ob1k</artifactId>
   <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
@@ -19,7 +19,7 @@
     <connection>scm:git:https://github.com/outbrain/ob1k.git</connection>
     <developerConnection>scm:git:https://github.com/outbrain/ob1k.git</developerConnection>
     <url>https://github.com/outbrain/ob1k/</url>
-    <tag>HEAD</tag>
+    <tag>ob1k-0.62</tag>
   </scm>
 
   <organization>
