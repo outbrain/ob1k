@@ -283,15 +283,9 @@ public class JettyServer implements Server {
     wac.setCompactPath(true);
     wac.setThrowUnavailableOnStartupException(true);
 
-    if (appServerClass != null) {
-      final String warPath = appServerClass.getProtectionDomain().getCodeSource().getLocation().getPath();
-      log.info("warPath=[{}]", warPath);
-      wac.setWar(warPath);
-    } else {
-      final String warPath = System.getProperty("com.outbrain.application.war.path", "src/main/webapp/");
-      log.info("warPath=[{}]", warPath);
-      wac.setWar(warPath);
-    }
+    final String warPath = resolveWarPath(appServerClass);
+    log.info("warPath=[{}]", warPath);
+    wac.setWar(warPath);
 
     if (maxFormSize != null) {
       wac.setMaxFormContentSize(maxFormSize);
@@ -308,6 +302,12 @@ public class JettyServer implements Server {
     wac.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
 
     return wac;
+  }
+
+  private String resolveWarPath(final Class<?> appServerClass) {
+    return appServerClass == null ?
+            System.getProperty("com.outbrain.application.war.path", "src/main/webapp/") :
+            appServerClass.getProtectionDomain().getCodeSource().getLocation().getPath();
   }
 
   @Override
