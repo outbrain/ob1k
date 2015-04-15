@@ -46,13 +46,6 @@ public class ComposableFutures {
             });
             threadPool.allowCoreThreadTimeOut(false);
 
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                @Override
-                public void run() {
-                    threadPool.shutdown();
-                }
-            });
-
             return threadPool;
         }
     }
