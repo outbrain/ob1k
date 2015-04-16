@@ -1,6 +1,7 @@
 #Ob1k - The RPC Framework
 
 [![Build Status](https://travis-ci.org/outbrain/ob1k.svg?branch=master)](https://travis-ci.org/outbrain/ob1k)
+[![Download](https://api.bintray.com/packages/harel-eran/Ob1k/com.outbrain.swinfra/images/download.svg)](https://bintray.com/harel-eran/Ob1k/com.outbrain.swinfra/_latestVersion)
 
 Ob1k is an asynchronous rpc framework for rapid development of async, high performance services.
 More documentation and examples to come soon.
