@@ -90,6 +90,7 @@ public class NettyServer implements Server {
           .childHandler(new RPCServerInitializer(maxContentLength));
 
       channel = b.bind(port).sync().channel();
+      addShutdownhook();
       queueObserver.setServerChannel(channel);
       NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
 
@@ -101,6 +102,15 @@ public class NettyServer implements Server {
       logger.error("failed to start server", e);
       return null;
     }
+  }
+
+  private void addShutdownhook() {
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run() {
+        NettyServer.this.stop();
+      }
+    });
   }
 
   private static String getOpeningText() {
@@ -128,8 +138,14 @@ public class NettyServer implements Server {
   public void stop() {
     logger.info("################## Stopping OB1K server for module '{}' ##################", applicationName);
     queueObserver.setServerChannel(null);
-    channel.close().awaitUninterruptibly(200);
-    nioGroup.shutdownGracefully();
+    channel.closeFuture().addListener(new ChannelFutureListener() {
+      @Override
+      public void operationComplete(ChannelFuture future) throws Exception {
+        nioGroup.shutdownGracefully();
+      }
+    });
+
+    channel.close();
   }
 
   @Override
