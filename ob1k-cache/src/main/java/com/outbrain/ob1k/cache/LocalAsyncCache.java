@@ -227,27 +227,41 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       }
 
       final ComposableFuture<V> currentFuture = map.get(key);
-      return currentFuture.continueOnSuccess(new FutureSuccessHandler<V, Boolean>() {
-        @Override
-        public ComposableFuture<Boolean> handle(final V currentValue) {
-          try {
-            final V newValue = mapper.map(key, currentValue);
-            if (newValue == null) {
-              return fromValue(false);
-            }
+      if (currentFuture != null) {
+        return currentFuture.continueOnSuccess(new FutureSuccessHandler<V, Boolean>() {
+          @Override
+          public ComposableFuture<Boolean> handle(final V currentValue) {
+            try {
+              final V newValue = mapper.map(key, currentValue);
+              if (newValue == null) {
+                return fromValue(false);
+              }
 
-            final boolean success = map.replace(key, currentFuture, fromValue(newValue));
-            if (success) {
-              return fromValue(true);
-            } else {
-              return setAsync(key, mapper, maxIterations - 1);
+              final boolean success = map.replace(key, currentFuture, fromValue(newValue));
+              if (success) {
+                return fromValue(true);
+              } else {
+                return setAsync(key, mapper, maxIterations - 1);
+              }
+            } catch (final Exception e) {
+              // in case mapper throws exception.
+              return fromError(e);
             }
-          } catch (final Exception e) {
-            // in case mapper throws exception.
-            return fromError(e);
           }
+        });
+      } else {
+        final V newValue = mapper.map(key, null);
+        if (newValue != null) {
+          final ComposableFuture<V> prev = map.putIfAbsent(key, fromValue(newValue));
+          if (prev == null) {
+            return fromValue(true);
+          } else {
+            return setAsync(key, mapper, maxIterations - 1);
+          }
+        } else {
+          return fromValue(false);
         }
-      });
+      }
 
     } catch (final Exception e) {
       return fromValue(false);
