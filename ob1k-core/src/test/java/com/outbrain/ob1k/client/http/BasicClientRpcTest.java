@@ -14,9 +14,12 @@ import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
+import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
 import com.outbrain.ob1k.server.build.*;
 import com.outbrain.ob1k.server.filters.CachingFilter;
 import junit.framework.Assert;
@@ -104,6 +107,12 @@ public class BasicClientRpcTest {
   @AfterClass
   public static void tearDown() {
     server.stop();
+  }
+
+  @Test
+  public void testEmptyJsonResponseBody() throws ExecutionException, InterruptedException {
+    IHelloService service = createClient(ContentType.JSON, port);
+    service.emptyString().get(); // used to throw "JsonMappingException: No content to map due to end-of-input"
   }
 
   @Test

@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.client.http;
 
+import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.Service;
 import rx.Observable;
@@ -16,7 +17,10 @@ public interface IHelloService extends Service {
   ComposableFuture<String> helloFilter(String name);
   String helloNow(String name);
 
+  ComposableFuture<Response> emptyString();
+
   ComposableFuture<List<TestBean>> increaseAge(List<TestBean> beans, String newHabit);
+
   ComposableFuture<Boolean> sleep(int milliseconds);
 
   Observable<String> getMessages(String name, int iterations, boolean failAtEnd);

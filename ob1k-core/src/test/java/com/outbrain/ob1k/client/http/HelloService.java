@@ -40,6 +40,11 @@ public class HelloService implements IHelloService {
   }
 
   @Override
+  public ComposableFuture<Response> emptyString() {
+    return ComposableFutures.fromValue(ResponseBuilder.ok().build());
+  }
+
+  @Override
   public ComposableFuture<Boolean> sleep(final int milliseconds) {
     return ComposableFutures.schedule(new Callable<Boolean>() {
       @Override
