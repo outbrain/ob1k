@@ -38,7 +38,7 @@
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ob1k-core</artifactId>
-      <version>${parent.version}</version>
+      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

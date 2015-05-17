@@ -53,6 +53,19 @@
       <artifactId>jetty-jsp</artifactId>
       <version>${org.eclipse.jetty.version}</version>
       <scope>runtime</scope>
+      <!-- excluding org.glassfish javax-el, since for some reason it decides to bring with it SNAPSHOT version -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.glassfish</groupId>
+          <artifactId>javax.el</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- and including again the org.glassfish javax.el package, just this time not a SNAPSHOT version -->
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.el</artifactId>
+      <version>[3.0.0,)</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
