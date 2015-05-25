@@ -10,6 +10,7 @@ import java.lang.reflect.Type;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -125,12 +126,12 @@ public class RequestBuilder {
     if (params == null) {
       return new AbstractMap.SimpleEntry<>(url, null);
     }
-    final List<Object> paramsList = new ArrayList<>(Arrays.asList(params));
+    final List<Object> paramsList = new LinkedList<>(Arrays.asList(params));
     int index = url.indexOf('{');
     int pathIndex = 0;
     String newUrl = url;
     while (index >= 0) {
-      paramsList.remove(pathIndex);
+      paramsList.remove(0);
       final int endIndex = newUrl.indexOf('}', index);
       final String pathParameter = newUrl.substring(index, endIndex + 1);
       newUrl = newUrl.replace(pathParameter, String.valueOf(params[pathIndex]));
