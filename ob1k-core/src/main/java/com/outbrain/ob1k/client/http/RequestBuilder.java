@@ -135,7 +135,7 @@ public class RequestBuilder {
       final int endIndex = newUrl.indexOf('}', index);
       final String pathParameter = newUrl.substring(index, endIndex + 1);
       newUrl = newUrl.replace(pathParameter, String.valueOf(params[pathIndex]));
-      index = newUrl.indexOf('{', endIndex);
+      index = newUrl.indexOf('{');
       pathIndex++;
     }
     return new AbstractMap.SimpleEntry<>(newUrl, paramsList.toArray());
