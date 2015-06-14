@@ -295,8 +295,6 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private void handleOK(final Object res, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
     if (res instanceof NettyResponse) {
       handleResponse((NettyResponse) res, request, ctx);
-    } else if (res instanceof FullHttpResponse) { // TODO this is still needed because of JmxService. Asy, can you take a look please?
-      handleResponse((FullHttpResponse) res, request, ctx);
     } else {
       handleResponse(res, OK, request, ctx);
     }
