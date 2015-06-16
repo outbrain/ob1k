@@ -52,7 +52,18 @@ public class ComposableFutures {
 
     private static class SchedulerServiceHolder {
         private static final Scheduler INSTANCE =
-            new ThreadPoolBasedScheduler(Configuration.getSchedulerCoreSize());
+            new ThreadPoolBasedScheduler(Configuration.getSchedulerCoreSize(),
+                 new ThreadFactory() {
+                     private final AtomicInteger threadNumber = new AtomicInteger(0);
+
+                     @Override
+                     public Thread newThread(final Runnable r) {
+                         final Thread t = new Thread(r, "ob1k-scheduler-service-pool-thread-" + threadNumber.getAndIncrement());
+                         t.setDaemon(true);
+                         return t;
+                     }
+                 }
+            );
     }
 
     public static <T> ComposableFuture<T> recursive(final Supplier<ComposableFuture<T>> creator, final Predicate<T> stopCriteria) {

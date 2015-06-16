@@ -2,6 +2,7 @@ package com.outbrain.ob1k.concurrent;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -14,6 +15,9 @@ public class ThreadPoolBasedScheduler implements Scheduler {
 
   public ThreadPoolBasedScheduler(final int numOfThreads) {
     this.scheduledThreadPool = Executors.newScheduledThreadPool(numOfThreads);
+  }
+  public ThreadPoolBasedScheduler(final int numOfThreads,ThreadFactory threadFactory) {
+    this.scheduledThreadPool = Executors.newScheduledThreadPool(numOfThreads,threadFactory);
   }
 
   @Override
