@@ -189,7 +189,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testSchedule() throws ExecutionException, InterruptedException {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1);
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-schedule");
     final ComposableFuture<Integer> res1 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
       @Override
       public Integer call() throws Exception {
@@ -233,7 +233,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testWithTimeout() throws ExecutionException, InterruptedException {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1);
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-with-timeout");
     final LazyComposableFuture<String> fast = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
       @Override
       public String call() throws Exception {
@@ -265,7 +265,7 @@ public class LazyComposableFutureTest {
   @Test
   public void testDoubleDispatch() throws ExecutionException, InterruptedException {
     final ExecutorService executor = Executors.newFixedThreadPool(2);
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1);
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-double-dispatch");
 
     final AtomicBoolean state1 = new AtomicBoolean(false);
     final LazyComposableFuture<String> res1 = LazyComposableFuture.submit(executor, new Callable<String>() {
@@ -336,7 +336,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testColdStream() {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1);
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-cold-stream");
     final ComposableFuture<String> first = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
       @Override
       public String call() throws Exception {
