@@ -221,9 +221,7 @@ public class BasicClientRpcTest {
         }
       });
     } catch (final RuntimeException e) {
-      Assert.assertTrue(e.getMessage().contains("last message is really bad"));
-    } catch (final Exception e) {
-      Assert.fail(e.getMessage());
+      Assert.assertTrue("Got an unexpected exception: " + e.getMessage(), e.getMessage().contains("last message is really bad"));
     }
 
     Assert.assertEquals(badResults.size(), SIZE);
