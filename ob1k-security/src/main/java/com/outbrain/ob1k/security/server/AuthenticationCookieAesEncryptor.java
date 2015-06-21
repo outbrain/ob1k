@@ -19,27 +19,36 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
 
   public static final String AES_ALGORITHM = "AES";
 
-  private static ThreadLocal<Cipher> decryptingCipher;
-  private static ThreadLocal<Cipher> encryptingCipher;
+  private final ThreadLocal<Cipher> decryptingCipher;
+  private final ThreadLocal<Cipher> encryptingCipher;
 
   /**
    * @param key a 128bit key
    */
-  public AuthenticationCookieAesEncryptor(final byte[] key) throws NoSuchPaddingException,
-    NoSuchAlgorithmException,
-    InvalidKeyException {
+  public AuthenticationCookieAesEncryptor(final byte[] key) {
 
     final SecretKey secretKey = new SecretKeySpec(key, AES_ALGORITHM);
 
-    final Cipher decCypher = Cipher.getInstance(AES_ALGORITHM);
-    decCypher.init(Cipher.DECRYPT_MODE, secretKey);
-    decryptingCipher = new ThreadLocal<>();
-    decryptingCipher.set(decCypher);
+    decryptingCipher = createCipher(secretKey, Cipher.DECRYPT_MODE);
+    encryptingCipher = createCipher(secretKey, Cipher.ENCRYPT_MODE);
+  }
 
-    final Cipher encCypher = Cipher.getInstance(AES_ALGORITHM);
-    encCypher.init(Cipher.ENCRYPT_MODE, secretKey);
-    encryptingCipher = new ThreadLocal<>();
-    encryptingCipher.set(encCypher);
+  private ThreadLocal<Cipher> createCipher(final SecretKey secretKey, final int decryptMode) {
+    return new ThreadLocal<Cipher>() {
+      @Override
+      protected Cipher initialValue() {
+        final Cipher cipher;
+        try {
+          cipher = Cipher.getInstance(AES_ALGORITHM);
+          cipher.init(decryptMode, secretKey);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+          throw new RuntimeException("Error initializing", e);
+        } catch (InvalidKeyException e) {
+          throw new RuntimeException("Invalid key", e);
+        }
+        return cipher;
+      }
+    };
   }
 
   @Override
@@ -48,7 +57,7 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
     try {
       final byte[] decryptedBytes = decryptingCipher.get().doFinal(encryptedBytes);
       return (AuthenticationCookie) SerializationUtils.deserialize(decryptedBytes);
-    } catch (IllegalBlockSizeException| BadPaddingException e) {
+    } catch (IllegalBlockSizeException | BadPaddingException e) {
       throw new RuntimeException("Error decrypting cookie " + encryptedCookie, e);
     }
   }
