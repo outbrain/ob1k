@@ -83,22 +83,6 @@ class AuthenticationCookie implements Serializable {
   }
 
   @Override
-  public boolean equals(final Object o) {
-    if (this == o) return true;
-
-    if (o == null || getClass() != o.getClass()) return false;
-
-    final AuthenticationCookie that = (AuthenticationCookie) o;
-
-    return new EqualsBuilder()
-      .append(username, that.username)
-      .append(creationTime, that.creationTime)
-      .append(appId, that.appId)
-      .append(authenticatorId, that.authenticatorId)
-      .isEquals();
-  }
-
-  @Override
   public String toString() {
     return new ToStringBuilder(this)
       .append("username", username)

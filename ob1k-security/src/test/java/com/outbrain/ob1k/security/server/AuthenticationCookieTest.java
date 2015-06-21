@@ -11,7 +11,10 @@ public class AuthenticationCookieTest {
   public void testDelimitedString() {
     final AuthenticationCookie original = new AuthenticationCookie("username", DateTime.now(), "app-id", "realm");
     final AuthenticationCookie result = AuthenticationCookie.fromDelimitedString(original.toDelimitedString());
-    assertEquals(original, result);
+    assertEquals(original.getAppId(), result.getAppId());
+    assertEquals(original.getAuthenticatorId(), result.getAuthenticatorId());
+    assertEquals(original.getCreationTime(), result.getCreationTime());
+    assertEquals(original.getUsername(), result.getUsername());
   }
 
 }
