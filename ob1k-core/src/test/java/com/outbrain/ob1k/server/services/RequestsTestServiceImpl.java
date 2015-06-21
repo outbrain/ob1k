@@ -10,7 +10,7 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 /**
  * @author marenzon
  */
-public class SimpleRequestMethodTypesServiceImpl implements SimpleRequestMethodTypesService {
+public class RequestsTestServiceImpl implements RequestsTestService {
 
   public final static String GREAT_SUCCESS = "Great success";
 
@@ -43,12 +43,7 @@ public class SimpleRequestMethodTypesServiceImpl implements SimpleRequestMethodT
   }
 
   @Override
-  public ComposableFuture<String> mustBeGet() {
-    return fromValue(GREAT_SUCCESS);
-  }
-
-  @Override
-  public ComposableFuture<String> any() {
-    return fromValue(GREAT_SUCCESS);
+  public ComposableFuture<String> printDetails(final String firstName, final String lastName, final int age) {
+    return fromValue(firstName + " " + lastName + " (" + age + ")");
   }
 }

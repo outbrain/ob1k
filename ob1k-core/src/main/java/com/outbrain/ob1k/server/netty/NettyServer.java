@@ -140,7 +140,7 @@ public class NettyServer implements Server {
     queueObserver.setServerChannel(null);
     channel.closeFuture().addListener(new ChannelFutureListener() {
       @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
+      public void operationComplete(final ChannelFuture future) throws Exception {
         logger.info("################## Closing OB1K server threads for module '{}' ##################", applicationName);
         nioGroup.shutdownGracefully();
       }
@@ -155,7 +155,7 @@ public class NettyServer implements Server {
     listeners.add(listener);
   }
 
-  public void addListeners(Collection<Listener> moreListeners) {
+  public void addListeners(final Collection<Listener> moreListeners) {
     listeners.addAll(moreListeners);
   }
 

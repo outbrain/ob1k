@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * @author marenzon
  */
-public interface SimpleRequestMethodTypesService extends Service {
+public interface RequestsTestService extends Service {
 
   public static class Person {
     public int id;
@@ -54,6 +54,5 @@ public interface SimpleRequestMethodTypesService extends Service {
   ComposableFuture<String> updateUser(int id, String name, String profession);
   ComposableFuture<String> deleteUser(int id);
   ComposableFuture<Person> createUser(String name, String profession);
-  ComposableFuture<String> mustBeGet();
-  ComposableFuture<String> any();
+  ComposableFuture<String> printDetails(String firstName, String lastName, int age);
 }

@@ -11,7 +11,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,7 +25,6 @@ public interface RequestMarshaller {
   FullHttpResponse marshallResponse(Object res, HttpResponseStatus status) throws IOException;
   HttpResponse marshallResponseHeaders(final boolean rawStream);
   HttpContent marshallResponsePart(Object res, HttpResponseStatus status, boolean rawStream) throws IOException;
-  void marshallRequestParams(AsyncHttpClient.BoundRequestBuilder requestBuilder, List<String> requestParamsNames, Object[] requestParams) throws IOException;
   void marshallRequestParams(AsyncHttpClient.BoundRequestBuilder requestBuilder, Object[] requestParams) throws IOException;
   Object unmarshallResponse(Response httpResponse, Type resType, boolean failOnError) throws IOException;
 }

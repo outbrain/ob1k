@@ -187,11 +187,10 @@ public class HttpClient implements Closeable {
         });
     }
 
-    public ComposableFuture httpGet(final String url, final Type respType, final String contentType,
-                                    final List<String> methodParamNames, final Object[] params) {
+    public ComposableFuture httpGet(final String url, final Type respType, final String contentType, final Object[] params) {
         try {
             final Request request =
-                builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType).build();
+                builder.buildGetRequestWithParams(asyncHttpClient, url, params, contentType).build();
 
             return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
                 @Override
@@ -214,7 +213,7 @@ public class HttpClient implements Closeable {
     }
 
     public <T> ComposableFuture<T> httpGet(final String url, final Class<T> respType) {
-        return httpGet(url, respType, null, null);
+        return httpGet(url, respType, (Header[]) null, null);
     }
 
     public ComposableFuture<Response> httpGet(final String url, final Header... headers) {
@@ -230,7 +229,7 @@ public class HttpClient implements Closeable {
     }
 
     public <T> ComposableFuture<T> httpGet(final String url, final Class<T> respType, final Param... params) {
-        return httpGet(url, respType, null, params);
+        return httpGet(url, respType, (Header[]) null, params);
     }
 
     public ComposableFuture<Response> httpGet(final String url, final Map<String, String> params) {
@@ -454,7 +453,7 @@ public class HttpClient implements Closeable {
                                        final List<String> methodParamNames, final Object[] params) {
         try {
             final Request request =
-                builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType).build();
+                builder.buildDeleteRequestWithParams(asyncHttpClient, url, params, contentType).build();
 
             return ComposableFutureAdaptor.fromListenableFuture(new ComposableFutureAdaptor.ListenableFutureProvider<Response>() {
                 @Override
@@ -494,7 +493,7 @@ public class HttpClient implements Closeable {
                                        final List<String> methodParamNames, final Object[] params) {
         try {
             final AsyncHttpClient.BoundRequestBuilder requestBuilder =
-                builder.buildGetRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType);
+                builder.buildGetRequestWithParams(asyncHttpClient, url, params, contentType);
 
             final PublishSubject<Object> result = PublishSubject.create();
             final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);
@@ -524,7 +523,7 @@ public class HttpClient implements Closeable {
                                           final List<String> methodParamNames, final Object[] params) {
         try {
             final AsyncHttpClient.BoundRequestBuilder requestBuilder =
-                builder.buildDeleteRequestWithParams(asyncHttpClient, url, methodParamNames, params, contentType);
+                builder.buildDeleteRequestWithParams(asyncHttpClient, url, params, contentType);
 
             final PublishSubject<Object> result = PublishSubject.create();
             final HttpStreamHandler<Object> handler = new HttpStreamHandler<>(result, builder, respType);

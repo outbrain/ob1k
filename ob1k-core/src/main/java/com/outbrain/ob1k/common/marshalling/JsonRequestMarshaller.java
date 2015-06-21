@@ -65,18 +65,24 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
     @Override
     public Object[] unmarshallRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
+        // if the method is not expecting anything, no reason trying unmarshalling
+        if (paramNames.length == 0) {
+            return new Object[0];
+        }
+
         final HttpRequestMethodType httpMethod = request.getMethod();
         if (HttpRequestMethodType.GET == httpMethod || HttpRequestMethodType.DELETE == httpMethod) {
-            return parseURLRequestParams(request, method, paramNames);
-        } else if (HttpRequestMethodType.POST == httpMethod || HttpRequestMethodType.PUT == httpMethod) {
-            final String body = request.getRequestBody();
-            if (body == null || body.isEmpty()) {
-                return new Object[0];
+            // if we're having query params, we'll try to unmarshall by them
+            // else, trying to read the values from the body
+            if (!request.getQueryParams().isEmpty()) {
+                return parseURLRequestParams(request, method, paramNames);
             }
-            return parseBodyRequestParams(body, paramNames, request.getPathParams(), method);
-        } else {
-            throw new IllegalArgumentException("http method not supported.");
         }
+        final String body = request.getRequestBody();
+        if (body.isEmpty()) {
+            return new Object[paramNames.length];
+        }
+        return parseBodyRequestParams(body, paramNames, request.getPathParams(), method);
     }
 
     @Override
@@ -91,19 +97,6 @@ public class JsonRequestMarshaller implements RequestMarshaller {
         requestBuilder.setBody(body);
         requestBuilder.setContentLength(body.getBytes("UTF8").length);
         requestBuilder.setBodyEncoding("UTF8");
-        requestBuilder.setHeader("Content-Type", ContentType.JSON.requestEncoding());
-    }
-
-    @Override
-    public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final List<String> requestParamsNames,
-                                      final Object[] requestParams) throws IOException {
-        if (requestParamsNames != null) {
-            int index = 0;
-            for (final String name : requestParamsNames) {
-                requestBuilder.addQueryParam(name, mapper.writeValueAsString(requestParams[index]));
-                index++;
-            }
-        }
         requestBuilder.setHeader("Content-Type", ContentType.JSON.requestEncoding());
     }
 
@@ -181,13 +174,13 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
     private Object[] parseBodyRequestParams(final String json, final String[] paramNames,
                                             final Map<String, String> pathParams, final Method method) throws IOException {
-        final List<Object> results = new ArrayList<>();
         final Type[] types = method.getGenericParameterTypes();
+        final List<Object> results = new ArrayList<>(types.length);
 
         int index = 0;
         for (final String paramName: paramNames) {
             if (pathParams.containsKey(paramName)) {
-                results.add(PathParamMarshaller.unMarshell(pathParams.get(paramName), (Class) types[index]));
+                results.add(ParamMarshaller.unmarshall(pathParams.get(paramName), (Class) types[index]));
                 index++;
             } else {
                 break;

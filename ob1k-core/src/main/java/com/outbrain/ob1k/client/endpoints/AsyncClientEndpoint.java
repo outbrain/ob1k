@@ -25,17 +25,16 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     this.filters = filters;
   }
 
+  @SuppressWarnings("unchecked")
   public <T> ComposableFuture<T> invokeAsync(final AsyncClientRequestContext ctx) {
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
       final AsyncFilter filter = filters[ctx.getExecutionIndex()];
-      @SuppressWarnings("unchecked")
-      final ComposableFuture<T> result = (ComposableFuture<T>) filter.handleAsync(ctx.nextPhase());
-      return result;
+      return (ComposableFuture<T>) filter.handleAsync(ctx.nextPhase());
     } else {
       final ComposableFuture<T> result;
       switch (requestMethodType) {
         case GET:
-          result = client.httpGet(ctx.getUrl(), getResType(), contentType.requestEncoding(), methodParamNames, ctx.getParams());
+          result = client.httpGet(ctx.getUrl(), getResType(), contentType.requestEncoding(), ctx.getParams());
           break;
         case PUT:
           result = client.httpPut(ctx.getUrl(), getResType(), ctx.getParams(), contentType.requestEncoding());

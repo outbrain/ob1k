@@ -26,17 +26,16 @@ public class SyncClientEndpoint extends AbstractClientEndpoint {
     this.filters = filters;
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T invokeSync(final SyncClientRequestContext ctx) throws ExecutionException {
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
       final SyncFilter filter = filters[ctx.getExecutionIndex()];
-      @SuppressWarnings("unchecked")
-      final T result = (T) filter.handleSync(ctx.nextPhase());
-      return result;
+      return (T) filter.handleSync(ctx.nextPhase());
     } else {
       final ComposableFuture<T> result;
       switch (requestMethodType) {
         case GET:
-          result = client.httpGet(ctx.getUrl(), getResType(), contentType.requestEncoding(), methodParamNames, ctx.getParams());;
+          result = client.httpGet(ctx.getUrl(), getResType(), contentType.requestEncoding(), ctx.getParams());
           break;
         case PUT:
           result = client.httpPut(ctx.getUrl(), getResType(), ctx.getParams(), contentType.requestEncoding());
