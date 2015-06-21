@@ -6,6 +6,8 @@ import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.SyncClientEndpoint;
 import com.outbrain.ob1k.client.http.HttpClient;
+import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
@@ -40,7 +42,7 @@ public class ClientBuilder<T extends Service> {
     public static final int REQUEST_TIMEOUT = 500;
 
     private final Class<T> type;
-    private final List<String> targets;
+    private TargetProvider targetProvider = new EmptyTargetProvider();
     private final List<SyncFilter> syncFilters;
     private final List<AsyncFilter> asyncFilters;
     private final List<StreamFilter> streamFilters;
@@ -58,7 +60,6 @@ public class ClientBuilder<T extends Service> {
 
     public ClientBuilder(final Class<T> type) {
         this.type = type;
-        this.targets = new ArrayList<>();
         this.syncFilters = new ArrayList<>();
         this.asyncFilters = new ArrayList<>();
         this.streamFilters = new ArrayList<>();
@@ -111,8 +112,8 @@ public class ClientBuilder<T extends Service> {
         return this;
     }
 
-    public ClientBuilder<T> addTarget(final String target) {
-        this.targets.add(target);
+    public ClientBuilder<T> setTargetProvider(final TargetProvider targetProvider) {
+        this.targetProvider = targetProvider == null ? new EmptyTargetProvider() : targetProvider;
         return this;
     }
 
@@ -178,7 +179,7 @@ public class ClientBuilder<T extends Service> {
         final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(type, client,
             asyncFilters, syncFilters, streamFilters, clientType, endpointDescriptors);
 
-        final HttpInvocationHandler handler = new HttpInvocationHandler(targets, client, endpoints);
+        final HttpInvocationHandler handler = new HttpInvocationHandler(targetProvider, client, endpoints);
 
         @SuppressWarnings("unchecked")
         final T res = (T) Proxy.newProxyInstance(loader, new Class[]{type, Closeable.class}, handler);

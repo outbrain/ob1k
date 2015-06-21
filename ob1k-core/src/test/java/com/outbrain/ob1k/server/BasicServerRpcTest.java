@@ -5,6 +5,7 @@ import com.google.common.collect.Sets;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
+import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.server.build.*;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Created by aronen on 10/6/14.
@@ -48,7 +48,7 @@ public class BasicServerRpcTest {
             final int port = server.start().getPort();
 
             client = new ClientBuilder<>(SimpleRequestMethodTypesService.class).
-                addTarget("http://localhost:" + port + "/test/users").
+                setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + "/test/users")).
                 bindEndpoint("getAll", HttpRequestMethodType.GET, "/").
                 bindEndpoint("createUser", HttpRequestMethodType.PUT, "/").
                 bindEndpoint("fetchUser", HttpRequestMethodType.GET, "/{id}").
@@ -127,7 +127,7 @@ public class BasicServerRpcTest {
             final int port = server.start().getPort();
 
             client = new ClientBuilder<>(SimpleRequestMethodTypesService.class).
-                addTarget("http://localhost:" + port + "/test/users").
+                setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + "/test/users")).
                 bindEndpoint("getAll", HttpRequestMethodType.GET, "/").
                 bindEndpoint("createUser", HttpRequestMethodType.PUT, "/").
                 bindEndpoint("fetchUser", HttpRequestMethodType.GET, "/{id}").
@@ -278,13 +278,13 @@ public class BasicServerRpcTest {
     }
 
     private SimpleTestService buildClientForSimpleTest(final int port) {
-        return new ClientBuilder<>(SimpleTestService.class).addTarget("http://localhost:" + port + "/test/simple").build();
+        return new ClientBuilder<>(SimpleTestService.class).setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + "/test/simple")).build();
     }
 
     private SimpleTestService buildClientForSimpleTestWithMaxConnections(final int port, final int maxConnections) {
         return new ClientBuilder<>(SimpleTestService.class).
             setMaxConnectionsPerHost(maxConnections).
-            addTarget("http://localhost:" + port + "/test/simple").
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + "/test/simple")).
             build();
     }
 

@@ -12,21 +12,18 @@ import java.util.concurrent.TimeoutException;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
+import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
 import com.outbrain.ob1k.server.build.*;
 import com.outbrain.ob1k.server.filters.CachingFilter;
 import junit.framework.Assert;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -343,17 +340,17 @@ public class BasicClientRpcTest {
     return new ClientBuilder<>(IHelloService.class).
         setProtocol(protocol).
         setRequestTimeout(120000). // heavily loaded testing environment.
-        addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
+        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
         build();
   }
 
   private IFilteredService createFilteredClient(final int port) {
     return new ClientBuilder<>(IFilteredService.class).
         setProtocol(ContentType.JSON).
-        addTarget("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH).
-        bindEndpoint("getNextCode", "/next").
-        bindEndpoint("getRandomCode", "/random", createCachingFilter()).
-        build();
+        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH)).
+                bindEndpoint("getNextCode", "/next").
+                bindEndpoint("getRandomCode", "/random", createCachingFilter()).
+                build();
   }
 
   private IHelloService createClient(final int port, final int requestTimeout, final int retries) {
@@ -361,7 +358,7 @@ public class BasicClientRpcTest {
         setProtocol(ContentType.JSON).
         setRequestTimeout(requestTimeout).
         setRetries(retries).
-        addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
+        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
         build();
   }
 
@@ -371,8 +368,8 @@ public class BasicClientRpcTest {
         addFilter(new BangFilter()).
         bindEndpoint("helloFilter", new QFilter()).
         setRequestTimeout(120000). // heavily loaded testing environment.
-            addTarget("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH).
-            build();
+        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+        build();
   }
 
   private final static class QFilter implements AsyncFilter<String, AsyncClientRequestContext> {
