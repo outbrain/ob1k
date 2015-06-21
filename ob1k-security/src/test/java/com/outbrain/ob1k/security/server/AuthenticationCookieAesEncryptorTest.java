@@ -32,7 +32,7 @@ public class AuthenticationCookieAesEncryptorTest {
     final AuthenticationCookie original = new AuthenticationCookie("username", DateTime.now(), "appId", "realm");
     final AuthenticationCookie result = encryptor.decrypt(encryptor.encrypt(original));
 
-    assertEquals(original, result);
+    assertEquals(original.toDelimitedString(), result.toDelimitedString());
   }
 
 }

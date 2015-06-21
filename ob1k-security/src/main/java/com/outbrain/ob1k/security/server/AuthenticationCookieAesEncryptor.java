@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.security.server;
 
 import com.ning.http.util.Base64;
-import org.apache.commons.lang3.SerializationUtils;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -9,6 +8,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEncryptor {
 
   public static final String AES_ALGORITHM = "AES";
+  public static final String UTF8 = "UTF-8";
 
   private final ThreadLocal<Cipher> decryptingCipher;
   private final ThreadLocal<Cipher> encryptingCipher;
@@ -56,19 +57,19 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
     final byte[] encryptedBytes = Base64.decode(encryptedCookie);
     try {
       final byte[] decryptedBytes = decryptingCipher.get().doFinal(encryptedBytes);
-      return (AuthenticationCookie) SerializationUtils.deserialize(decryptedBytes);
-    } catch (IllegalBlockSizeException | BadPaddingException e) {
+      return AuthenticationCookie.fromDelimitedString(new String(decryptedBytes, UTF8));
+    } catch (IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException e) {
       throw new RuntimeException("Error decrypting cookie " + encryptedCookie, e);
     }
   }
 
   @Override
   public String encrypt(final AuthenticationCookie authenticationCookie) {
-    final byte[] cookieBytes = SerializationUtils.serialize(authenticationCookie);
     try {
+      final byte[] cookieBytes = authenticationCookie.toDelimitedString().getBytes(UTF8);
       final byte[] encryptedBytes = encryptingCipher.get().doFinal(cookieBytes);
       return Base64.encode(encryptedBytes);
-    } catch (IllegalBlockSizeException | BadPaddingException e) {
+    } catch (IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException e) {
       throw new RuntimeException("Error encrypting cookie " + authenticationCookie, e);
     }
   }

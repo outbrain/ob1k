@@ -1,25 +1,20 @@
 package com.outbrain.ob1k.security.server;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
-
-import java.io.Serializable;
 
 /**
  * Represents a valid authentication cookie for users who have valid credentials.
  * This cookie is meant to be serialized into the response and then sent back by the user for each subsequent
  * request.
  */
-class AuthenticationCookie implements Serializable {
+class AuthenticationCookie {
 
   public final static String DELIMITER = ";";
   public static final DateTimeFormatter DATE_TIME_FORMATTER = ISODateTimeFormat.basicDateTime();
-
-  private static final long serialVersionUID = 738329438828511296L;
 
   private final String username;
   private final DateTime creationTime;
