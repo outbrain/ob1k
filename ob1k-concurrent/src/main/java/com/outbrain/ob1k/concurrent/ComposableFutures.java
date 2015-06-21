@@ -34,16 +34,8 @@ public class ComposableFutures {
 
         private static ExecutorService createExecutor(final int coreSize, final int maxSize) {
             final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(coreSize, maxSize,
-                0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
-                private final AtomicInteger threadNumber = new AtomicInteger(0);
-
-                @Override
-                public Thread newThread(final Runnable r) {
-                    final Thread t = new Thread(r, "ob1k-main-pool-thread-" + threadNumber.getAndIncrement());
-                    t.setDaemon(false);
-                    return t;
-                }
-            });
+                0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+              new PrefixBasedThreadFactory("ob1k-main"));
             threadPool.allowCoreThreadTimeOut(false);
 
             return threadPool;
@@ -53,17 +45,8 @@ public class ComposableFutures {
     private static class SchedulerServiceHolder {
         private static final Scheduler INSTANCE =
             new ThreadPoolBasedScheduler(Configuration.getSchedulerCoreSize(),
-                 new ThreadFactory() {
-                     private final AtomicInteger threadNumber = new AtomicInteger(0);
+              new PrefixBasedThreadFactory("ob1k-scheduler-service").withDaemonThreads());
 
-                     @Override
-                     public Thread newThread(final Runnable r) {
-                         final Thread t = new Thread(r, "ob1k-scheduler-service-pool-thread-" + threadNumber.getAndIncrement());
-                         t.setDaemon(true);
-                         return t;
-                     }
-                 }
-            );
     }
 
     public static <T> ComposableFuture<T> recursive(final Supplier<ComposableFuture<T>> creator, final Predicate<T> stopCriteria) {
