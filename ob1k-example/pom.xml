@@ -6,7 +6,7 @@
   <parent>
     <artifactId>ob1k</artifactId>
     <groupId>com.outbrain.swinfra</groupId>
-    <version>0.77-SNAPSHOT</version>
+    <version>0.78-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-example</artifactId>
@@ -47,10 +47,16 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 </project>

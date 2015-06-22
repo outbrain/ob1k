@@ -67,12 +67,13 @@ public class RequestBuilder {
     return requestBuilder;
   }
 
-  public AsyncHttpClient.BoundRequestBuilder buildGetRequestWithParams(final AsyncHttpClient client, final String url, final List<String> methodParams,
+  public AsyncHttpClient.BoundRequestBuilder buildGetRequestWithParams(final AsyncHttpClient client, final String url,
                                                                        final Object[] ctxParams, final String contentType) throws IOException {
     final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, ctxParams);
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareGet(urlAndParams.getKey());
+    requestBuilder.setHeader("Content-Type", contentType);
     final RequestMarshaller marshaller = registry.getMarshaller(contentType);
-    marshaller.marshallRequestParams(requestBuilder, methodParams, urlAndParams.getValue());
+    marshaller.marshallRequestParams(requestBuilder, urlAndParams.getValue());
     return requestBuilder;
   }
 
@@ -91,18 +92,19 @@ public class RequestBuilder {
                                                                         final String contentType, final Object[] requestParams) throws IOException {
     final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, requestParams);
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.preparePut(urlAndParams.getKey());
-
+    requestBuilder.setHeader("Content-Type", contentType);
     final RequestMarshaller marshaller = registry.getMarshaller(contentType);
     marshaller.marshallRequestParams(requestBuilder, urlAndParams.getValue());
     return requestBuilder;
   }
 
-  public AsyncHttpClient.BoundRequestBuilder buildDeleteRequestWithParams(final AsyncHttpClient client, final String url, final List<String> methodParams,
-                                                                       final Object[] ctxParams, final String contentType) throws IOException {
+  public AsyncHttpClient.BoundRequestBuilder buildDeleteRequestWithParams(final AsyncHttpClient client, final String url,
+                                                                          final Object[] ctxParams, final String contentType) throws IOException {
     final AbstractMap.SimpleEntry<String, Object[]> urlAndParams = replacePathParamsWithValues(url, ctxParams);
     final AsyncHttpClient.BoundRequestBuilder requestBuilder = client.prepareDelete(urlAndParams.getKey());
+    requestBuilder.setHeader("Content-Type", contentType);
     final RequestMarshaller marshaller = registry.getMarshaller(contentType);
-    marshaller.marshallRequestParams(requestBuilder, methodParams, urlAndParams.getValue());
+    marshaller.marshallRequestParams(requestBuilder, urlAndParams.getValue());
     return requestBuilder;
   }
 

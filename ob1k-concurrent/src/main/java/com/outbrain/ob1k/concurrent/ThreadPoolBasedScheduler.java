@@ -13,8 +13,9 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPoolBasedScheduler implements Scheduler {
   private final ScheduledExecutorService scheduledThreadPool;
 
-  public ThreadPoolBasedScheduler(final int numOfThreads) {
-    this.scheduledThreadPool = Executors.newScheduledThreadPool(numOfThreads);
+  public ThreadPoolBasedScheduler(final int numOfThreads,String threadNamePrefix) {
+    this.scheduledThreadPool = Executors.newScheduledThreadPool(numOfThreads,
+      new PrefixBasedThreadFactory(threadNamePrefix));
   }
   public ThreadPoolBasedScheduler(final int numOfThreads,ThreadFactory threadFactory) {
     this.scheduledThreadPool = Executors.newScheduledThreadPool(numOfThreads,threadFactory);

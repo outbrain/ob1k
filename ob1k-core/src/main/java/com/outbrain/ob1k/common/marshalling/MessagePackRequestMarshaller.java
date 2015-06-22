@@ -2,6 +2,7 @@ package com.outbrain.ob1k.common.marshalling;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
+import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -20,7 +21,14 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -98,50 +106,70 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     }
   }
 
-  private void registerBean(final Set<Class> processed, final Class cls) {
-    if (cls == Request.class || cls == HttpRequest.class || cls == HttpResponse.class)
-      return;
-
-    processed.add(cls);
-    final Field[] declaredFields = cls.getDeclaredFields();
-    for (final Field field: declaredFields) {
-      if (Modifier.isStatic(field.getModifiers()))
-        continue;
-
-      final Type fieldType = field.getGenericType();
-      registerTypes(processed, fieldType);
-    }
-
-    try {
-      msgPack.register(cls);
-    } catch (final MessageTypeException | TemplateBuildException e) {
-      logger.warn("class " + cls.getName() + " is not MsgPack compatible. class must have empty constructor, all fields must be concrete and have getters and setters");
-      throw e;
-    }
-  }
-
   @Override
   public Object[] unmarshallRequestParams(final Request request, final Method method, final String[] paramNames) throws IOException {
+    // if the method is not expecting anything, no reason trying unmarshalling
+    if (paramNames.length == 0) {
+      return new Object[0];
+    }
+
     final Type[] types = method.getGenericParameterTypes();
-    final Object[] res = new Object[types.length];
+    final List<Object> results = new ArrayList<>(types.length);
     final InputStream inputStream = request.getRequestInputStream();
-    final Value rawValues = msgPack.read(inputStream);
-    final Value[] values = rawValues.asArrayValue().getElementArray();
-
     final Map<String, String> pathParams = request.getPathParams();
-    final int pathParamsSize = pathParams.size();
 
-    for (int index = 0; index < types.length; index++) {
-      final String paramName = paramNames[index];
+    int index = 0;
+    for (final String paramName: paramNames) {
       if (pathParams.containsKey(paramName)) {
-        res[index] = PathParamMarshaller.unMarshell(pathParams.get(paramName), (Class) types[index]);
+        results.add(ParamMarshaller.unmarshall(pathParams.get(paramName), (Class) types[index]));
+        index++;
       } else {
-        final Template template = msgPack.lookup(types[index]);
-        res[index] = template.read(new Converter(msgPack, values[index - pathParamsSize]), null);
+        break;
       }
     }
 
-    return res;
+    if (results.size() < pathParams.size()) {
+      throw new IOException("path params should be bounded to be a prefix of the method parameters list.");
+    }
+
+    final HttpRequestMethodType requestMethod = request.getMethod();
+    if (HttpRequestMethodType.GET == requestMethod || HttpRequestMethodType.DELETE == requestMethod) {
+      final Map<String, String> queryParams = request.getQueryParams();
+      for (final String paramName : paramNames) {
+        if (queryParams.containsKey(paramName)) {
+          final Type type = types[index];
+          if (!isPrimitiveOrString(type)) {
+            throw new IllegalArgumentException("only primitives and strings are allowed in query");
+          }
+          results.add(ParamMarshaller.unmarshall(queryParams.get(paramName), (Class) type));
+          index++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (results.size() == types.length) {
+      return results.toArray();
+    }
+
+    if (request.getRequestBody().isEmpty()) {
+      throw new IllegalArgumentException("not enough params passed for the request");
+    }
+
+    final Value rawValues = msgPack.read(inputStream);
+    final Value[] values = rawValues.asArrayValue().getElementArray();
+
+    final int pathParamsSize = pathParams.size();
+
+    for (; index < types.length; index++) {
+      final Template template = msgPack.lookup(types[index]);
+      @SuppressWarnings("unchecked")
+      final Object unmarshalled = template.read(new Converter(msgPack, values[index - pathParamsSize]), null);
+      results.add(unmarshalled);
+    }
+
+    return results.toArray();
   }
 
   @Override
@@ -201,16 +229,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   }
 
   @Override
-  public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final List<String> requestParamsNames,
-                                    final Object[] requestParams) throws IOException {
-    if (requestParamsNames.isEmpty()) {
-      return;
-    }
-
-    throw new UnsupportedOperationException("Cannot send msgpack serialization via get request");
-  }
-
-  @Override
+  @SuppressWarnings("unchecked")
   public Object unmarshallResponse(final Response httpResponse, final Type resType, final boolean failOnError) throws IOException {
     final int statusCode = httpResponse.getStatusCode();
     if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
@@ -223,5 +242,31 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     } else {
       throw new IOException(httpResponse.getResponseBody());
     }
+  }
+
+  private void registerBean(final Set<Class> processed, final Class cls) {
+    if (cls == Request.class || cls == HttpRequest.class || cls == HttpResponse.class)
+      return;
+
+    processed.add(cls);
+    final Field[] declaredFields = cls.getDeclaredFields();
+    for (final Field field: declaredFields) {
+      if (Modifier.isStatic(field.getModifiers()))
+        continue;
+
+      final Type fieldType = field.getGenericType();
+      registerTypes(processed, fieldType);
+    }
+
+    try {
+      msgPack.register(cls);
+    } catch (final MessageTypeException | TemplateBuildException e) {
+      logger.warn("class " + cls.getName() + " is not MsgPack compatible. class must have empty constructor, all fields must be concrete and have getters and setters");
+      throw e;
+    }
+  }
+
+  private boolean isPrimitiveOrString(final Type type) {
+    return type instanceof Class && (((Class) type).isPrimitive() || String.class.isAssignableFrom((Class<?>) type));
   }
 }

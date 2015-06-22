@@ -2,11 +2,11 @@ package com.outbrain.ob1k.client;
 
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.http.HttpClient;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.*;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -17,11 +17,11 @@ class HttpInvocationHandler implements InvocationHandler {
 
   private final HttpClient client;
   private final Map<Method, AbstractClientEndpoint> endpoints;
-  private final List<String> targets;
+  private final TargetProvider targetProvider;
 
-  HttpInvocationHandler(final List<String> targets, final HttpClient client, final Map<Method, AbstractClientEndpoint> endpoints) {
+  HttpInvocationHandler(final TargetProvider targetProvider, final HttpClient client, final Map<Method, AbstractClientEndpoint> endpoints) {
     this.client = client;
-    this.targets = targets;
+    this.targetProvider = targetProvider;
     this.endpoints = endpoints;
   }
 
@@ -39,6 +39,6 @@ class HttpInvocationHandler implements InvocationHandler {
   }
 
   private String chooseTarget() {
-    return targets.get(0);
+    return targetProvider.provideTarget();
   }
 }

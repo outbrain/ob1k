@@ -158,7 +158,7 @@ public class ServiceRegistry {
       return;
     }
     if (Arrays.asList(parameterTypes).contains(Request.class)) {
-      throw new RuntimeException("You can't get more objects in your method signature if requesting Request object");
+      throw new RuntimeException("Request object must be the only param in the method signature");
     }
     if (methodBind.contains("{")) {
       int index = methodBind.indexOf('{');
