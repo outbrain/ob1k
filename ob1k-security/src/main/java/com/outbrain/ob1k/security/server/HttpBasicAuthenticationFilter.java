@@ -40,16 +40,17 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   @Override
   public ComposableFuture<Response> handleAsync(final AsyncServerRequestContext ctx) {
-    return httpAccessAuthenticator.authenticate(ctx.getRequest()).continueOnSuccess(new FutureSuccessHandler<String, Response>() {
-      @Override
-      public ComposableFuture<Response> handle(final String authenticatorId) {
-        if (authenticatorId != null) {
-          return handleAuthorizedAsyncRequest(ctx, authenticatorId);
-        } else {
-          return handleUnauthorizedAsyncRequest(ctx);
+    return httpAccessAuthenticator.authenticate(ctx.getRequest())
+      .continueOnSuccess(new FutureSuccessHandler<String, Response>() {
+        @Override
+        public ComposableFuture<Response> handle(final String authenticatorId) {
+          if (authenticatorId != null) {
+            return handleAuthorizedAsyncRequest(ctx, authenticatorId);
+          } else {
+            return handleUnauthorizedAsyncRequest(ctx);
+          }
         }
-      }
-    });
+      });
   }
 
   private ComposableFuture<Response> handleUnauthorizedAsyncRequest(final AsyncServerRequestContext ctx) {
@@ -112,11 +113,16 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
      */
     public ComposableFuture<String> authenticate(final Request request) {
       final AuthenticationCookie authenticationCookie = extractCookieElements(request);
-      if (isValidCookie(authenticationCookie)) {
+      if (isValidCookie(authenticationCookie) && isAuthenticated(authenticationCookie, request)) {
         return ComposableFutures.fromValue(authenticationCookie.getAuthenticatorId());
       } else {
         return authenticateCredentials(request);
       }
+    }
+
+    private boolean isAuthenticated(final AuthenticationCookie cookie, final Request request) {
+      CredentialsAuthenticator<UserPasswordToken> authenticator = pathAssociations.getAuthenticator(cookie.getAuthenticatorId());
+      return pathAssociations.isAuthorized(authenticator, request.getPath());
     }
 
     private boolean isValidCookie(final AuthenticationCookie authenticationCookie) {
@@ -128,7 +134,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     private ComposableFuture<String> authenticateCredentials(final Request request) {
       final Credentials<UserPasswordToken> credentials = headerParser.extractCredentials(request);
       if (credentials != null) return authenticate(credentials, request.getPath());
-      else return null;
+      else return ComposableFutures.fromNull();
     }
 
     private ComposableFuture<String> authenticate(final Credentials<UserPasswordToken> credentials, final String path) {

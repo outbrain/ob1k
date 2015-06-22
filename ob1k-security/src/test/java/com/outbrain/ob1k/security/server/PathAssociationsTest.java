@@ -11,14 +11,16 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class PathAssociationsTest {
 
   private static final String ASSOCIATED_PATH = "/part";
 
-  private DummyAuthenticator rootAssociatedAuthenticator;
-  private DummyAuthenticator pathAssociatedAuthenticator;
+  private CredentialsAuthenticator<String> rootAssociatedAuthenticator;
+  private CredentialsAuthenticator<String> pathAssociatedAuthenticator;
 
   private PathAssociations<String> pathAssociations;
 
@@ -93,4 +95,13 @@ public class PathAssociationsTest {
     assertTrue(authenticators.contains(rootAssociatedAuthenticator));
   }
 
+  @Test
+  public void testGetExistingAuthenticator() {
+    assertEquals(rootAssociatedAuthenticator, pathAssociations.getAuthenticator(rootAssociatedAuthenticator.getId()));
+  }
+
+  @Test
+  public void testGetNonExistingAuthenticator() {
+    assertNull(pathAssociations.getAuthenticator("made-up-id"));
+  }
 }

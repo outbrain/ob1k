@@ -1,10 +1,12 @@
 package com.outbrain.ob1k.security.server;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,8 +30,17 @@ public class PathAssociations<T> {
   //This is a multi map, so a URL might have several CredentialAuthenticators associated with it
   private final SetMultimap<String, CredentialsAuthenticator<T>> associations = HashMultimap.create();
 
+  //Key: Authenticator ID
+  //Value: CredentialsAuthenticator
+  private final Map<String, CredentialsAuthenticator<T>> authenticatorsById = Maps.newHashMap();
+
   private PathAssociations(final SetMultimap<String, CredentialsAuthenticator<T>> associations) {
     this.associations.putAll(associations);
+
+    //Map authenticators by their ID
+    for (CredentialsAuthenticator<T> authenticator : associations.values()) {
+      authenticatorsById.put(authenticator.getId(), authenticator);
+    }
   }
 
   /**
@@ -39,6 +50,13 @@ public class PathAssociations<T> {
   public Set<CredentialsAuthenticator<T>> getAuthenticators(final String path) {
     final Set<CredentialsAuthenticator<T>> authenticators = new HashSet<>(associations.size());
     return accumulateAuthenticators(validatePath(path), authenticators);
+  }
+
+  /**
+   * @return the authenticator with the given {@code id} or null if it doesn't exist
+   */
+  public CredentialsAuthenticator<T> getAuthenticator(final String id) {
+    return authenticatorsById.get(id);
   }
 
   private Set<CredentialsAuthenticator<T>> accumulateAuthenticators(final String path,

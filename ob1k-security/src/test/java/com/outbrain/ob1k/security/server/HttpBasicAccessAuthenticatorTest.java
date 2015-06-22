@@ -52,8 +52,8 @@ public class HttpBasicAccessAuthenticatorTest {
     //Path associations - the johnAuthenticator may authorize all URIs
     final PathAssociations<UserPasswordToken> associations = new PathAssociationsBuilder<UserPasswordToken>()
       .associate("/", rootAuthenticator)
-      .associate("/" + JOHN, johnAuthenticator)
-      .associate("/" + GEORGE, georgeAuthenticator)
+      .associate("/" + JOHN, johnAuthenticator) //Associate "/john" with johnAuthenticator
+      .associate("/" + GEORGE, georgeAuthenticator) //Associate "/geroge" with georgeAuthenticator
       .build();
 
     //The basicAccessAuthenticator to test
@@ -80,35 +80,44 @@ public class HttpBasicAccessAuthenticatorTest {
   @Test
   public void testValidCookie() throws ExecutionException, InterruptedException {
     final String cookie = createCookie("username", DateTime.now(), APP_ID, rootAuthenticator.getId());
-    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
+    setRequestCookie(cookie);
     assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   //Tests an invalid cookie, meaning the cookie header will contain something that's not a cookie
-  public void testInvalidCookie() {
-    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn("not a cookie");
-    assertNull(basicAccessAuthenticator.authenticate(request));
+  public void testInvalidCookie() throws ExecutionException, InterruptedException {
+    setRequestCookie("not a cookie");
+    assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
-  public void testExpiredCookie() {
+  public void testExpiredCookie() throws ExecutionException, InterruptedException {
     final DateTime cookieExpiredTime = DateTime.now().minusSeconds(sessionMaxTimeSeconds * 2);
     final String cookie = createCookie("username", cookieExpiredTime, "appId", rootAuthenticator.getId());
-    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
-    assertNull(basicAccessAuthenticator.authenticate(request));
+    setRequestCookie(cookie);
+    assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
-  public void testCookieWithWrongAppId() {
+  public void testCookieWithWrongAppId() throws ExecutionException, InterruptedException {
     final String cookie = createCookie("username", DateTime.now(), "wrong_app_id", rootAuthenticator.getId());
-    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
-    assertNull(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    setRequestCookie(cookie);
+    assertNull(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
-  public void testNoCookieAndNoCredentials() {
-    assertNull(basicAccessAuthenticator.authenticate(request));
+  public void testNoCookieAndNoCredentials() throws ExecutionException, InterruptedException {
+    assertNull(basicAccessAuthenticator.authenticate(request).get());
+  }
+
+  @Test
+  //Test a request that has an authenticate cookie, that's unauthenticated for the request's URL
+  public void testCookieWithWrongAuthenticator() throws ExecutionException, InterruptedException {
+    final String cookie = createCookie(JOHN, DateTime.now(), APP_ID, johnAuthenticator.getId());
+    setRequestCookie(cookie);
+    when(request.getPath()).thenReturn("/" + GEORGE);
+    assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
@@ -148,7 +157,12 @@ public class HttpBasicAccessAuthenticatorTest {
     assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
-  private String createCookie(final String username, final DateTime cookieExpiredTime,
+  private void setRequestCookie(final String cookie) {
+    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
+  }
+
+  private String createCookie(final String username,
+                              final DateTime cookieExpiredTime,
                               final String appId,
                               final String authenticatorId) {
     final AuthenticationCookie cookie = new AuthenticationCookie(username,
