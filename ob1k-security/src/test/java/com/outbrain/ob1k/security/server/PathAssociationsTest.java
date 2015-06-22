@@ -45,19 +45,19 @@ public class PathAssociationsTest {
   @Test
   //Tests an authenticator that's associated with the root url
   public void testRootAssociation() {
-    assertTrue(pathAssociations.isAuthorized(rootAssociatedAuthenticator, "/"));
-    assertTrue(pathAssociations.isAuthorized(rootAssociatedAuthenticator, ASSOCIATED_PATH));
-    assertTrue(pathAssociations.isAuthorized(rootAssociatedAuthenticator, ASSOCIATED_PATH + "/endpoint"));
+    assertTrue(pathAssociations.mayAuthenticate(rootAssociatedAuthenticator, "/"));
+    assertTrue(pathAssociations.mayAuthenticate(rootAssociatedAuthenticator, ASSOCIATED_PATH));
+    assertTrue(pathAssociations.mayAuthenticate(rootAssociatedAuthenticator, ASSOCIATED_PATH + "/endpoint"));
   }
 
   @Test
   //Tests an authenticator that's associated with
   public void testSpecificAssociation() {
-    assertTrue(pathAssociations.isAuthorized(pathAssociatedAuthenticator, ASSOCIATED_PATH));
-    assertTrue(pathAssociations.isAuthorized(pathAssociatedAuthenticator, ASSOCIATED_PATH + "/endpoint"));
+    assertTrue(pathAssociations.mayAuthenticate(pathAssociatedAuthenticator, ASSOCIATED_PATH));
+    assertTrue(pathAssociations.mayAuthenticate(pathAssociatedAuthenticator, ASSOCIATED_PATH + "/endpoint"));
 
-    assertFalse(pathAssociations.isAuthorized(pathAssociatedAuthenticator, "/"));
-    assertFalse(pathAssociations.isAuthorized(pathAssociatedAuthenticator, "/just/made/up/"));
+    assertFalse(pathAssociations.mayAuthenticate(pathAssociatedAuthenticator, "/"));
+    assertFalse(pathAssociations.mayAuthenticate(pathAssociatedAuthenticator, "/just/made/up/"));
   }
 
   private class DummyAuthenticator implements CredentialsAuthenticator<String> {

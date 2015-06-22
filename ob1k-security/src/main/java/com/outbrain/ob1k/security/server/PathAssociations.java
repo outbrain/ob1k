@@ -69,7 +69,7 @@ public class PathAssociations<T> {
 
   /**
    * <p>
-   * Checks whether or not {@code authenticator} may authorize access to {@code path}. Such an authenticator exists
+   * Checks whether or not {@code authenticator} may authenticate access to {@code path}. Such an authenticator exists
    * if it was associated with {@code path} or with any of its parents. For example for the path "/a/b/c" Any authenticator
    * assigned with either "/a/b/c", "/a/b", "/a", "/" is valid
    * </p>
@@ -78,8 +78,8 @@ public class PathAssociations<T> {
    * <table>
    * <tr>
    * <th>Authenticator associated with</th>
-   * <th>Authorized paths</th>
-   * <th>Unauthorized paths</th>
+   * <th>Valid paths</th>
+   * <th>Invalid paths</th>
    * </tr>
    * <tr>
    * <td>/</td>
@@ -94,11 +94,11 @@ public class PathAssociations<T> {
    * </table>
    * </p>
    */
-  public boolean isAuthorized(final CredentialsAuthenticator authenticator, final String path) {
+  public boolean mayAuthenticate(final CredentialsAuthenticator authenticator, final String path) {
     if (StringUtils.isBlank(path) || isRootPath(path)) {
       return associations.containsEntry(PATH_DELIMITER, authenticator);
     } else {
-      return associations.containsEntry(path, authenticator) || isAuthorized(authenticator, parentPath(path));
+      return associations.containsEntry(path, authenticator) || mayAuthenticate(authenticator, parentPath(path));
     }
   }
 

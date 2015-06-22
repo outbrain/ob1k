@@ -122,7 +122,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     private boolean isAuthenticated(final AuthenticationCookie cookie, final Request request) {
       CredentialsAuthenticator<UserPasswordToken> authenticator = pathAssociations.getAuthenticator(cookie.getAuthenticatorId());
-      return pathAssociations.isAuthorized(authenticator, request.getPath());
+      return pathAssociations.mayAuthenticate(authenticator, request.getPath());
     }
 
     private boolean isValidCookie(final AuthenticationCookie authenticationCookie) {
