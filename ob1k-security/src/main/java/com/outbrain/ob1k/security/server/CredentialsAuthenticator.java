@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.security.server;
 
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+
 public interface CredentialsAuthenticator<T> {
 
   /**
@@ -8,7 +10,7 @@ public interface CredentialsAuthenticator<T> {
    *
    * @return {@code true} if authentication succeeded
    */
-  boolean authenticate(Credentials<T> credentials);
+  ComposableFuture<Boolean> authenticate(Credentials<T> credentials);
 
   /**
    * Returns the unique identifier of this CredentialsAuthenticator.<br>

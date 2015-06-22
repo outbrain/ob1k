@@ -2,6 +2,8 @@ package com.outbrain.ob1k.security.server;
 
 import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter.HttpBasicAccessAuthenticator;
 import com.outbrain.ob1k.security.server.PathAssociations.PathAssociationsBuilder;
 import org.joda.time.DateTime;
@@ -14,6 +16,7 @@ import javax.crypto.NoSuchPaddingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -75,10 +78,10 @@ public class HttpBasicAccessAuthenticatorTest {
   }
 
   @Test
-  public void testValidCookie() {
+  public void testValidCookie() throws ExecutionException, InterruptedException {
     final String cookie = createCookie("username", DateTime.now(), APP_ID, rootAuthenticator.getId());
     when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
@@ -109,40 +112,40 @@ public class HttpBasicAccessAuthenticatorTest {
   }
 
   @Test
-  public void testInvalidCredentials() {
+  public void testInvalidCredentials() throws ExecutionException, InterruptedException {
     populateRequestWithCredentials("username", "expectedPassword");
-    assertNull(basicAccessAuthenticator.authenticate(request));
+    assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   //Tests that the root URI is authenticated by rootAuthenticator
-  public void testValidCredentials() {
+  public void testValidCredentials() throws ExecutionException, InterruptedException {
     populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   //Tests that non-root URI is still authenticated by rootAuthenticator
-  public void testValidCredentialsNonRootPath() {
+  public void testValidCredentialsNonRootPath() throws ExecutionException, InterruptedException {
     when(request.getPath()).thenReturn("/not-associated-with-authenticator");
     populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   //Tests that a URI under /john is authenticated by johnAuthenticator when provided with JOHN credentials
-  public void testJohnUriWithJohnCredentials() {
+  public void testJohnUriWithJohnCredentials() throws ExecutionException, InterruptedException {
     when(request.getPath()).thenReturn(JOHN + "/some-suffix");
     populateRequestWithCredentials(JOHN, JOHN);
-    assertEquals(johnAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    assertEquals(johnAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   //Tests that a URI under /john is authenticated by rootAuthenticator when provided with ROOT credentials
-  public void testJohnUriWithRootCredentials() {
+  public void testJohnUriWithRootCredentials() throws ExecutionException, InterruptedException {
     when(request.getPath()).thenReturn(JOHN + "/some-suffix");
     populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request));
+    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   private String createCookie(final String username, final DateTime cookieExpiredTime,
@@ -174,10 +177,10 @@ public class HttpBasicAccessAuthenticatorTest {
     }
 
     @Override
-    public boolean authenticate(final Credentials<UserPasswordToken> credentials) {
+    public ComposableFuture<Boolean> authenticate(final Credentials<UserPasswordToken> credentials) {
       final String password = new String(credentials.get().getPassword());
       final String username = credentials.get().getUsername();
-      return password.equals(expectedPassword) && username.equals(expectedUsername);
+      return ComposableFutures.fromValue(password.equals(expectedPassword) && username.equals(expectedUsername));
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.security.server;
 
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.security.server.PathAssociations.PathAssociationsBuilder;
 import org.junit.After;
 import org.junit.Before;
@@ -59,8 +61,8 @@ public class PathAssociationsTest {
   private class DummyAuthenticator implements CredentialsAuthenticator<String> {
 
     @Override
-    public boolean authenticate(final Credentials<String> credentials) {
-      return false;
+    public ComposableFuture<Boolean> authenticate(final Credentials<String> credentials) {
+      return ComposableFutures.fromValue(false);
     }
 
     @Override
