@@ -20,36 +20,15 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
   public static final String AES_ALGORITHM = "AES";
   public static final String UTF8 = "UTF-8";
 
-  private final ThreadLocal<Cipher> decryptingCipher;
-  private final ThreadLocal<Cipher> encryptingCipher;
+  private final ThreadLocalCipher decryptingCipher;
+  private final ThreadLocalCipher encryptingCipher;
 
   /**
    * @param key a 128bit key
    */
   public AuthenticationCookieAesEncryptor(final byte[] key) {
-
-    final SecretKey secretKey = new SecretKeySpec(key, AES_ALGORITHM);
-
-    decryptingCipher = createCipher(secretKey, Cipher.DECRYPT_MODE);
-    encryptingCipher = createCipher(secretKey, Cipher.ENCRYPT_MODE);
-  }
-
-  private ThreadLocal<Cipher> createCipher(final SecretKey secretKey, final int decryptMode) {
-    return new ThreadLocal<Cipher>() {
-      @Override
-      protected Cipher initialValue() {
-        final Cipher cipher;
-        try {
-          cipher = Cipher.getInstance(AES_ALGORITHM);
-          cipher.init(decryptMode, secretKey);
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-          throw new RuntimeException("Error initializing", e);
-        } catch (InvalidKeyException e) {
-          throw new RuntimeException("Invalid key", e);
-        }
-        return cipher;
-      }
-    };
+    decryptingCipher = new ThreadLocalCipher(key, Cipher.DECRYPT_MODE);
+    encryptingCipher = new ThreadLocalCipher(key, Cipher.ENCRYPT_MODE);
   }
 
   @Override
@@ -73,4 +52,30 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
       throw new RuntimeException("Error encrypting cookie " + authenticationCookie, e);
     }
   }
+
+  private class ThreadLocalCipher extends ThreadLocal<Cipher> {
+
+    private final int mode;
+    private final SecretKey key;
+
+    public ThreadLocalCipher(final byte[] key, final int mode) {
+      this.mode = mode;
+      this.key = new SecretKeySpec(key, AES_ALGORITHM);
+    }
+
+    @Override
+    protected Cipher initialValue() {
+      final Cipher cipher;
+      try {
+        cipher = Cipher.getInstance(AES_ALGORITHM);
+        cipher.init(mode, key);
+      } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+        throw new RuntimeException("Error initializing", e);
+      } catch (InvalidKeyException e) {
+        throw new RuntimeException("Invalid key", e);
+      }
+      return cipher;
+    }
+  }
+
 }
