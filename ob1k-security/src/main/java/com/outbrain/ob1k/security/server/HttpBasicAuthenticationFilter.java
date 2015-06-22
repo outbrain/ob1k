@@ -62,9 +62,9 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
   private ComposableFuture<Response> handleAuthorizedAsyncRequest(final AsyncServerRequestContext ctx,
                                                                   final String authenticatorId) {
     final String username = httpAccessAuthenticator.extractUsername(ctx.getRequest());
-    return ctx.invokeAsync().continueWith(new FutureResultHandler<Object, Response>() {
+    return ctx.invokeAsync().continueOnSuccess(new FutureSuccessHandler<Object, Response>() {
       @Override
-      public ComposableFuture<Response> handle(final Try<Object> result) {
+      public ComposableFuture<Response> handle(final Object result) {
         final Response response =
           httpAccessAuthenticator.createAuthorizedResponse(username, authenticatorId, result);
         return ComposableFutures.fromValue(response);
