@@ -27,7 +27,7 @@ public class Main {
     //starts the server
     final Server server = UsersServer.buildServer(PORT);
     server.start();
-    logger.info("** "+UsersServer.class.getSimpleName() + " Have Been Started On Port: {} **", PORT);
+    logger.info("** " + UsersServer.class.getSimpleName() + " Have Been Started On Port: {} **", PORT);
 
     runClient();
 
@@ -58,7 +58,7 @@ public class Main {
       return userService.fetchUser(1);
     });
     final String address = myUser.get().getAddress();
-    System.out.println("*** The address is "+address);
+    System.out.println("*** The address is " + address);
     Clients.close(userService);
   }
 }
