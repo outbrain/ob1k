@@ -79,10 +79,11 @@ public class JsonRequestMarshaller implements RequestMarshaller {
             }
         }
         final String body = request.getRequestBody();
-        if (body.isEmpty()) {
+        final Map<String, String> pathParams = request.getPathParams();
+        if (body.isEmpty() && pathParams.isEmpty()) {
             return new Object[paramNames.length];
         }
-        return parseBodyRequestParams(body, paramNames, request.getPathParams(), method);
+        return parseBodyRequestParams(body, paramNames, pathParams, method);
     }
 
     @Override
@@ -189,6 +190,10 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
         if (results.size() < pathParams.size()) {
             throw new IOException("path params should be bounded to be a prefix of the method parameters list.");
+        }
+
+        if (results.size() == types.length) {
+            return results.toArray();
         }
 
         final int numOfBodyParams = types.length - results.size();
