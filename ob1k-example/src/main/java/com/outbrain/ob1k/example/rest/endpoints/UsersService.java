@@ -2,7 +2,6 @@ package com.outbrain.ob1k.example.rest.endpoints;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.example.rest.holders.User;
 import com.outbrain.ob1k.example.rest.holders.UserActions;
 import org.slf4j.Logger;
