@@ -1,13 +1,11 @@
 package com.outbrain.ob1k.example.securedrest;
 
+import com.google.common.collect.Lists;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.example.rest.endpoints.UsersService;
 import com.outbrain.ob1k.example.securedrest.security.UserPassEqualAuthenticator;
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
-import com.outbrain.ob1k.security.server.PathAssociations;
-import com.outbrain.ob1k.security.server.PathAssociations.PathAssociationsBuilder;
-import com.outbrain.ob1k.security.server.UserPasswordToken;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.build.ServerBuilder;
 import com.outbrain.ob1k.server.build.ServiceBindingProvider;
@@ -60,16 +58,10 @@ public class SecureRestServer {
   private static HttpBasicAuthenticationFilter createAuthFilter() {
     return new HttpBasicAuthenticationFilter(
       new AuthenticationCookieAesEncryptor(createKey()),
-      createPathAssociations(),
+      Lists.newArrayList(new UserPassEqualAuthenticator()),
       "myAppId",
       3600
     );
-  }
-
-  private static PathAssociations<UserPasswordToken> createPathAssociations() {
-    return new PathAssociationsBuilder<UserPasswordToken>()
-      .associate("/", new UserPassEqualAuthenticator())
-      .build();
   }
 
   /**

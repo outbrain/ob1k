@@ -5,7 +5,6 @@ import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter.HttpBasicAccessAuthenticator;
-import com.outbrain.ob1k.security.server.PathAssociations.PathAssociationsBuilder;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
@@ -15,6 +14,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -27,15 +27,11 @@ public class HttpBasicAccessAuthenticatorTest {
 
   public static final String APP_ID = "myApp";
   private HttpBasicAccessAuthenticator basicAccessAuthenticator;
-  private CredentialsAuthenticator<UserPasswordToken> rootAuthenticator;
-  private CredentialsAuthenticator<UserPasswordToken> johnAuthenticator;
-  private CredentialsAuthenticator<UserPasswordToken> georgeAuthenticator;
+  private CredentialsAuthenticator<UserPasswordToken> credentialsAuthenticator;
   private AuthenticationCookieEncryptor cookieEncryptor;
   private Request request;
   private final int sessionMaxTimeSeconds = 10;
   private final static String ROOT = "root";
-  private final static String JOHN = "john";
-  private final static String GEORGE = "george";
 
 
   @Before
@@ -45,21 +41,12 @@ public class HttpBasicAccessAuthenticatorTest {
     cookieEncryptor = new AuthenticationCookieAesEncryptor(keyGenerator.generateKey().getEncoded());
 
     //A credentials basicAccessAuthenticator for UserPassword credentials
-    rootAuthenticator = new SpecificUserPasswordAuthenticator(ROOT, ROOT);
-    johnAuthenticator = new SpecificUserPasswordAuthenticator(JOHN, JOHN);
-    georgeAuthenticator = new SpecificUserPasswordAuthenticator(GEORGE, GEORGE);
-
-    //Path associations - the johnAuthenticator may authorize all URIs
-    final PathAssociations<UserPasswordToken> associations = new PathAssociationsBuilder<UserPasswordToken>()
-      .associate("/", rootAuthenticator)
-      .associate("/" + JOHN, johnAuthenticator) //Associate "/john" with johnAuthenticator
-      .associate("/" + GEORGE, georgeAuthenticator) //Associate "/geroge" with georgeAuthenticator
-      .build();
+    credentialsAuthenticator = new SpecificUserPasswordAuthenticator(ROOT, ROOT);
 
     //The basicAccessAuthenticator to test
     basicAccessAuthenticator = new HttpBasicAccessAuthenticator(
       cookieEncryptor,
-      associations,
+      Collections.singletonList(credentialsAuthenticator),
       APP_ID,
       sessionMaxTimeSeconds);
 
@@ -70,18 +57,16 @@ public class HttpBasicAccessAuthenticatorTest {
   @After
   public void tearDown() {
     basicAccessAuthenticator = null;
-    rootAuthenticator = null;
-    johnAuthenticator = null;
-    georgeAuthenticator = null;
+    credentialsAuthenticator = null;
     cookieEncryptor = null;
     request = null;
   }
 
   @Test
   public void testValidCookie() throws ExecutionException, InterruptedException {
-    final String cookie = createCookie("username", DateTime.now(), APP_ID, rootAuthenticator.getId());
+    final String cookie = createCookie("username", DateTime.now(), APP_ID, credentialsAuthenticator.getId());
     setRequestCookie(cookie);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
+    assertEquals(credentialsAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
@@ -94,29 +79,20 @@ public class HttpBasicAccessAuthenticatorTest {
   @Test
   public void testExpiredCookie() throws ExecutionException, InterruptedException {
     final DateTime cookieExpiredTime = DateTime.now().minusSeconds(sessionMaxTimeSeconds * 2);
-    final String cookie = createCookie("username", cookieExpiredTime, "appId", rootAuthenticator.getId());
+    final String cookie = createCookie("username", cookieExpiredTime, "appId", credentialsAuthenticator.getId());
     setRequestCookie(cookie);
     assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   public void testCookieWithWrongAppId() throws ExecutionException, InterruptedException {
-    final String cookie = createCookie("username", DateTime.now(), "wrong_app_id", rootAuthenticator.getId());
+    final String cookie = createCookie("username", DateTime.now(), "wrong_app_id", credentialsAuthenticator.getId());
     setRequestCookie(cookie);
-    assertNull(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
+    assertNull(credentialsAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
   public void testNoCookieAndNoCredentials() throws ExecutionException, InterruptedException {
-    assertNull(basicAccessAuthenticator.authenticate(request).get());
-  }
-
-  @Test
-  //Test a request that has an authenticate cookie, that's unauthenticated for the request's URL
-  public void testCookieWithWrongAuthenticator() throws ExecutionException, InterruptedException {
-    final String cookie = createCookie(JOHN, DateTime.now(), APP_ID, johnAuthenticator.getId());
-    setRequestCookie(cookie);
-    when(request.getPath()).thenReturn("/" + GEORGE);
     assertNull(basicAccessAuthenticator.authenticate(request).get());
   }
 
@@ -130,7 +106,7 @@ public class HttpBasicAccessAuthenticatorTest {
   //Tests that the root URI is authenticated by rootAuthenticator
   public void testValidCredentials() throws ExecutionException, InterruptedException {
     populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
+    assertEquals(credentialsAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   @Test
@@ -138,23 +114,7 @@ public class HttpBasicAccessAuthenticatorTest {
   public void testValidCredentialsNonRootPath() throws ExecutionException, InterruptedException {
     when(request.getPath()).thenReturn("/not-associated-with-authenticator");
     populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
-  }
-
-  @Test
-  //Tests that a URI under /john is authenticated by johnAuthenticator when provided with JOHN credentials
-  public void testJohnUriWithJohnCredentials() throws ExecutionException, InterruptedException {
-    when(request.getPath()).thenReturn(JOHN + "/some-suffix");
-    populateRequestWithCredentials(JOHN, JOHN);
-    assertEquals(johnAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
-  }
-
-  @Test
-  //Tests that a URI under /john is authenticated by rootAuthenticator when provided with ROOT credentials
-  public void testJohnUriWithRootCredentials() throws ExecutionException, InterruptedException {
-    when(request.getPath()).thenReturn(JOHN + "/some-suffix");
-    populateRequestWithCredentials(ROOT, ROOT);
-    assertEquals(rootAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
+    assertEquals(credentialsAuthenticator.getId(), basicAccessAuthenticator.authenticate(request).get());
   }
 
   private void setRequestCookie(final String cookie) {
