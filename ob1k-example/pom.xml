@@ -41,6 +41,11 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>ob1k-security</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
