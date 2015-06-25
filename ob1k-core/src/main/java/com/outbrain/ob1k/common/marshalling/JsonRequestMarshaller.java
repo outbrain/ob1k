@@ -144,11 +144,15 @@ public class JsonRequestMarshaller implements RequestMarshaller {
                                    final boolean failOnError) throws IOException {
     final String body = httpResponse.getResponseBody();
     final int statusCode = httpResponse.getStatusCode();
-    if (HttpResponseStatus.NO_CONTENT.code() == statusCode || Strings.isNullOrEmpty(body)) {
+    if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
       // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
       return null;
     } else if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
-      return mapper.readValue(body, getJacksonType(resType));
+      if (Strings.isNullOrEmpty(body)) {
+        return null;
+      } else {
+        return mapper.readValue(body, getJacksonType(resType));
+      }
     } else {
       throw new IOException("called failed for:" + httpResponse + "\n" + body);
     }
