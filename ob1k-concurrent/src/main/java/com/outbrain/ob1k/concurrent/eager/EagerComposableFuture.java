@@ -380,26 +380,26 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
 
   @Override
   public ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit) {
-    final EagerComposableFuture<T> outer = this;
-    scheduler.schedule(new Runnable() {
+    final ComposablePromise<T> deadline = new EagerComposableFuture<>();
+    final CancellationToken cancellationToken =  scheduler.schedule(new Runnable() {
       @Override
       public void run() {
-        if (!outer.isDone()) {
-          outer.setException(new TimeoutException("timeout occurred on future(" + timeout + " " + unit + ")"));
-        }
+          deadline.setException(new TimeoutException("Timeout occurred on future(" + timeout + " " + unit + ")"));
       }
     }, timeout, unit);
 
-    return outer;
+    this.consume(new Consumer<T>() {
+      @Override
+      public void consume(final Try<T> result) {
+        cancellationToken.cancel();
+      }
+    });
+    return collectFirst(Arrays.asList(this, deadline.future()));
   }
 
   @Override
   public ComposableFuture<T> materialize() {
     return this;
-  }
-
-  private boolean isDone() {
-    return value.get() != null;
   }
 
   @Override

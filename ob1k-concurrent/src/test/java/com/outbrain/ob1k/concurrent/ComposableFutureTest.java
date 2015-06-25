@@ -4,10 +4,12 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
+import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.*;
 import junit.framework.Assert;
 
@@ -575,6 +577,31 @@ public class ComposableFutureTest {
             }
         }));
         return elements;
+    }
+
+    @Test
+    public void testWithTimeout() throws Exception {
+        final String RES_STR= "result";
+        final EagerComposableFuture<String> value = new EagerComposableFuture<>();
+
+        ComposableFuture<String> effectiveValue = value.withTimeout(50, TimeUnit.MILLISECONDS);
+        Thread.sleep(25);
+        value.set(RES_STR);
+        Assert.assertEquals(RES_STR, value.get());
+        Assert.assertEquals(RES_STR,effectiveValue.get());
+
+    }
+
+    @Test(expected=ExecutionException.class)
+    public void testWithTimeoutExpired() throws Exception {
+        final String RES_STR= "result";
+        final EagerComposableFuture<String> value = new EagerComposableFuture<>();
+
+        ComposableFuture<String> effectiveValue = value.withTimeout(25, TimeUnit.MILLISECONDS);
+        Thread.sleep(50);
+        value.set(RES_STR);
+        Assert.assertEquals(RES_STR , value.get());
+        effectiveValue.get(); // this should throw an exception
     }
 
 }
