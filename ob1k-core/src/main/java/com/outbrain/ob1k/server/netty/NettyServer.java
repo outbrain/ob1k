@@ -138,6 +138,9 @@ public class NettyServer implements Server {
   public void stop() {
     logger.info("################## Stopping OB1K server for module '{}' ##################", applicationName);
     queueObserver.setServerChannel(null);
+    if (!channel.isOpen()) {
+      return;
+    }
     channel.closeFuture().addListener(new ChannelFutureListener() {
       @Override
       public void operationComplete(final ChannelFuture future) throws Exception {

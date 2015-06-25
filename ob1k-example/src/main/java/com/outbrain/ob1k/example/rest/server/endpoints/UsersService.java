@@ -1,10 +1,9 @@
-package com.outbrain.ob1k.example.rest.endpoints;
+package com.outbrain.ob1k.example.rest.server.endpoints;
 
-import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.example.rest.holders.User;
-import com.outbrain.ob1k.example.rest.holders.UserActions;
+import com.outbrain.ob1k.example.rest.model.IUserService;
+import com.outbrain.ob1k.example.rest.model.User;
+import com.outbrain.ob1k.example.rest.model.UserActions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,15 +21,12 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  *
  * @author marenzon
  */
-public class UsersService implements Service {
+public class UsersService implements IUserService {
 
   private static final Logger logger = LoggerFactory.getLogger(UsersService.class);
 
   private final AtomicInteger userIdCounter = new AtomicInteger(1);
-  private final Map<Integer, User> users = new ConcurrentHashMap<Integer, User>() {{
-    final int id = userIdCounter.getAndIncrement();
-    put(id, new User(id, "Harry Potter", "Hogwarts School of Prayer and Miracles", "Wizard"));
-  }};
+  private final Map<Integer, User> users = new ConcurrentHashMap<>();
 
   public ComposableFuture<List<User>> getAll() {
     final List<User> usersList = new ArrayList<>();
