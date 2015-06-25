@@ -6,7 +6,7 @@
   <parent>
     <artifactId>ob1k</artifactId>
     <groupId>com.outbrain.swinfra</groupId>
-    <version>0.78</version>
+    <version>0.79-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-example</artifactId>
