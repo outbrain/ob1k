@@ -6,8 +6,6 @@ import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.Try;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
@@ -18,9 +16,9 @@ import org.joda.time.Seconds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.WWW_AUTHENTICATE;
 
@@ -29,11 +27,11 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
   private final HttpBasicAccessAuthenticator httpAccessAuthenticator;
 
   public HttpBasicAuthenticationFilter(final AuthenticationCookieEncryptor authenticationCookieEncryptor,
-                                       final PathAssociations<UserPasswordToken> pathAssociations,
+                                       final List<CredentialsAuthenticator<UserPasswordToken>> authenticators,
                                        final String appId,
                                        final int sessionMaxTimeSeconds) {
     this.httpAccessAuthenticator = new HttpBasicAccessAuthenticator(authenticationCookieEncryptor,
-                                                                    pathAssociations,
+                                                                    authenticators,
                                                                     appId,
                                                                     sessionMaxTimeSeconds);
   }
@@ -88,17 +86,17 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     public static final String SESSION_COOKIE_HEADER = "ob1k-session";
 
     private final AuthenticationCookieEncryptor authenticationCookieEncryptor;
-    private final PathAssociations<UserPasswordToken> pathAssociations;
+    private final List<CredentialsAuthenticator<UserPasswordToken>> authenticators;
     private final String appId;
     private final int sessionMaxTimeSeconds;
     private final BasicAuthenticationHeaderParser headerParser = new BasicAuthenticationHeaderParser();
 
     public HttpBasicAccessAuthenticator(final AuthenticationCookieEncryptor authenticationCookieEncryptor,
-                                        final PathAssociations<UserPasswordToken> pathAssociations,
+                                        final List<CredentialsAuthenticator<UserPasswordToken>> authenticators,
                                         final String appId,
                                         final int sessionMaxTimeSeconds) {
       this.authenticationCookieEncryptor = authenticationCookieEncryptor;
-      this.pathAssociations = pathAssociations;
+      this.authenticators = authenticators;
       this.appId = appId;
       this.sessionMaxTimeSeconds = sessionMaxTimeSeconds;
     }
@@ -113,16 +111,21 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
      */
     public ComposableFuture<String> authenticate(final Request request) {
       final AuthenticationCookie authenticationCookie = extractCookieElements(request);
-      if (isValidCookie(authenticationCookie) && isAuthenticated(authenticationCookie, request)) {
+      if (isValidCookie(authenticationCookie) && isAuthenticated(authenticationCookie)) {
         return ComposableFutures.fromValue(authenticationCookie.getAuthenticatorId());
       } else {
         return authenticateCredentials(request);
       }
     }
 
-    private boolean isAuthenticated(final AuthenticationCookie cookie, final Request request) {
-      CredentialsAuthenticator<UserPasswordToken> authenticator = pathAssociations.getAuthenticator(cookie.getAuthenticatorId());
-      return pathAssociations.mayAuthenticate(authenticator, request.getPath());
+    /*
+    Returns true if the cookie contains an authenticatorId that also exists in this filter's list of authenticators
+     */
+    private boolean isAuthenticated(final AuthenticationCookie cookie) {
+      for (final CredentialsAuthenticator authenticator : authenticators) {
+        if (StringUtils.equals(cookie.getAuthenticatorId(), authenticator.getId())) return true;
+      }
+      return false;
     }
 
     private boolean isValidCookie(final AuthenticationCookie authenticationCookie) {
@@ -138,23 +141,19 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     }
 
     private ComposableFuture<String> authenticate(final Credentials<UserPasswordToken> credentials, final String path) {
-      final Set<CredentialsAuthenticator<UserPasswordToken>> authenticators = pathAssociations.getAuthenticators(path);
-
       //Send the authentication requests, receiveing a map of AuthenticatorId -> Authentication Result
-      final Map<String, ComposableFuture<Boolean>> authenticationResults = sendAuthenticationRequests(authenticators,
-                                                                                                      credentials);
+      final Map<String, ComposableFuture<Boolean>> authenticationResults = sendAuthenticationRequests(credentials);
 
       //Combine all reaults
-      ComposableFuture<Map<String, Boolean>> combinedResults = ComposableFutures.all(false, authenticationResults);
+      final ComposableFuture<Map<String, Boolean>> combinedResults = ComposableFutures.all(false, authenticationResults);
 
       //Find the Authenticator that returned successfully authenticated the request
       return findAuthenticator(combinedResults);
     }
 
-    private Map<String, ComposableFuture<Boolean>> sendAuthenticationRequests(final Set<CredentialsAuthenticator<UserPasswordToken>> authenticators,
-                                                                              final Credentials<UserPasswordToken> credentials) {
-      Map<String, ComposableFuture<Boolean>> authenticationRequests = Maps.newHashMap();
-      for (CredentialsAuthenticator<UserPasswordToken> authenticator : authenticators) {
+    private Map<String, ComposableFuture<Boolean>> sendAuthenticationRequests(final Credentials<UserPasswordToken> credentials) {
+      final Map<String, ComposableFuture<Boolean>> authenticationRequests = Maps.newHashMap();
+      for (final CredentialsAuthenticator<UserPasswordToken> authenticator : authenticators) {
         authenticationRequests.put(authenticator.getId(), authenticator.authenticate(credentials));
       }
       return authenticationRequests;
@@ -165,7 +164,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
         @Override
         public ComposableFuture<String> handle(final Map<String, Boolean> authenticationResults) {
           String authenticatorId = null;
-          for (Entry<String, Boolean> authenticationResult : authenticationResults.entrySet()) {
+          for (final Entry<String, Boolean> authenticationResult : authenticationResults.entrySet()) {
             if (authenticationResult.getValue()) authenticatorId = authenticationResult.getKey();
           }
           return ComposableFutures.fromValue(authenticatorId);
