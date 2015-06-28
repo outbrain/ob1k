@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
@@ -17,38 +18,32 @@
       <artifactId>util-metrics</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
-
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ob1k-concurrent</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
-
     <dependency>
       <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ob1k-cache</artifactId>
       <scope>provided</scope>
       <version>${project.parent.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>5.0.3</version>
     </dependency>
-
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <version>4.0.18.Final</version>
     </dependency>
-
     <dependency>
       <groupId>com.ning</groupId>
       <artifactId>async-http-client</artifactId>
       <version>1.9.11</version>
     </dependency>
-
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
@@ -59,32 +54,27 @@
       <artifactId>jackson-core</artifactId>
       <version>2.2.2</version>
     </dependency>
-
     <dependency>
       <groupId>com.netflix.rxjava</groupId>
       <artifactId>rxjava-core</artifactId>
       <version>0.19.4</version>
     </dependency>
-
     <dependency>
       <groupId>com.github.stephenc.high-scale-lib</groupId>
       <artifactId>high-scale-lib</artifactId>
       <version>1.1.4</version>
     </dependency>
-
     <dependency>
       <groupId>org.msgpack</groupId>
       <artifactId>msgpack</artifactId>
       <version>0.6.7</version>
     </dependency>
-
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
       <!-- this is an optional dependency - needed only if the SpringBeanContext is used -->
       <scope>provided</scope>
     </dependency>
-
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -96,17 +86,23 @@
       <version>1.7.5</version>
       <scope>provided</scope>
     </dependency>
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.10</version>
     </dependency>
-
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.10</version>
+    </dependency>
   </dependencies>
 </project>

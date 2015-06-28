@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+
 /**
  * User: aronen
  * Date: 6/23/13
@@ -26,12 +28,17 @@ public class HelloService implements IHelloService {
       throw new IllegalArgumentException("bad name.");
     }
 
-    return ComposableFutures.fromValue("hello " + name);
+    return fromValue("hello " + name);
+  }
+
+  @Override
+  public ComposableFuture<String> helloWorld() {
+    return fromValue("hello world");
   }
 
   @Override
   public ComposableFuture<String> helloFilter(final String name) {
-    return ComposableFutures.fromValue("hello " + name);
+    return fromValue("hello " + name);
   }
 
   @Override
@@ -41,7 +48,7 @@ public class HelloService implements IHelloService {
 
   @Override
   public ComposableFuture<Response> emptyString() {
-    return ComposableFutures.fromValue(ResponseBuilder.ok().build());
+    return fromValue(ResponseBuilder.ok().build());
   }
 
   @Override
@@ -64,7 +71,7 @@ public class HelloService implements IHelloService {
       bean.getHabits().add(newHabit);
     }
 
-    return ComposableFutures.fromValue(beans);
+    return fromValue(beans);
   }
 
   @Override
@@ -87,10 +94,10 @@ public class HelloService implements IHelloService {
   }
 
   public ComposableFuture<Response> noJsonContent() {
-    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.JSON.responseEncoding()).build());
+    return fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.JSON.responseEncoding()).build());
   }
 
   public ComposableFuture<Response> noMsgPackContent() {
-    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.MESSAGE_PACK.responseEncoding()).build());
+    return fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.MESSAGE_PACK.responseEncoding()).build());
   }
 }

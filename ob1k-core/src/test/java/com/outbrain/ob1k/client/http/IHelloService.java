@@ -14,6 +14,7 @@ import java.util.List;
  */
 public interface IHelloService extends Service {
   ComposableFuture<String> hello(String name);
+  ComposableFuture<String> helloWorld();
   ComposableFuture<String> helloFilter(String name);
   String helloNow(String name);
 
