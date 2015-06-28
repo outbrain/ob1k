@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.example.securedrest;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
-import com.outbrain.ob1k.example.rest.endpoints.UsersService;
+import com.outbrain.ob1k.example.rest.server.endpoints.UsersService;
 import com.outbrain.ob1k.example.securedrest.security.UserPassEqualAuthenticator;
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
