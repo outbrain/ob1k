@@ -6,10 +6,10 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 
 /**
@@ -20,15 +20,34 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
   public static final String AES_ALGORITHM = "AES";
   public static final String UTF8 = "UTF-8";
 
-  private final ThreadLocalCipher decryptingCipher;
-  private final ThreadLocalCipher encryptingCipher;
+  private final ThreadLocal<Cipher> decryptingCipher;
+  private final ThreadLocal<Cipher> encryptingCipher;
 
   /**
    * @param key a 128bit key
    */
   public AuthenticationCookieAesEncryptor(final byte[] key) {
-    decryptingCipher = new ThreadLocalCipher(key, Cipher.DECRYPT_MODE);
-    encryptingCipher = new ThreadLocalCipher(key, Cipher.ENCRYPT_MODE);
+    final Key secretKey = new SecretKeySpec(key, AES_ALGORITHM);
+    decryptingCipher = createCipher(secretKey, Cipher.DECRYPT_MODE);
+    encryptingCipher = createCipher(secretKey, Cipher.ENCRYPT_MODE);
+  }
+
+  private ThreadLocal<Cipher> createCipher(final Key key, final int mode) {
+    return new ThreadLocal<Cipher>() {
+      @Override
+      protected Cipher initialValue() {
+        final Cipher cipher;
+        try {
+          cipher = Cipher.getInstance(AES_ALGORITHM);
+          cipher.init(mode, key);
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+          throw new RuntimeException("Error initializing", e);
+        } catch (final InvalidKeyException e) {
+          throw new RuntimeException("Invalid key", e);
+        }
+        return cipher;
+      }
+    };
   }
 
   @Override
@@ -50,31 +69,6 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
       return Base64.encode(encryptedBytes);
     } catch (IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException e) {
       throw new RuntimeException("Error encrypting cookie " + authenticationCookie, e);
-    }
-  }
-
-  private class ThreadLocalCipher extends ThreadLocal<Cipher> {
-
-    private final int mode;
-    private final SecretKey key;
-
-    public ThreadLocalCipher(final byte[] key, final int mode) {
-      this.mode = mode;
-      this.key = new SecretKeySpec(key, AES_ALGORITHM);
-    }
-
-    @Override
-    protected Cipher initialValue() {
-      final Cipher cipher;
-      try {
-        cipher = Cipher.getInstance(AES_ALGORITHM);
-        cipher.init(mode, key);
-      } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-        throw new RuntimeException("Error initializing", e);
-      } catch (InvalidKeyException e) {
-        throw new RuntimeException("Invalid key", e);
-      }
-      return cipher;
     }
   }
 
