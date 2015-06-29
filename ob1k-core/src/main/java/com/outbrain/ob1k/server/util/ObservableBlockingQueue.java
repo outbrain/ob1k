@@ -18,7 +18,7 @@ public class ObservableBlockingQueue<E> implements BlockingQueue<E> {
   private final int notifyThreshold;
   private final QueueObserver observer;
 
-  public ObservableBlockingQueue(final BlockingQueue delegate, final QueueObserver observer) {
+  public ObservableBlockingQueue(final BlockingQueue<E> delegate, final QueueObserver observer) {
     this.observer = Preconditions.checkNotNull(observer, "observer must not be null");
     this.delegate = Preconditions.checkNotNull(delegate, "delegate must not be null");
     this.notifyThreshold = (int) (delegate.remainingCapacity() * NOTIFY_THRESHOLD_FACTOR);
