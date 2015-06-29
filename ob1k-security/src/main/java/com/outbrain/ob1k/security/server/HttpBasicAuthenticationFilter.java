@@ -6,6 +6,8 @@ import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
@@ -39,10 +41,11 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
   @Override
   public ComposableFuture<Response> handleAsync(final AsyncServerRequestContext ctx) {
     return httpAccessAuthenticator.authenticate(ctx.getRequest())
-      .continueOnSuccess(new FutureSuccessHandler<String, Response>() {
+      .continueWith(new FutureResultHandler<String, Response>() {
         @Override
-        public ComposableFuture<Response> handle(final String authenticatorId) {
-          if (authenticatorId != null) {
+        public ComposableFuture<Response> handle(final Try<String> result) {
+          if (result.isSuccess() && result.getValue() != null) {
+            final String authenticatorId = result.getValue();
             return handleAuthorizedAsyncRequest(ctx, authenticatorId);
           } else {
             return handleUnauthorizedAsyncRequest(ctx);
@@ -142,21 +145,19 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     private ComposableFuture<String> authenticate(final Credentials<UserPasswordToken> credentials, final String path) {
       //Send the authentication requests, receiveing a map of AuthenticatorId -> Authentication Result
-      final Map<String, ComposableFuture<Boolean>> authenticationResults = sendAuthenticationRequests(credentials);
-
-      //Combine all reaults
-      final ComposableFuture<Map<String, Boolean>> combinedResults = ComposableFutures.all(false, authenticationResults);
+      final ComposableFuture<Map<String, Boolean>> authenticationResults = sendAuthenticationRequests(credentials);
 
       //Find the Authenticator that returned successfully authenticated the request
-      return findAuthenticator(combinedResults);
+      return findAuthenticator(authenticationResults);
     }
 
-    private Map<String, ComposableFuture<Boolean>> sendAuthenticationRequests(final Credentials<UserPasswordToken> credentials) {
+    private ComposableFuture<Map<String, Boolean>> sendAuthenticationRequests(final Credentials<UserPasswordToken> credentials) {
       final Map<String, ComposableFuture<Boolean>> authenticationRequests = Maps.newHashMap();
       for (final CredentialsAuthenticator<UserPasswordToken> authenticator : authenticators) {
         authenticationRequests.put(authenticator.getId(), authenticator.authenticate(credentials));
       }
-      return authenticationRequests;
+
+      return ComposableFutures.all(false, authenticationRequests);
     }
 
     private ComposableFuture<String> findAuthenticator(final ComposableFuture<Map<String, Boolean>> authenticationResults) {
