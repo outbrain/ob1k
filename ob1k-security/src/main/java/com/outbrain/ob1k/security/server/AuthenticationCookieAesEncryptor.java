@@ -11,7 +11,6 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,7 +46,7 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
     }
 
     private Cipher getDecryptingCipher() {
-        Map<Key, Cipher> cipherMap = decryptingCipher.get();
+        final Map<Key, Cipher> cipherMap = decryptingCipher.get();
         Cipher cipher = cipherMap.get(cipherKey);
         if (cipher == null) {
             cipher = createCipher(cipherKey, Cipher.DECRYPT_MODE);
@@ -58,7 +57,7 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
     }
 
     private Cipher getEncryptingCipher() {
-        Map<Key, Cipher> cipherMap = encryptingCipher.get();
+        final Map<Key, Cipher> cipherMap = encryptingCipher.get();
         Cipher cipher = cipherMap.get(cipherKey);
         if (cipher == null) {
             cipher = createCipher(cipherKey, Cipher.ENCRYPT_MODE);
