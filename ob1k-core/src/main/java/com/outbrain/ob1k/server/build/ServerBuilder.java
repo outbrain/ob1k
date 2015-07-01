@@ -103,7 +103,8 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
 
   private static Executor createExecutorService(final ThreadPoolConfig config, final SyncRequestQueueObserver queueObserver) {
     final int queueCapacity = config.maxSize * 2; // TODO make this configurable ?
-    final BlockingQueue<Runnable> requestQueue = new ObservableBlockingQueue<>(new LinkedBlockingQueue<>(queueCapacity), queueObserver);
+    final BlockingQueue<Runnable> requestQueue =
+            new ObservableBlockingQueue<>(new LinkedBlockingQueue<Runnable>(queueCapacity), queueObserver);
 
     return new ThreadPoolExecutor(config.minSize, config.maxSize, 30, TimeUnit.SECONDS, requestQueue,
         new DefaultThreadFactory("syncReqPool"), new ThreadPoolExecutor.AbortPolicy());
