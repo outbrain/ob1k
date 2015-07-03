@@ -584,8 +584,8 @@ public class ComposableFutureTest {
         final String RES_STR= "result";
         final EagerComposableFuture<String> value = new EagerComposableFuture<>();
 
-        ComposableFuture<String> effectiveValue = value.withTimeout(50, TimeUnit.MILLISECONDS);
-        Thread.sleep(25);
+        ComposableFuture<String> effectiveValue = value.withTimeout(100, TimeUnit.MILLISECONDS);
+        Thread.sleep(50);
         value.set(RES_STR);
         Assert.assertEquals(RES_STR, value.get());
         Assert.assertEquals(RES_STR,effectiveValue.get());
@@ -597,8 +597,8 @@ public class ComposableFutureTest {
         final String RES_STR= "result";
         final EagerComposableFuture<String> value = new EagerComposableFuture<>();
 
-        ComposableFuture<String> effectiveValue = value.withTimeout(25, TimeUnit.MILLISECONDS);
-        Thread.sleep(50);
+        ComposableFuture<String> effectiveValue = value.withTimeout(50, TimeUnit.MILLISECONDS);
+        Thread.sleep(100);
         value.set(RES_STR);
         Assert.assertEquals(RES_STR , value.get());
         effectiveValue.get(); // this should throw an exception
