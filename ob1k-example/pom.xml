@@ -36,13 +36,18 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.parent.groupId}</groupId>
       <artifactId>ob1k-core</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.parent.groupId}</groupId>
       <artifactId>ob1k-security</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>ob1k-ldap</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
