@@ -8,4 +8,6 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
  */
 public interface SecureService extends Service {
   ComposableFuture<String> returnString(String val);
+
+  String returnStringSync(String val);
 }

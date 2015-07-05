@@ -1,9 +1,9 @@
 package com.outbrain.ob1k.security.server;
 
 import com.outbrain.ob1k.client.Clients;
-import com.outbrain.ob1k.security.common.MyClient;
-import com.outbrain.ob1k.security.common.MyServer;
 import com.outbrain.ob1k.security.common.SecureService;
+import com.outbrain.ob1k.security.common.TestClient;
+import com.outbrain.ob1k.security.common.TestServer;
 import com.outbrain.ob1k.security.common.UnsecureService;
 import com.outbrain.ob1k.server.Server;
 import org.junit.Test;
@@ -22,10 +22,10 @@ public class SecureServerTest {
     Server server = null;
     UnsecureService service = null;
     try {
-      server = MyServer.newServer();
+      server = TestServer.newServer();
       final InetSocketAddress serverAddress = server.start();
-      service = MyClient.newClient(serverAddress.getPort(),
-                                   UnsecureService.class);
+      service = TestClient.newClient(serverAddress.getPort(),
+                                     UnsecureService.class);
       final String val = "val";
       assertEquals(val, service.returnString(val).get());
     } finally {
@@ -37,15 +37,16 @@ public class SecureServerTest {
     }
   }
 
-//  @Test
 // todo unignore this once I can create a client that can handle a server returning 401
+// todo add test for returnStringSync
+//  @Test
 //  public void testSecureEndpoint() throws Exception {
 //    Server server = null;
 //    SecureService service = null;
 //    try {
-//      server = MyServer.newServer();
-//      InetSocketAddress serverAddress = server.start();
-//      service = MyClient.newClient(serverAddress.getPort(),
+//      server = TestServer.newServer();
+//      final InetSocketAddress serverAddress = server.start();
+//      service = TestClient.newClient(serverAddress.getPort(),
 //                                   SecureService.class);
 //      final String val = "val";
 //      assertEquals(val, service.returnString(val).get());

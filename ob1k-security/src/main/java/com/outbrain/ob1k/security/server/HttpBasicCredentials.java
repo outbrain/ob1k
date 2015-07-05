@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.security.server;
 
-public class HttpBasicCredentials implements Credentials<UserPasswordToken> {
+class HttpBasicCredentials implements Credentials<UserPasswordToken> {
 
   private final UserPasswordToken credentials;
 

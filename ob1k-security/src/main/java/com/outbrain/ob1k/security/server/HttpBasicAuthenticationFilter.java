@@ -4,12 +4,15 @@ import com.google.common.collect.Maps;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
+import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
+import com.outbrain.ob1k.server.ctx.ServerRequestContext;
+import com.outbrain.ob1k.server.ctx.SyncServerRequestContext;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
@@ -21,10 +24,14 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.WWW_AUTHENTICATE;
 
-public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, AsyncServerRequestContext> {
+public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, AsyncServerRequestContext>,
+                                                      SyncFilter<Response, SyncServerRequestContext> {
+
+  private final static Logger logger = LoggerFactory.getLogger(HttpBasicAuthenticationFilter.class);
 
   private final HttpBasicAccessAuthenticator httpAccessAuthenticator;
 
@@ -73,8 +80,26 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     });
   }
 
-  private String extractRealm(final AsyncServerRequestContext ctx) {
+  private String extractRealm(final ServerRequestContext ctx) {
     return ctx.getRequest().getPath();
+  }
+
+  @Override
+  public Response handleSync(final SyncServerRequestContext ctx) throws ExecutionException {
+    String authenticatorId = null;
+    try {
+      authenticatorId = httpAccessAuthenticator.authenticate(ctx.getRequest()).get();
+    } catch (final InterruptedException e) {
+      logger.warn("Authentication interrupted", e);
+    }
+
+    if (authenticatorId != null) {
+      final Object nextPhaseResult = ctx.invokeSync();
+      final String username = httpAccessAuthenticator.extractUsername(ctx.getRequest());
+      return httpAccessAuthenticator.createAuthorizedResponse(username, authenticatorId, nextPhaseResult);
+    } else {
+      return httpAccessAuthenticator.createUnauthorizedResponse(extractRealm(ctx));
+    }
   }
 
   /**
