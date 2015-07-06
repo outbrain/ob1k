@@ -56,4 +56,6 @@ public interface Request {
   String getProtocol();
 
   String getContextPath();
+
+  Map<String, String> getCookies();
 }

@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.netty;
 
+import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
@@ -26,6 +27,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
  * Time: 12:02 PM
  */
 public class NettyRequest implements Request {
+  public static final String COOKIE_HEADER = "Cookie";
   private final HttpRequest inner;
   private final Channel channel;
   private final QueryStringDecoder getQueryDecoder;
@@ -187,6 +189,19 @@ public class NettyRequest implements Request {
   @Override
   public String getContextPath() {
     return contextPath;
+  }
+
+  @Override
+  public Map<String, String> getCookies() {
+    final Map<String, String> result = Maps.newHashMap();
+    final CookieParser parser = new CookieParser();
+    final List<String> cookieHeaderValues = inner.headers().getAll(COOKIE_HEADER);
+
+    for (final String headerValue : cookieHeaderValues) {
+      result.putAll(parser.parse(headerValue));
+    }
+
+    return result;
   }
 
   @Override
