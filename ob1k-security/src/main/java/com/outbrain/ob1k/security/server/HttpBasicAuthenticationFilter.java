@@ -69,12 +69,11 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   private ComposableFuture<Response> handleAuthorizedAsyncRequest(final AsyncServerRequestContext ctx,
                                                                   final String authenticatorId) {
-    final String username = httpAccessAuthenticator.extractUsername(ctx.getRequest());
     return ctx.invokeAsync().continueOnSuccess(new FutureSuccessHandler<Object, Response>() {
       @Override
       public ComposableFuture<Response> handle(final Object result) {
         final Response response =
-          httpAccessAuthenticator.createAuthorizedResponse(username, authenticatorId, result);
+          httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, result);
         return ComposableFutures.fromValue(response);
       }
     });
@@ -95,8 +94,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     if (authenticatorId != null) {
       final Object nextPhaseResult = ctx.invokeSync();
-      final String username = httpAccessAuthenticator.extractUsername(ctx.getRequest());
-      return httpAccessAuthenticator.createAuthorizedResponse(username, authenticatorId, nextPhaseResult);
+      return httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, nextPhaseResult);
     } else {
       return httpAccessAuthenticator.createUnauthorizedResponse(extractRealm(ctx));
     }
@@ -111,7 +109,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     private final static Logger logger = LoggerFactory.getLogger(HttpBasicAccessAuthenticator.class);
 
-    public static final String SESSION_COOKIE_HEADER = "ob1k-session";
+    public static final String SESSION_COOKIE_NAME = "ob1k-session";
 
     private final AuthenticationCookieEncryptor authenticationCookieEncryptor;
     private final List<CredentialsAuthenticator<UserPasswordToken>> authenticators;
@@ -204,20 +202,8 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
       return seconds <= sessionMaxTimeSeconds;
     }
 
-    /**
-     * Extracts the username from the cookie the request contains.
-     *
-     * @return the username, or null if the request is not authenticated
-     */
-    public String extractUsername(final Request request) {
-      final AuthenticationCookie authenticationCookie = extractCookieElements(request);
-      if (authenticationCookie == null) return null;
-
-      return authenticationCookie.getUsername();
-    }
-
     private AuthenticationCookie extractCookieElements(final Request request) {
-      final String encodedCookie = request.getHeader(SESSION_COOKIE_HEADER);
+      final String encodedCookie = request.getCookie(SESSION_COOKIE_NAME);
       if (encodedCookie == null || encodedCookie.length() == 0) return null;
 
       try {
@@ -230,23 +216,44 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     /**
      * Creates a response that is marked as OK, containing the provided message.
-     * The response will also contain the authentication cookie that is composed from the given username and authenticator id
      *
-     * @return the same given response, with the cookie added to it
+     * If the request does not currently contain a cookie with the given authenticator id, then one such cookie
+     * will be added to the response.
      */
-    Response createAuthorizedResponse(final String username,
+    Response createAuthorizedResponse(final Request request,
                                       final String authenticatorId,
                                       final Object message) {
+      if (requestContainsCookie(request, authenticatorId)) {
+        return createResponseWithoutCookie(message);
+      } else {
+        final String username = headerParser.extractCredentials(request).get().getUsername();
+        final AuthenticationCookie authenticationCookie = new AuthenticationCookie(username,
+                                                                                   DateTime.now(),
+                                                                                   appId,
+                                                                                   authenticatorId);
+        final String cookieValue = authenticationCookieEncryptor.encrypt(authenticationCookie);
+        return createResponseWithCookie(message, cookieValue);
+      }
+    }
 
-      final AuthenticationCookie authenticationCookie = new AuthenticationCookie(username,
-                                                                                 DateTime.now(),
-                                                                                 appId,
-                                                                                 authenticatorId);
-      final String cookieValue = authenticationCookieEncryptor.encrypt(authenticationCookie);
+    private boolean requestContainsCookie(final Request request, final String authenticatorId) {
+      final AuthenticationCookie existingCookie = extractCookieElements(request);
+      return existingCookie != null &&
+        StringUtils.equals(existingCookie.getAuthenticatorId(), authenticatorId);
+    }
+
+    private Response createResponseWithoutCookie(final Object message) {
       return ResponseBuilder
         .ok()
         .withMessage(message)
-        .addCookie(SESSION_COOKIE_HEADER, cookieValue)
+        .build();
+    }
+
+    private Response createResponseWithCookie(final Object message, final String cookieValue) {
+      return ResponseBuilder
+        .ok()
+        .withMessage(message)
+        .addCookie(SESSION_COOKIE_NAME + "=" + cookieValue)
         .build();
     }
 
