@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -8,6 +9,6 @@ import java.util.concurrent.TimeUnit;
  * a ComposableFuture based scheduler.
  */
 public interface Scheduler {
-  void schedule(final Runnable task, final long delay, final TimeUnit timeUnit);
-  public void shutdown();
+  CancellationToken schedule(final Runnable task, final long delay, final TimeUnit timeUnit);
+  void shutdown();
 }

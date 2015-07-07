@@ -22,8 +22,8 @@ public class ThreadPoolBasedScheduler implements Scheduler {
   }
 
   @Override
-  public void schedule(final Runnable task, final long delay, final TimeUnit unit) {
-    scheduledThreadPool.schedule(task, delay, unit);
+  public CancellationToken schedule(final Runnable task, final long delay, final TimeUnit unit) {
+    return  new ScheduledFutureCancellationToken(scheduledThreadPool.schedule(task, delay, unit));
   }
 
   @Override
