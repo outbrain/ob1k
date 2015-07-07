@@ -12,7 +12,7 @@ public class ScheduledFutureCancellationToken implements CancellationToken {
   }
 
   @Override
-  public boolean cancel() {
-    return scheduledFuture.cancel(false);
+  public boolean cancel(final boolean mayInterrupt) {
+    return scheduledFuture.cancel(mayInterrupt);
   }
 }

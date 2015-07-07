@@ -391,7 +391,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     this.consume(new Consumer<T>() {
       @Override
       public void consume(final Try<T> result) {
-        cancellationToken.cancel();
+        cancellationToken.cancel(false);
       }
     });
     return collectFirst(Arrays.asList(this, deadline.future()));
