@@ -1,5 +1,7 @@
 package com.outbrain.ob1k;
 
+import io.netty.handler.codec.http.Cookie;
+
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -57,5 +59,5 @@ public interface Request {
 
   String getContextPath();
 
-  Map<String, String> getCookies();
+  String getCookie(String cookieName);
 }
