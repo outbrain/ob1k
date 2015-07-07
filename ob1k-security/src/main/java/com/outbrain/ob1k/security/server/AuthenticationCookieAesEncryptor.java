@@ -1,7 +1,5 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -11,6 +9,9 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,6 +22,9 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
 
   private static final String AES_ALGORITHM = "AES";
   private static final String UTF8 = "UTF-8";
+
+  private final Decoder decoder = Base64.getDecoder();
+  private final Encoder encoder = Base64.getEncoder().withoutPadding();
 
   private static final ThreadLocal<Map<Key, Cipher>> decryptingCipher = new ThreadLocal<Map<Key, Cipher>>() {
     @Override
@@ -81,7 +85,7 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
 
   @Override
   public AuthenticationCookie decrypt(final String encryptedCookie) {
-    final byte[] encryptedBytes = Base64.decode(encryptedCookie);
+    final byte[] encryptedBytes = decoder.decode(encryptedCookie);
     try {
       final byte[] decryptedBytes = getDecryptingCipher().doFinal(encryptedBytes);
       return AuthenticationCookie.fromDelimitedString(new String(decryptedBytes, UTF8));
@@ -95,7 +99,7 @@ public class AuthenticationCookieAesEncryptor implements AuthenticationCookieEnc
     try {
       final byte[] cookieBytes = authenticationCookie.toDelimitedString().getBytes(UTF8);
       final byte[] encryptedBytes = getEncryptingCipher().doFinal(cookieBytes);
-      return Base64.encode(encryptedBytes);
+      return new String(encoder.encode(encryptedBytes), UTF8);
     } catch (IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException e) {
       throw new RuntimeException("Error encrypting cookie " + authenticationCookie, e);
     }
