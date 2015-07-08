@@ -39,6 +39,7 @@ public class ConsulAPI {
               .setTargetProvider(new SimpleTargetProvider("http://localhost:8500/v1/catalog"))
               .bindEndpoint("findInstances", HttpRequestMethodType.GET, "/service/{service}?dc={dc}")
               .bindEndpoint("findDcLocalInstances", HttpRequestMethodType.GET, "/service/{service}")
+              .bindEndpoint("filterDcLocalInstances", HttpRequestMethodType.GET, "/service/{service}?tag={filterTag}")
               .bindEndpoint("pollDcLocalInstances", HttpRequestMethodType.GET, "/service/{service}?tag={filterTag}&index={index}&wait={maxWaitSec}s")
               .bindEndpoint("services", HttpRequestMethodType.GET, "/services?dc={dc}")
               .setProtocol(ContentType.JSON)
