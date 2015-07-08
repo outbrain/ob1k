@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
  * Time: 3:41 PM
  */
 public class HttpClient implements Closeable {
+    public static final int CHUNKED_FILE_CHUNK_SIZE = 64 * 1024;
     public static final int MAX_CONNECTIONS_PER_HOST = 100;
     public static final int TOTAL_MAX_CONNECTIONS = MAX_CONNECTIONS_PER_HOST * 2;
     private final AsyncHttpClient asyncHttpClient;
@@ -97,7 +98,8 @@ public class HttpClient implements Closeable {
             final NioClientSocketChannelFactory channelFactory = new NioClientSocketChannelFactory();
 
             nettyConfig.setSocketChannelFactory(channelFactory);
-
+            nettyConfig.setChunkedFileChunkSize(CHUNKED_FILE_CHUNK_SIZE);
+            
             final HashedWheelTimer timer = new HashedWheelTimer();
             timer.start();
             nettyConfig.setNettyTimer(timer);
