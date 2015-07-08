@@ -58,6 +58,7 @@
     <module>ob1k-example</module>
     <module>ob1k-security</module>
     <module>ob1k-ldap</module>
+    <module>ob1k-consul</module>
   </modules>
 
   <properties>
