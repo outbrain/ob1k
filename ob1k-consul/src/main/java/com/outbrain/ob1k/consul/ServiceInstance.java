@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.consul;
 
 import com.google.common.base.Objects;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -21,24 +20,11 @@ public class ServiceInstance {
   public Set<String> ServiceTags;
 
   public Integer port(final String portType) {
-    final String tag = extractTag(portType + "Port-");
-    return tag == null ? null : Integer.valueOf(tag);
+    return TagsUtil.extractPort(ServiceTags, portType);
   }
 
   public String context() {
-    return extractTag("contextPath-");
-  }
-
-  private String extractTag(final String tagKey) {
-    if (null != ServiceTags) {
-      for (final String serviceTag : ServiceTags) {
-        if (StringUtils.isNotEmpty(serviceTag) && serviceTag.startsWith(tagKey)) {
-          return serviceTag.substring(tagKey.length());
-        }
-      }
-    }
-
-    return null;
+    return TagsUtil.extractContextPath(ServiceTags);
   }
 
   @Override
