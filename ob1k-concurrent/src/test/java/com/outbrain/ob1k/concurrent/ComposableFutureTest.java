@@ -1,10 +1,14 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
@@ -476,35 +480,48 @@ public class ComposableFutureTest {
 
     @Test
     public void testFirstNoTimeout() throws Exception {
-        final Map<String, ComposableFuture<String>> elements = createElementsMap();
+        final PassThroughCount passThroughCount = new PassThroughCount(3);
+        try {
+            final Map<String, ComposableFuture<String>> elements = createElementsMap(passThroughCount);
 
-        final Map<String, String> res = first(elements, 3).get();
-        Assert.assertEquals(res.size(), 3);
-        Assert.assertEquals(res.get("one"), "one");
-        Assert.assertEquals(res.get("three"), "three");
-        Assert.assertEquals(res.get("five"), "five");
+            final Map<String, String> res = first(elements, 3).get();
+            Assert.assertEquals(3,res.size());
+            Assert.assertEquals("one", res.get("one"));
+            Assert.assertEquals("two", res.get("two"));
+            Assert.assertEquals("three", res.get("three"));
+        } finally {
+            passThroughCount.releaseAllWaiters(); // release last two guys
+        }
     }
 
     @Test
     public void testFirstWithTimeout() throws Exception {
-        final Map<String, ComposableFuture<String>> elements = createElementsMap();
+        final PassThroughCount passThroughCount = new PassThroughCount(2);
+        try {
+            final Map<String, ComposableFuture<String>> elements = createElementsMap(passThroughCount);
+            passThroughCount.waitForPassers();  // we do not want that the first two elements will not finish due to scheduling issues
+            final Map<String, String> res = first(elements, 3, 10, TimeUnit.MILLISECONDS).get();
 
-        final Map<String, String> res = first(elements, 3, 10, TimeUnit.MILLISECONDS).get();
-
-        Assert.assertEquals(2, res.size());
-        Assert.assertEquals("one", res.get("one"));
-        Assert.assertEquals("five", res.get("five"));
+            Assert.assertEquals(2, res.size());
+            Assert.assertEquals("one", res.get("one"));
+            Assert.assertEquals("two", res.get("two"));
+        } finally {
+            passThroughCount.releaseAllWaiters(); // release last two guys
+        }
     }
 
     @Test
     public void testAllFailOnError() throws Exception {
-        final Map<String, ComposableFuture<String>> elements = createElementsMap();
+        final PassThroughCount passThroughCount = new PassThroughCount(5);
+        final Map<String, ComposableFuture<String>> elements = createElementsMap(passThroughCount);
 
         try {
             all(true, elements).get();
             Assert.fail("should get an exception");
         } catch (final ExecutionException e) {
             Assert.assertTrue(e.getCause().getMessage().contains("bad element"));
+        } finally {
+            passThroughCount.releaseAllWaiters(); // release last two guys
         }
 
     }
@@ -538,41 +555,64 @@ public class ComposableFutureTest {
             Assert.assertTrue("should fail fast", (t2 - t1) < 50);
         }
     }
+    class PassThroughCount {
+        final CountDownLatch waitersLatch;
+        final CountDownLatch passersLatch;
+        final int numToPass;
 
-    private Map<String, ComposableFuture<String>> createElementsMap() {
+        public PassThroughCount(int numToPass) {
+            waitersLatch = new CountDownLatch(1);
+            passersLatch = new CountDownLatch(numToPass);
+            this.numToPass = numToPass;
+        }
+
+        public void awaitOrPass(long myOrder) throws InterruptedException {
+            if (myOrder  > numToPass)  waitersLatch.await() ;
+            else passersLatch.countDown();
+        }
+        public void releaseAllWaiters() {
+            waitersLatch.countDown();
+        }
+        public void waitForPassers() throws InterruptedException {
+            passersLatch.await();
+        }
+    }
+
+    private Map<String, ComposableFuture<String>> createElementsMap(final PassThroughCount passThroughCount) {
         final Map<String, ComposableFuture<String>> elements = new HashMap<>();
 
         elements.put("one", submit(new Callable<String>() {
             @Override
             public String call() throws Exception {
+                passThroughCount.awaitOrPass(1);
                 return "one";
             }
         }));
         elements.put("two", submit(new Callable<String>() {
             @Override
             public String call() throws Exception {
-                Thread.sleep(50);
+                passThroughCount.awaitOrPass(2);
                 return "two";
             }
         }));
         elements.put("three", submit(new Callable<String>() {
             @Override
             public String call() throws Exception {
-                Thread.sleep(25);
+                passThroughCount.awaitOrPass(3);
                 return "three";
             }
         }));
         elements.put("four", submit(new Callable<String>() {
             @Override
             public String call() throws Exception {
-                Thread.sleep(50);
+                passThroughCount.awaitOrPass(4);
                 throw new RuntimeException("bad element");
-                //return "four";
             }
         }));
         elements.put("five", submit(new Callable<String>() {
             @Override
             public String call() throws Exception {
+                passThroughCount.awaitOrPass(5);
                 return "five";
             }
         }));
