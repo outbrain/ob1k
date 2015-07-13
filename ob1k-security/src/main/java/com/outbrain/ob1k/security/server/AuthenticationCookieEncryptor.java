@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.security.server;
 
-interface AuthenticationCookieEncryptor {
+public interface AuthenticationCookieEncryptor {
 
   AuthenticationCookie decrypt(final String encryptedCookie);
 

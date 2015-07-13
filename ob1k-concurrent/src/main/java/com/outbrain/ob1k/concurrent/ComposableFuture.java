@@ -8,20 +8,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * <p>a base interface for all future implementation in the system.
- * a composable future is a monadic construct that represents a (potentially long)computation that will eventually create a value or an error.
- * futures are created from a Producer that represents the long computation.
- * futures can be either eager or lazy.
- * eager futures activate the producer immediately and stores the result(or error) internally.
- * lazy futures stores the producer the activate it upon consumption</p>
+ * <p>A base interface for all future implementation in the system.
+ * A composable future is a monadic construct that represents a (potentially long) computation that will eventually create a value or an error.
+ * Futures are created from a Producer that represents the long computation.
+ * Futures can be either eager or lazy.
+ * Eager futures activate the producer immediately and stores the result(or error) internally.
+ * Lazy futures stores the producer and activate it upon consumption</p>
  *
- * <p>futures can be "continued" to create a flow of computations, each next step is activated upon the arrival of the result
+ * <p>Futures can be "continued" to create a flow of computations, each next step is activated upon the arrival of the result
  * on the previous future.</p>
  *
- * <p>futures can be activated by calling the consumed method that activates the future(in the case of a lazy one)
+ * <p>Futures can be activated by calling the consumed method that activates the future(in the case of a lazy one)
  * or just "waits"(using a callback) for the result(in case of an eager one)</p>
  *
- * <p>for testing purposes or for usage inside a blocking context, the future result can be returned in a blocking manner
+ * <p>For testing purposes or for usage inside a blocking context, the future result can be returned in a blocking manner
  * by calling the get method. however, in a non-blocking asynchronous environment such as Ob1k <b>it should never be used.</b></p>
  *
  * @author aronen
@@ -29,7 +29,7 @@ import java.util.concurrent.TimeoutException;
  */
 public interface ComposableFuture<T> {
   /**
-   * continues a future with a handler that will be called whether the future has resulted in a successful value or an error.
+   * Continues a future with a handler that will be called whether the future has resulted in a successful value or an error.
    *
    * @param handler the continuation handler that returns a future
    * @param <R> the resulting future type.

@@ -1,10 +1,15 @@
 package com.outbrain.ob1k.server.netty;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.Cookie;
+import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
@@ -17,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 
@@ -26,6 +32,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
  * Time: 12:02 PM
  */
 public class NettyRequest implements Request {
+  public static final String COOKIE_HEADER = "Cookie";
   private final HttpRequest inner;
   private final Channel channel;
   private final QueryStringDecoder getQueryDecoder;
@@ -33,6 +40,7 @@ public class NettyRequest implements Request {
   private final String contextPath;
   private final Map<String, String> pathParams;
   private QueryStringDecoder postQueryDecoder;
+  private Map<String, Cookie> cookies;
 
 
   public NettyRequest(final HttpRequest inner, final HttpContent content, final Channel channel, final String contextPath) {
@@ -187,6 +195,21 @@ public class NettyRequest implements Request {
   @Override
   public String getContextPath() {
     return contextPath;
+  }
+
+  @Override
+  public String getCookie(final String cookieName) {
+    if (cookies == null) {
+      final String cookieHeaderValue = inner.headers().get(COOKIE_HEADER);
+      final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue);
+      cookies = Maps.newHashMapWithExpectedSize(cookiesSet.size());
+      for (final Cookie cookie : cookiesSet) {
+        cookies.put(cookie.getName(), cookie);
+      }
+    }
+
+    final Cookie cookie = cookies.get(cookieName);
+    return cookie != null ? cookie.getValue() : null;
   }
 
   @Override

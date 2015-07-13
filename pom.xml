@@ -2,7 +2,7 @@
 <!--suppress ALL --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.81-SNAPSHOT</version>
+  <version>0.86-SNAPSHOT</version>
   <artifactId>ob1k</artifactId>
   <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
@@ -58,6 +58,7 @@
     <module>ob1k-example</module>
     <module>ob1k-security</module>
     <module>ob1k-ldap</module>
+    <module>ob1k-consul</module>
   </modules>
 
   <properties>
@@ -68,6 +69,7 @@
 
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
+    <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
   </properties>
 
   <profiles>
@@ -217,6 +219,12 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-beans</artifactId>
         <version>${org.springframework.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.ldap</groupId>
+        <artifactId>spring-ldap-core</artifactId>
+        <version>${spring-ldap-core.version}</version>
       </dependency>
 
       <dependency>

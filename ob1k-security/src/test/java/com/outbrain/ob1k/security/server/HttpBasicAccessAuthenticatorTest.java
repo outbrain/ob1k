@@ -118,7 +118,7 @@ public class HttpBasicAccessAuthenticatorTest {
   }
 
   private void setRequestCookie(final String cookie) {
-    when(request.getHeader(HttpBasicAccessAuthenticator.SESSION_COOKIE_HEADER)).thenReturn(cookie);
+    when(request.getCookie(HttpBasicAccessAuthenticator.SESSION_COOKIE_NAME)).thenReturn(cookie);
   }
 
   private String createCookie(final String username,

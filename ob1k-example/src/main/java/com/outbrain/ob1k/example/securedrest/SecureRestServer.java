@@ -3,7 +3,7 @@ package com.outbrain.ob1k.example.securedrest;
 import com.google.common.collect.Lists;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.example.rest.server.endpoints.UsersService;
-import com.outbrain.ob1k.example.securedrest.security.UserPassEqualAuthenticator;
+import com.outbrain.ob1k.security.ldap.LdapCredentialsAuthenticator;
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
 import com.outbrain.ob1k.server.Server;
@@ -15,10 +15,9 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Builds a new ob1k netty server with the security filter, defining all the endpoints
+ * Builds a new ob1k netty server with a LDAP security filter, defining all the endpoints
  * and starting on defined port.
  *
  * @author marenzon
@@ -40,7 +39,6 @@ public class SecureRestServer {
       .configurePorts(portProvider -> portProvider.setPort(port))
       .setContextPath("/api")
       .withServices(serviceProvider -> serviceProvider.defineService(new UsersService(), "/users", defineEndpoints()))
-      .configureExtraParams(paramsProvider -> paramsProvider.setRequestTimeout(50, TimeUnit.MILLISECONDS))
       .build();
   }
 
@@ -58,7 +56,7 @@ public class SecureRestServer {
   private static HttpBasicAuthenticationFilter createAuthFilter() {
     return new HttpBasicAuthenticationFilter(
       new AuthenticationCookieAesEncryptor(createKey()),
-      Lists.newArrayList(new UserPassEqualAuthenticator()),
+      Lists.newArrayList(new LdapCredentialsAuthenticator("ldap", 389, "ou=People,dc=outbrain,dc=com")),
       "myAppId",
       3600
     );

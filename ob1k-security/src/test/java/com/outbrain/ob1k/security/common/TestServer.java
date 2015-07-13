@@ -15,12 +15,15 @@ import com.outbrain.ob1k.server.build.ServerBuilder;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by gmarom on 6/24/15
  */
-public class MyServer {
+public class TestServer {
 
   public final static String CONTEXT_PATH = "/app/";
 
