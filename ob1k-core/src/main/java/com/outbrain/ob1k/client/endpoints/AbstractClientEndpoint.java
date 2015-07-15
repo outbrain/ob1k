@@ -2,6 +2,7 @@ package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.http.HttpClient;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.ContentType;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 
@@ -38,6 +39,5 @@ public abstract class AbstractClientEndpoint {
     return TypeHelper.extractReturnType(method);
   }
 
-  public abstract Object invoke(final String remoteTarget, final Object[] params) throws Throwable;
-
+  public abstract Object invoke(final TargetProvider remoteTarget, final Object[] params) throws Throwable;
 }

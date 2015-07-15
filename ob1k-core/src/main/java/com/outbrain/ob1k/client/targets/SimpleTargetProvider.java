@@ -14,7 +14,12 @@ public class SimpleTargetProvider implements TargetProvider {
         this.target = Preconditions.checkNotNull(target, "target must not be null");
     }
 
-    @Override
+  @Override
+  public String getTargetLogicalName() {
+    return target;
+  }
+
+  @Override
     public String provideTarget() {
         return target;
     }

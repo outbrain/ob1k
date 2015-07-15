@@ -7,6 +7,11 @@ import java.util.NoSuchElementException;
  */
 public class EmptyTargetProvider implements TargetProvider {
     @Override
+    public String getTargetLogicalName() {
+        return "No Target";
+    }
+
+    @Override
     public String provideTarget() {
         throw new NoSuchElementException("No target was set - nothing to provide");
     }

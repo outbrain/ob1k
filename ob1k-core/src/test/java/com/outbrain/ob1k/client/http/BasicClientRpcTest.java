@@ -5,10 +5,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
@@ -398,6 +400,19 @@ public class BasicClientRpcTest {
     @Override
     public String handleSync(final SyncClientRequestContext ctx) throws ExecutionException {
       return ctx.invokeSync() + " !!!";
+    }
+  }
+
+  @Test(expected=ExecutionException.class)
+  public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
+    IHelloService service = new ClientBuilder<>(IHelloService.class).build();
+    final ComposableFuture<Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
+    Assert.assertNotNull(future);
+    try {
+      future.get();
+    } catch (ExecutionException e) {
+      Assert.assertEquals(NoSuchElementException.class,e.getCause().getClass());
+      throw e;
     }
   }
 
