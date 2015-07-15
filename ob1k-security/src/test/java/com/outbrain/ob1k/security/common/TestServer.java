@@ -27,6 +27,15 @@ public class TestServer {
 
   public final static String CONTEXT_PATH = "/app/";
 
+  public static void main(final String[] args) throws IOException {
+    final Server server = newServer();
+    final InetSocketAddress address = server.start();
+    System.out.println("Server started at " + address);
+    System.out.println("Enter");
+    System.in.read();
+    server.stop();
+  }
+
   public static Server newServer() {
     return ServerBuilder.newBuilder()
       .configurePorts(createPortsProvider())
