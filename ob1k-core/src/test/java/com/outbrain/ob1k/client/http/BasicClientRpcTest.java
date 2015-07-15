@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
@@ -18,6 +19,8 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
+import com.outbrain.ob1k.http.Response;
+import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.server.build.*;
 import com.outbrain.ob1k.server.filters.CachingFilter;
 import junit.framework.Assert;
@@ -28,7 +31,7 @@ import org.junit.Test;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.client.ClientBuilder;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.build.ServerBuilder;
 import rx.Observable;
@@ -54,48 +57,58 @@ public class BasicClientRpcTest {
       public String createKey(Object[] params) {
         return params[0].toString();
       }
-    },10, 1, TimeUnit.SECONDS);
+    }, 10, 1, TimeUnit.SECONDS);
+  }
+
+  private interface HelloServiceClient extends Service {
+    ComposableFuture<Response> helloWorld();
+    Observable<Response> getMessages(String name, int iterations, boolean failAtEnd);
+  }
+
+  private interface HelloServiceTypedClient extends Service {
+    ComposableFuture<TypedResponse<String>> helloWorld();
+    Observable<TypedResponse<String>> getMessages(String name, int iterations, boolean failAtEnd);
   }
 
   @BeforeClass
   public static void setup() {
     server = ServerBuilder.newBuilder().
-        configurePorts(new PortsProvider() {
-          @Override
-          public void configure(final ChoosePortPhase builder) {
-            builder.useRandomPort();
-          }
-        }).
-        setContextPath(CTX_PATH).
-        configureExtraParams(new ExtraParamsProvider() {
-          @Override
-          public void configureExtraParams(final ExtraParamsPhase builder) {
-            builder.configureExecutorService(5, 10);
-
-          }
-        }).
-        withServices(new RawServiceProvider() {
-          @Override
-          public void addServices(final AddRawServicePhase builder) {
-            builder.addService(new HelloService(), HELLO_SERVICE_PATH);
-            builder.addService(new ParamsService(), "/params");
-            builder.defineService(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindingProvider() {
+            configurePorts(new PortsProvider() {
               @Override
-              public void configureService(RawServiceBuilderPhase builder) {
-               builder.addEndpoint("getNextCode", "/next", createCachingFilter());
-               builder.addEndpoint("getRandomCode", "/random");
+              public void configure(final ChoosePortPhase builder) {
+                builder.useRandomPort();
               }
-            });
-          }
-        }).
-        configureStaticResources(new StaticResourcesProvider() {
-          @Override
-          public void configureResources(final StaticResourcesPhase builder) {
-            builder.addStaticPath("/static");
+            }).
+            setContextPath(CTX_PATH).
+            configureExtraParams(new ExtraParamsProvider() {
+              @Override
+              public void configureExtraParams(final ExtraParamsPhase builder) {
+                builder.configureExecutorService(5, 10);
 
-          }
-        }).
-        build();
+              }
+            }).
+            withServices(new RawServiceProvider() {
+              @Override
+              public void addServices(final AddRawServicePhase builder) {
+                builder.addService(new HelloService(), HELLO_SERVICE_PATH);
+                builder.addService(new ParamsService(), "/params");
+                builder.defineService(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindingProvider() {
+                  @Override
+                  public void configureService(RawServiceBuilderPhase builder) {
+                    builder.addEndpoint("getNextCode", "/next", createCachingFilter());
+                    builder.addEndpoint("getRandomCode", "/random");
+                  }
+                });
+              }
+            }).
+            configureStaticResources(new StaticResourcesProvider() {
+              @Override
+              public void configureResources(final StaticResourcesPhase builder) {
+                builder.addStaticPath("/static");
+
+              }
+            }).
+            build();
 
     final InetSocketAddress address = server.start();
     port = address.getPort();
@@ -104,6 +117,72 @@ public class BasicClientRpcTest {
   @AfterClass
   public static void tearDown() {
     server.stop();
+  }
+
+  @Test
+  public void testSimpleResponse() throws Exception {
+    final HelloServiceClient helloServiceClient = new ClientBuilder<>(HelloServiceClient.class).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
+
+    final Response response = helloServiceClient.helloWorld().get();
+    Assert.assertTrue("response should contain hello world", response.getResponseBody().contains("hello world"));
+  }
+
+  @Test
+  public void testSimpleResponseStream() throws Exception {
+    final HelloServiceClient helloServiceClient = new ClientBuilder<>(HelloServiceClient.class).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
+
+    final List<String> names = new ArrayList<>(5);
+    final Observable<Response> haim = helloServiceClient.getMessages("haim", 5, false);
+
+    haim.toBlocking().forEach(new Action1<Response>() {
+      @Override
+      public void call(final Response response) {
+        try {
+          names.add(response.getResponseBody());
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+
+    Assert.assertTrue("first name should contain haim", names.get(0).contains("haim"));
+  }
+
+  @Test
+  public void testTypedResponse() throws Exception {
+    final HelloServiceTypedClient helloServiceClient = new ClientBuilder<>(HelloServiceTypedClient.class).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
+
+    final TypedResponse<String> response = helloServiceClient.helloWorld().get();
+    Assert.assertEquals("response should be hello world", "hello world", response.getTypedBody());
+  }
+
+  @Test
+  public void testTypedResponseStream() throws Exception {
+    final HelloServiceTypedClient helloServiceClient = new ClientBuilder<>(HelloServiceTypedClient.class).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
+
+    final List<String> names = new ArrayList<>(5);
+    final Observable<TypedResponse<String>> haim = helloServiceClient.getMessages("haim", 5, false);
+
+    haim.toBlocking().forEach(new Action1<TypedResponse<String>>() {
+      @Override
+      public void call(final TypedResponse<String> response) {
+        try {
+          names.add(response.getTypedBody());
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+
+    Assert.assertTrue("first name should contain haim", names.get(0).contains("haim"));
   }
 
   @Test
@@ -140,7 +219,7 @@ public class BasicClientRpcTest {
     final List<IHelloService> clients = new ArrayList<>();
     final int numOfThreadsBefore = Thread.activeCount();
 
-    for (int i=0; i< 100; i++) {
+    for (int i = 0; i < 100; i++) {
       final IHelloService client = createClient(ContentType.JSON, port);
       clients.add(client);
     }
@@ -192,8 +271,17 @@ public class BasicClientRpcTest {
   }
 
   @Test
-  public void testStream() {
-    final IHelloService client = createClient(ContentType.JSON, port);
+  public void testStreamJson() {
+    testStream(ContentType.JSON);
+  }
+
+  @Test
+  public void testStreamMsgPack() {
+    testStream(ContentType.MESSAGE_PACK);
+  }
+
+  private void testStream(final ContentType contentType) {
+    final IHelloService client = createClient(contentType, port);
     final int SIZE = 10;
     final Observable<String> messages = client.getMessages("moshe", SIZE, false);
 
@@ -223,34 +311,6 @@ public class BasicClientRpcTest {
 
     Assert.assertEquals(badResults.size(), SIZE);
     Assert.assertEquals(badResults.get(0), "hello moshe #0");
-
-//    final CountDownLatch latch = new CountDownLatch(1);
-//    messages.subscribe(new Observer<String>() {
-//      @Override
-//      public void onCompleted() {
-//        System.out.println("the end.");
-//        latch.countDown();
-//      }
-//
-//      @Override
-//      public void onError(final Throwable e) {
-//        System.out.println("got exception: " + e.toString());
-//        latch.countDown();
-//      }
-//
-//      @Override
-//      public void onNext(final String element) {
-//        System.out.println("element: " + element);
-//      }
-//    });
-//
-//    try {
-//      latch.await();
-//    } catch (final InterruptedException e) {
-//      e.printStackTrace();
-//    }
-
-    System.out.println("test finished.");
   }
 
   @Test
@@ -264,7 +324,7 @@ public class BasicClientRpcTest {
     }
 
     try {
-      final String moshe = client.hello("moshe").get();
+      client.hello("moshe").get();
       Assert.fail("method should throw exception with this param");
     } catch (final InterruptedException e) {
       Assert.fail(e.getMessage());
@@ -338,38 +398,38 @@ public class BasicClientRpcTest {
 
   private IHelloService createClient(final ContentType protocol, final int port) {
     return new ClientBuilder<>(IHelloService.class).
-        setProtocol(protocol).
-        setRequestTimeout(120000). // heavily loaded testing environment.
-        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
-        build();
+            setProtocol(protocol).
+            setRequestTimeout(120000). // heavily loaded testing environment.
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
   }
 
   private IFilteredService createFilteredClient(final int port) {
     return new ClientBuilder<>(IFilteredService.class).
-        setProtocol(ContentType.JSON).
-        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH)).
-                bindEndpoint("getNextCode", "/next").
-                bindEndpoint("getRandomCode", "/random", createCachingFilter()).
-                build();
+            setProtocol(ContentType.JSON).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH)).
+            bindEndpoint("getNextCode", "/next").
+            bindEndpoint("getRandomCode", "/random", createCachingFilter()).
+            build();
   }
 
   private IHelloService createClient(final int port, final int requestTimeout, final int retries) {
     return new ClientBuilder<>(IHelloService.class).
-        setProtocol(ContentType.JSON).
-        setRequestTimeout(requestTimeout).
-        setRetries(retries).
-        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
-        build();
+            setProtocol(ContentType.JSON).
+            setRequestTimeout(requestTimeout).
+            setRetries(retries).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
   }
 
   private IHelloService createClientWithFilters(final ContentType protocol, final int port) {
     return new ClientBuilder<>(IHelloService.class).
-        setProtocol(protocol).
-        addFilter(new BangFilter()).
-        bindEndpoint("helloFilter", new QFilter()).
-        setRequestTimeout(120000). // heavily loaded testing environment.
-        setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
-        build();
+            setProtocol(protocol).
+            addFilter(new BangFilter()).
+            bindEndpoint("helloFilter", new QFilter()).
+            setRequestTimeout(120000). // heavily loaded testing environment.
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            build();
   }
 
   private final static class QFilter implements AsyncFilter<String, AsyncClientRequestContext> {

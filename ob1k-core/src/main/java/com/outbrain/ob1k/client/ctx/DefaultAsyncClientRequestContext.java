@@ -19,12 +19,12 @@ public class DefaultAsyncClientRequestContext extends AbstractClientRequestConte
 
   @Override
   public AsyncClientRequestContext nextPhase() {
-    return new DefaultAsyncClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
+    return new DefaultAsyncClientRequestContext(remoteTarget, params, clientEndpoint, executionIndex + 1);
   }
 
   @Override
   public <T> ComposableFuture<T> invokeAsync() {
-    return endpoint.invokeAsync(this);
+    return clientEndpoint.invokeAsync(this);
   }
 
 

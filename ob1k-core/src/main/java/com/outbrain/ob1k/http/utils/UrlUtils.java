@@ -4,6 +4,9 @@ import org.apache.commons.codec.EncoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author marenzon
  */
@@ -37,5 +40,27 @@ public class UrlUtils {
     final String pathParam = new StringBuilder().append('{').append(param).append('}').toString();
     final String encodedValue = encode(value);
     return StringUtils.replace(url, pathParam, encodedValue);
+  }
+
+  /**
+   * Extracts all path params in url
+   *
+   * @param url url to find path params in
+   * @return list of path params
+   */
+  public static List<String> extractPathParams(final String url) {
+
+    final List<String> pathParams = new ArrayList<>();
+    int index = url.indexOf('{');
+
+    while (index >= 0) {
+
+      final int endIndex = url.indexOf('}', index);
+      final String pathParam = url.substring(index + 1, endIndex);
+      pathParams.add(pathParam);
+      index = url.indexOf('{', endIndex);
+    }
+
+    return pathParams;
   }
 }

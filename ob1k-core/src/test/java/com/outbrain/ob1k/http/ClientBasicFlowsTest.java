@@ -12,8 +12,14 @@ import com.outbrain.ob1k.server.build.ServerBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import rx.Observable;
+import rx.functions.Action1;
+import rx.observables.BlockingObservable;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -58,9 +64,34 @@ public class ClientBasicFlowsTest {
   public void testSimpleRequestResponse() throws Exception {
 
     final HttpClient httpClient = HttpClient.newBuilder().build();
-    final Response response = httpClient.get(serviceUrl + "/helloWorld").execute().get();
+    final Response response = httpClient.get(serviceUrl + "/helloWorld").asResponse().get();
 
     assertEquals("response body should be \"hello world\"", "\"hello world\"", response.getResponseBody().toLowerCase());
+  }
+
+  @Test
+  public void testStream() throws Exception {
+
+    final HttpClient httpClient = HttpClient.newBuilder().build();
+    final int iters = 10;
+    final BlockingObservable<Response> responseObservable = httpClient.get(serviceUrl + "/getMessages").
+            setBody("[\"haim\", " + iters + ", false]").
+            asStream().toBlocking();
+
+    final List<String> names = new ArrayList<>();
+    responseObservable.forEach(new Action1<Response>() {
+      @Override
+      public void call(final Response response) {
+        try {
+          names.add(response.getResponseBody());
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+
+    assertEquals("response elements size equals to iters", iters, names.size());
+    assertTrue("names contains haim", names.get(0).contains("haim"));
   }
 
   @Test
@@ -68,7 +99,7 @@ public class ClientBasicFlowsTest {
 
     final HttpClient httpClient = HttpClient.newBuilder().build();
     final String name = "julia";
-    final Response response = httpClient.post(serviceUrl + "/hello").setBody("\"" + name + "\"").execute().get();
+    final Response response = httpClient.post(serviceUrl + "/hello").setBody("\"" + name + "\"").asResponse().get();
 
     assertTrue("response body should contain the word julia", response.getResponseBody().contains(name));
   }
@@ -78,7 +109,7 @@ public class ClientBasicFlowsTest {
 
     final HttpClient httpClient = HttpClient.newBuilder().build();
     final String name = "julia";
-    final Response response = httpClient.get(serviceUrl + "/hello").addQueryParam("name", "\"" + name + "\"").execute().get();
+    final Response response = httpClient.get(serviceUrl + "/hello").addQueryParam("name", "\"" + name + "\"").asResponse().get();
 
     assertTrue("response body should contain the word julia", response.getResponseBody().contains(name));
   }
@@ -88,7 +119,7 @@ public class ClientBasicFlowsTest {
 
     final HttpClient httpClient = HttpClient.newBuilder().build();
     final String name = "julia";
-    final Response response = httpClient.get(serviceUrl + "/hello?name={name}").setPathParam("name", "\"" + name + "\"").execute().get();
+    final Response response = httpClient.get(serviceUrl + "/hello?name={name}").setPathParam("name", "\"" + name + "\"").asResponse().get();
 
     assertTrue("response body should contain the word julia", response.getResponseBody().contains(name));
   }
@@ -97,8 +128,31 @@ public class ClientBasicFlowsTest {
   public void testRequestTimeout() throws Exception {
 
     final HttpClient httpClient = HttpClient.newBuilder().setConnectionTimeout(1).build();
-    httpClient.get(serviceUrl + "/sleep").addQueryParam("milliseconds", "100000").execute().get();
+    httpClient.get(serviceUrl + "/sleep").addQueryParam("milliseconds", "100000").asResponse().get();
 
-    fail("should have throw ExecutionException");
+    fail("should have throw ExecutionException - timeout exception");
+  }
+
+  @Test(expected=ExecutionException.class)
+  public void testResponseMaxSize() throws Exception {
+
+    final HttpClient httpClient = HttpClient.newBuilder().build();
+    httpClient.get(serviceUrl + "/helloWorld").setResponseMaxSize(1).asResponse().get();
+
+    fail("should have throw ExecutionException - response too big exception");
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testStreamWithResponseMaxSize() throws Exception {
+
+    final HttpClient httpClient = HttpClient.newBuilder().build();
+    final Observable<Response> responseObservable = httpClient.get(serviceUrl + "/getMessages").
+            setBody("[\"haim\", 10, false]").
+            setResponseMaxSize(1).
+            asStream();
+
+    responseObservable.toBlocking().first();
+
+    fail("should have throw RuntimeException - response size limit is bigger than 1");
   }
 }

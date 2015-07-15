@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -23,11 +24,15 @@ public interface Response {
 
   URI getUri() throws URISyntaxException;
 
+  String getUrl();
+
   String getContentType();
 
   byte[] getResponseBodyAsBytes() throws IOException;
 
   InputStream getResponseBodyAsStream() throws IOException;
+
+  ByteBuffer getResponseBodyAsByteBuffer() throws IOException;
 
   List<Cookie> getCookies();
 
@@ -40,4 +45,10 @@ public interface Response {
   Map<String, List<String>> getHeaders();
 
   boolean isRedirected();
+
+  boolean hasResponseBody();
+
+  boolean hasResponseStatus();
+
+  boolean hasResponseHeaders();
 }

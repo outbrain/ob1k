@@ -1,6 +1,8 @@
 package com.outbrain.ob1k.http.common;
 
 /**
+ * Represents cookie for the request
+ *
  * @author marenzon
  */
 public class Cookie {
@@ -10,19 +12,21 @@ public class Cookie {
   private final String domain;
   private final String path;
   private final int maxAge;
-  private final boolean secure;
-  private final boolean httpOnly;
+  private final boolean isSecure;
+  private final boolean isHttpOnly;
+  private final long expires;
 
   public Cookie(final String name, final String value, final String domain, final String path, final int maxAge,
-                final boolean secure, final boolean httpOnly) {
+                final long expires, final boolean isSecure, final boolean isHttpOnly) {
 
     this.name = name;
     this.value = value;
     this.domain = domain;
     this.path = path;
     this.maxAge = maxAge;
-    this.secure = secure;
-    this.httpOnly = httpOnly;
+    this.expires = expires;
+    this.isSecure = isSecure;
+    this.isHttpOnly = isHttpOnly;
   }
 
   public String getName() {
@@ -33,6 +37,11 @@ public class Cookie {
   public String getValue() {
 
     return value;
+  }
+
+  public long getExpires() {
+
+    return expires;
   }
 
   public String getDomain() {
@@ -52,11 +61,11 @@ public class Cookie {
 
   public boolean isSecure() {
 
-    return secure;
+    return isSecure;
   }
 
   public boolean isHttpOnly() {
 
-    return httpOnly;
+    return isHttpOnly;
   }
 }

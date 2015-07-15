@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.client.http;
 
 import com.outbrain.ob1k.Response;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
@@ -10,6 +10,7 @@ import rx.Observable;
 import rx.functions.Func1;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -22,18 +23,24 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  */
 public class HelloService implements IHelloService {
 
+  private final Random random = new Random();
+
   @Override
   public ComposableFuture<String> hello(final String name) {
     if ("moshe".equals(name)) {
       throw new IllegalArgumentException("bad name.");
     }
-
     return fromValue("hello " + name);
   }
 
   @Override
   public ComposableFuture<String> helloWorld() {
     return fromValue("hello world");
+  }
+
+  @Override
+  public ComposableFuture<Integer> getRandomNumber() {
+    return fromValue(random.nextInt(9) + 1);
   }
 
   @Override

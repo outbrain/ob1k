@@ -7,13 +7,14 @@ import com.google.common.collect.Lists;
 import com.ning.http.client.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
-import com.outbrain.ob1k.http.marshalling.UnmarshallingStrategy;
+import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -22,18 +23,17 @@ import java.util.Map;
  */
 public class NingResponse<T> implements TypedResponse<T> {
 
-  private final UnmarshallingStrategy unmarshallingStrategy;
+  private final MarshallingStrategy marshallingStrategy;
   private final Type type;
   private final Response ningResponse;
-  private List<Cookie> cookies;
-  private T typedBody;
+  private volatile T typedBody;
 
-  public NingResponse(final Response ningResponse, final Type type, final UnmarshallingStrategy unmarshallingStrategy) throws IOException {
+  public NingResponse(final Response ningResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
 
     checkNotNull(ningResponse, "ningResponse may not be null");
 
     this.ningResponse = ningResponse;
-    this.unmarshallingStrategy = unmarshallingStrategy;
+    this.marshallingStrategy = marshallingStrategy;
     this.type = type;
   }
 
@@ -56,6 +56,12 @@ public class NingResponse<T> implements TypedResponse<T> {
   }
 
   @Override
+  public String getUrl() {
+
+    return ningResponse.getUri().toUrl();
+  }
+
+  @Override
   public String getContentType() {
 
     return ningResponse.getContentType();
@@ -66,10 +72,10 @@ public class NingResponse<T> implements TypedResponse<T> {
 
     if (typedBody == null) {
 
-      checkNotNull(unmarshallingStrategy, "unmarshallingStrategy may not be null");
+      checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
       checkNotNull(type, "class type may not be null");
 
-      typedBody = unmarshallingStrategy.unmarshall(type, this);
+      typedBody = marshallingStrategy.unmarshall(type, this);
     }
 
     return typedBody;
@@ -94,14 +100,15 @@ public class NingResponse<T> implements TypedResponse<T> {
   }
 
   @Override
+  public ByteBuffer getResponseBodyAsByteBuffer() throws IOException {
+
+    return ningResponse.getResponseBodyAsByteBuffer();
+  }
+
+  @Override
   public List<Cookie> getCookies() {
 
-    if (cookies == null) {
-
-      cookies = transformNingResponseCookies(ningResponse.getCookies());
-    }
-
-    return cookies;
+    return transformNingResponseCookies(ningResponse.getCookies());
   }
 
   @Override
@@ -128,13 +135,31 @@ public class NingResponse<T> implements TypedResponse<T> {
     return ningResponse.isRedirected();
   }
 
+  @Override
+  public boolean hasResponseBody() {
+
+    return ningResponse.hasResponseBody();
+  }
+
+  @Override
+  public boolean hasResponseStatus() {
+
+    return ningResponse.hasResponseStatus();
+  }
+
+  @Override
+  public boolean hasResponseHeaders() {
+
+    return ningResponse.hasResponseHeaders();
+  }
+
   private List<Cookie> transformNingResponseCookies(final List<com.ning.http.client.cookie.Cookie> cookies) {
 
     final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = new Function<com.ning.http.client.cookie.Cookie, Cookie>() {
       @Override
       public Cookie apply(final com.ning.http.client.cookie.Cookie ningCookie) {
-        return new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(), ningCookie.getPath(), ningCookie.getMaxAge(),
-          ningCookie.isSecure(), ningCookie.isHttpOnly());
+        return new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(), ningCookie.getPath(),
+                ningCookie.getMaxAge(), ningCookie.getExpires(), ningCookie.isSecure(), ningCookie.isHttpOnly());
       }
     };
 

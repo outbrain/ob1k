@@ -3,7 +3,7 @@ package com.outbrain.ob1k.example.hello.client;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.example.hello.server.HelloServer;

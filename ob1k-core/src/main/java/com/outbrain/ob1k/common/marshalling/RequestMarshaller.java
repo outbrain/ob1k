@@ -1,8 +1,7 @@
 package com.outbrain.ob1k.common.marshalling;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.http.Response;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponse;
@@ -20,11 +19,11 @@ import java.lang.reflect.Type;
  */
 public interface RequestMarshaller {
   void registerTypes(Type... types);
-
   Object[] unmarshallRequestParams(Request request, Method method, String[] paramNames) throws IOException;
   FullHttpResponse marshallResponse(Object res, HttpResponseStatus status) throws IOException;
   HttpResponse marshallResponseHeaders(final boolean rawStream);
   HttpContent marshallResponsePart(Object res, HttpResponseStatus status, boolean rawStream) throws IOException;
-  void marshallRequestParams(AsyncHttpClient.BoundRequestBuilder requestBuilder, Object[] requestParams) throws IOException;
-  Object unmarshallResponse(Response httpResponse, Type resType, boolean failOnError) throws IOException;
+  byte[] marshallRequestParams(Object[] requestParams) throws IOException;
+  <T> T unmarshallResponse(Response response, Type type) throws IOException;
+  <T> T unmarshallStreamResponse(Response response, Type type) throws IOException;
 }

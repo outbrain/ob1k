@@ -6,6 +6,8 @@ import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
 
+import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
+import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.ning.NingRequestBuilder;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
@@ -36,11 +38,16 @@ public class HttpClient implements Closeable {
 
   private final AsyncHttpClient asyncHttpClient;
   private final MetricFactory metricFactory;
+  private final MarshallingStrategy marshallingStrategy;
+  private final long responseMaxSize;
 
-  private HttpClient(final AsyncHttpClient asyncHttpClient, final MetricFactory metricFactory) {
+  private HttpClient(final AsyncHttpClient asyncHttpClient, final MetricFactory metricFactory,
+                     final long responseMaxSize, final MarshallingStrategy marshallingStrategy) {
 
     this.asyncHttpClient = asyncHttpClient;
     this.metricFactory = metricFactory;
+    this.responseMaxSize = responseMaxSize;
+    this.marshallingStrategy = marshallingStrategy;
   }
 
   /**
@@ -53,7 +60,7 @@ public class HttpClient implements Closeable {
 
     checkNotNull(url, "url may not be null");
     final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareGet(url);
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory);
+    return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
   /**
@@ -66,7 +73,7 @@ public class HttpClient implements Closeable {
 
     checkNotNull(url, "url may not be null");
     final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePost(url);
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory);
+    return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
   /**
@@ -79,7 +86,7 @@ public class HttpClient implements Closeable {
 
     checkNotNull(url, "url may not be null");
     final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePut(url);
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory);
+    return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
   /**
@@ -92,7 +99,7 @@ public class HttpClient implements Closeable {
 
     checkNotNull(url, "url may not be null");
     final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareDelete(url);
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory);
+    return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
   /**
@@ -105,7 +112,7 @@ public class HttpClient implements Closeable {
 
     checkNotNull(url, "url may not be null");
     final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareHead(url);
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory);
+    return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
   /**
@@ -117,6 +124,11 @@ public class HttpClient implements Closeable {
   public void close() throws IOException {
 
     asyncHttpClient.close();
+  }
+
+  private NingRequestBuilder createNewRequestBuilder(final String url, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder) {
+
+    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory, responseMaxSize, marshallingStrategy);
   }
 
   /**
@@ -133,16 +145,18 @@ public class HttpClient implements Closeable {
    */
   public static class Builder {
 
+    private MarshallingStrategy marshallingStrategy = new JacksonMarshallingStrategy();
     private MetricFactory metricFactory;
     private int connectionTimeout = HttpClient.CONNECTION_TIMEOUT;
     private int requestTimeout = HttpClient.REQUEST_TIMEOUT;
     private int retries = HttpClient.RETRIES;
     private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
     private int maxTotalConnections = HttpClient.MAX_TOTAL_CONNECTIONS;
-    private boolean compressionEnforced = false;
-    private boolean disableUrlEncoding = false;
-    private boolean followRedirect = false;
-    private boolean acceptAnySslCertificate = false;
+    private boolean compressionEnforced;
+    private boolean disableUrlEncoding;
+    private boolean followRedirect;
+    private boolean acceptAnySslCertificate;
+    private long responseMaxSize;
 
     /**
      * Max retries for request
@@ -165,6 +179,18 @@ public class HttpClient implements Closeable {
     public Builder setMaxConnectionsPerHost(final int maxConnectionsPerHost) {
 
       this.maxConnectionsPerHost = maxConnectionsPerHost;
+      return this;
+    }
+
+    /**
+     * Response max size - in case of large response that may cause OOM
+     *
+     * @param responseMaxSize response max size
+     * @return builder
+     */
+    public Builder setResponseMaxSize(final long responseMaxSize) {
+
+      this.responseMaxSize = responseMaxSize;
       return this;
     }
 
@@ -194,42 +220,95 @@ public class HttpClient implements Closeable {
       return this;
     }
 
+    /**
+     * Connection timeout
+     *
+     * @param connectionTimeout connection timeout in ms
+     * @return builder
+     */
     public Builder setConnectionTimeout(final int connectionTimeout) {
 
       this.connectionTimeout = connectionTimeout;
       return this;
     }
 
+    /**
+     * Request timeout
+     * Can be override in request builder phase
+     *
+     * @param requestTimeout request timeout in ms
+     * @return builder
+     */
     public Builder setRequestTimeout(final int requestTimeout) {
 
       this.requestTimeout = requestTimeout;
       return this;
     }
 
+    /**
+     * Enforce compression on the request
+     *
+     * @param compressionEnforced enforce compression
+     * @return builder
+     */
     public Builder setCompressionEnforced(final boolean compressionEnforced) {
 
       this.compressionEnforced = compressionEnforced;
       return this;
     }
 
+    /**
+     * Disable url encoding
+     *
+     * @param disableUrlEncoding disable url encoding
+     * @return builder
+     */
     public Builder setDisableUrlEncoding(final boolean disableUrlEncoding) {
 
       this.disableUrlEncoding = disableUrlEncoding;
       return this;
     }
 
+    /**
+     * Follow redirects
+     *
+     * @param followRedirect follow redirects
+     * @return builder
+     */
     public Builder setFollowRedirect(final boolean followRedirect) {
 
       this.followRedirect = followRedirect;
       return this;
     }
 
+    /**
+     * Set metric factory for the client
+     *
+     * @param metricFactory metric factory
+     * @return builder
+     */
     public Builder setMetricFactory(final MetricFactory metricFactory) {
 
       this.metricFactory = metricFactory;
       return this;
     }
 
+    /**
+     * Set marshalling strategy default for the request builder
+     *
+     * @param marshallingStrategy marshalling strategy
+     */
+    public Builder setMarshallingStrategy(final MarshallingStrategy marshallingStrategy) {
+
+      this.marshallingStrategy = checkNotNull(marshallingStrategy, "marshallingStrategy may not be null");
+      return this;
+    }
+
+    /**
+     * Creates new HttpClient from the configuration set
+     *
+     * @return new HttpClient instance
+     */
     public HttpClient build() {
 
       final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().
@@ -245,7 +324,7 @@ public class HttpClient implements Closeable {
               setAcceptAnyCertificate(acceptAnySslCertificate).
               build();
 
-      return new HttpClient(new AsyncHttpClient(config), metricFactory);
+      return new HttpClient(new AsyncHttpClient(config), metricFactory, responseMaxSize, marshallingStrategy);
     }
   }
 

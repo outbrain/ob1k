@@ -6,7 +6,7 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.server.build.*;
 import com.outbrain.ob1k.server.entities.OtherEntity;
@@ -300,7 +300,7 @@ public class BasicServerRpcTest {
         res.get();
         Assert.fail("should get timeout exception");
       } catch (final ExecutionException e) {
-        Assert.assertTrue(e.getCause().getMessage().contains("response took too long"));
+        Assert.assertTrue(e.getCause().getMessage().contains("status code: 500"));
       }
 
     } finally {
