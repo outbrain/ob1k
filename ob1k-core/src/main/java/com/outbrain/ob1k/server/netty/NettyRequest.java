@@ -200,16 +200,23 @@ public class NettyRequest implements Request {
   @Override
   public String getCookie(final String cookieName) {
     if (cookies == null) {
-      final String cookieHeaderValue = inner.headers().get(COOKIE_HEADER);
-      final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue);
-      cookies = Maps.newHashMapWithExpectedSize(cookiesSet.size());
-      for (final Cookie cookie : cookiesSet) {
-        cookies.put(cookie.getName(), cookie);
-      }
+      populateCookies();
     }
 
     final Cookie cookie = cookies.get(cookieName);
     return cookie != null ? cookie.getValue() : null;
+  }
+
+  private void populateCookies() {
+    cookies = Maps.newHashMap();
+
+    final String cookieHeaderValue = inner.headers().get(COOKIE_HEADER);
+    if (cookieHeaderValue == null) return;
+
+    final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue);
+    for (final Cookie cookie : cookiesSet) {
+      cookies.put(cookie.getName(), cookie);
+    }
   }
 
   @Override
