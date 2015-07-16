@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.http.common;
 
+import com.google.common.base.Objects;
+
 /**
  * @author marenzon
  */
@@ -22,5 +24,13 @@ public class Param {
   public String getValue() {
 
     return value;
+  }
+
+  @Override
+  public String toString() {
+    return Objects.toStringHelper(this)
+            .add("name", name)
+            .add("value", value)
+            .toString();
   }
 }
