@@ -36,17 +36,12 @@ class HttpInvocationHandler implements InvocationHandler {
     if ("close".equals(method.getName()) && method.getParameterTypes().length == 0) {
 
       client.close();
-      logger.debug("client {} is closed.", chooseTarget());
+      if (logger.isDebugEnabled()) {
+        logger.debug("client {} is closed.", targetProvider.getTargetLogicalName());
+      }
       return null;
     }
-
-    final String target = chooseTarget();
     final AbstractClientEndpoint endpoint = endpoints.get(method);
-    return endpoint.invoke(target, args);
-  }
-
-  private String chooseTarget() {
-
-    return targetProvider.provideTarget();
+    return endpoint.invoke(targetProvider, args);
   }
 }
