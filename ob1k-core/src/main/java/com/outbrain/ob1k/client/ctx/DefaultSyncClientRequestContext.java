@@ -20,12 +20,12 @@ public class DefaultSyncClientRequestContext extends AbstractClientRequestContex
 
   @Override
   public SyncClientRequestContext nextPhase() {
-    return new DefaultSyncClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
+    return new DefaultSyncClientRequestContext(remoteTarget, params, clientEndpoint, executionIndex + 1);
   }
 
   @Override
   public <T> T invokeSync() throws ExecutionException {
-    return endpoint.invokeSync(this);
+    return clientEndpoint.invokeSync(this);
   }
 
 

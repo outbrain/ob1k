@@ -5,7 +5,6 @@ import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.SyncClientEndpoint;
-import com.outbrain.ob1k.client.http.HttpClient;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
@@ -13,11 +12,11 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.server.MethodParamNamesExtractor;
+import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import rx.Observable;
 
@@ -32,250 +31,240 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * User: aronen
- * Date: 6/18/13
- * Time: 2:18 PM
+ * @author aronen
  */
 public class ClientBuilder<T extends Service> {
-    public static final int RETRIES = 3;
-    public static final int CONNECTION_TIMEOUT = 200;
-    public static final int REQUEST_TIMEOUT = 500;
 
-    private final Class<T> type;
-    private TargetProvider targetProvider = new EmptyTargetProvider();
-    private final List<SyncFilter> syncFilters;
-    private final List<AsyncFilter> asyncFilters;
-    private final List<StreamFilter> streamFilters;
-    private final Map<String, EndpointDescriptor> endpointDescriptors;
+  private final Class<T> type;
+  private final List<SyncFilter> syncFilters;
+  private final List<AsyncFilter> asyncFilters;
+  private final List<StreamFilter> streamFilters;
+  private final Map<String, EndpointDescriptor> endpointDescriptors;
+  private final HttpClient.Builder httpClientBuilder;
 
-    private int retries = RETRIES;
-    private int connectionTimeout = CONNECTION_TIMEOUT;
-    private boolean followRedirect = false;
-    private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
-    private int totalMaxConnections = HttpClient.TOTAL_MAX_CONNECTIONS;
-    private int requestTimeout = REQUEST_TIMEOUT;
-    private ContentType clientType = ContentType.JSON; // default content type.
-    private boolean compression = false;
-    private MetricFactory metricFactory;
+  private TargetProvider targetProvider = new EmptyTargetProvider();
+  private ContentType clientType = ContentType.JSON;
 
-    public ClientBuilder(final Class<T> type) {
-        this.type = type;
-        this.syncFilters = new ArrayList<>();
-        this.asyncFilters = new ArrayList<>();
-        this.streamFilters = new ArrayList<>();
-        this.endpointDescriptors = new HashMap<>();
+  public ClientBuilder(final Class<T> type) {
+    this.type = type;
+    this.httpClientBuilder = new HttpClient.Builder();
+    this.syncFilters = new ArrayList<>();
+    this.asyncFilters = new ArrayList<>();
+    this.streamFilters = new ArrayList<>();
+    this.endpointDescriptors = new HashMap<>();
+  }
+
+  public ClientBuilder<T> addFilter(final ServiceFilter filter) {
+    if (filter instanceof SyncFilter) {
+      syncFilters.add((SyncFilter) filter);
     }
 
-    public ClientBuilder<T> addFilter(final ServiceFilter filter) {
-        if (filter instanceof SyncFilter) {
-            syncFilters.add((SyncFilter) filter);
-        }
-
-        if (filter instanceof AsyncFilter) {
-            asyncFilters.add((AsyncFilter) filter);
-        }
-
-        if (filter instanceof StreamFilter) {
-            streamFilters.add((StreamFilter) filter);
-        }
-
-        return this;
+    if (filter instanceof AsyncFilter) {
+      asyncFilters.add((AsyncFilter) filter);
     }
 
-    public ClientBuilder<T> setProtocol(final ContentType clientType) {
-        this.clientType = clientType;
-        return this;
+    if (filter instanceof StreamFilter) {
+      streamFilters.add((StreamFilter) filter);
     }
 
-    public ClientBuilder<T> followRedirect(final boolean followRedirect) {
-        this.followRedirect = followRedirect;
-        return this;
+    return this;
+  }
+
+  public ClientBuilder<T> setProtocol(final ContentType clientType) {
+    this.clientType = clientType;
+    return this;
+  }
+
+  public ClientBuilder<T> followRedirect(final boolean followRedirect) {
+    httpClientBuilder.setFollowRedirect(followRedirect);
+    return this;
+  }
+
+  public ClientBuilder<T> setMetricFactory(final MetricFactory metricFactory) {
+    httpClientBuilder.setMetricFactory(metricFactory);
+    return this;
+  }
+
+  public ClientBuilder<T> setCompression(final boolean compression) {
+    httpClientBuilder.setCompressionEnforced(compression);
+    return this;
+  }
+
+  public ClientBuilder<T> setMaxConnectionsPerHost(final int maxConnectionsPerHost) {
+    httpClientBuilder.setMaxConnectionsPerHost(maxConnectionsPerHost);
+    setTotalMaxConnections(maxConnectionsPerHost * 2);
+    return this;
+  }
+
+  public ClientBuilder<T> setTotalMaxConnections(final int maxConnections) {
+    httpClientBuilder.setMaxTotalConnections(maxConnections);
+    return this;
+  }
+
+  public ClientBuilder<T> setResponseMaxSize(final long responseMaxSize) {
+    httpClientBuilder.setResponseMaxSize(responseMaxSize);
+    return this;
+  }
+
+  public ClientBuilder<T> setRetries(final int retries) {
+    httpClientBuilder.setRetries(retries);
+    return this;
+  }
+
+  public ClientBuilder<T> setConnectionTimeout(final int timeout) {
+    httpClientBuilder.setConnectionTimeout(timeout);
+    return this;
+  }
+
+  public ClientBuilder<T> setRequestTimeout(final int timeout) {
+    httpClientBuilder.setRequestTimeout(timeout);
+    return this;
+  }
+
+  public ClientBuilder<T> setTargetProvider(final TargetProvider targetProvider) {
+    this.targetProvider = targetProvider == null ? new EmptyTargetProvider() : targetProvider;
+    return this;
+  }
+
+  public ClientBuilder<T> bindEndpoint(final String methodName, final String path, final ServiceFilter... filters) {
+    bindEndpoint(methodName, HttpRequestMethodType.ANY, path, filters);
+    return this;
+  }
+
+  public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType) {
+    bindEndpoint(methodName, requestMethodType, methodName);
+    return this;
+  }
+
+  public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType,
+                                       final ServiceFilter... filters) {
+    bindEndpoint(methodName, requestMethodType, methodName, filters);
+    return this;
+  }
+
+  public ClientBuilder<T> bindEndpoint(final String methodName, final ServiceFilter... filters) {
+    bindEndpoint(methodName, HttpRequestMethodType.ANY, methodName, filters);
+    return this;
+  }
+
+  public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType,
+                                       final String path, final ServiceFilter... filters) {
+    final List<? extends ServiceFilter> serviceFilters;
+    if (filters == null) {
+      serviceFilters = new ArrayList<>();
+    } else {
+      serviceFilters = Arrays.asList(filters);
+    }
+    endpointDescriptors.put(methodName, new EndpointDescriptor(methodName, path, serviceFilters, requestMethodType));
+    return this;
+  }
+
+  public T build() {
+    final ClassLoader loader = ClientBuilder.class.getClassLoader();
+    final HttpClient httpClient = httpClientBuilder.build();
+    final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(httpClient);
+    final HttpInvocationHandler handler = new HttpInvocationHandler(targetProvider, httpClient, endpoints);
+
+    @SuppressWarnings("unchecked")
+    final T proxy = (T) Proxy.newProxyInstance(loader, new Class[]{type, Closeable.class}, handler);
+    return proxy;
+  }
+
+  private static RequestMarshallerRegistry createRegistry(final Class type) {
+    final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
+
+    final Method[] methods = type.getDeclaredMethods();
+    for (final Method method : methods) {
+      registry.registerTypes(TypeHelper.extractTypes(method));
     }
 
-    public ClientBuilder<T> setMetricFactory(final MetricFactory metricFactory) {
-        this.metricFactory = metricFactory;
-        return this;
-    }
+    return registry;
+  }
 
-    public ClientBuilder<T> setRetries(final int retries) {
-        this.retries = retries;
-        return this;
-    }
+  private Map<Method, AbstractClientEndpoint> extractEndpointsFromType(final HttpClient httpClient) {
 
-    public ClientBuilder<T> setConnectionTimeout(final int timeout) {
-        this.connectionTimeout = timeout;
-        return this;
-    }
+    final Map<Method, AbstractClientEndpoint> endpoints = new HashMap<>();
+    final Method[] methods = type.getDeclaredMethods();
 
-    public ClientBuilder<T> setRequestTimeout(final int timeout) {
-        this.requestTimeout = timeout;
-        return this;
-    }
+    for (final Method method : methods) {
+      if (isValidEndpoint(method)) {
+        final String methodName = method.getName();
+        final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
+        final RequestMarshallerRegistry registry = createRegistry(type);
+        final AbstractClientEndpoint.Endpoint endpoint = new AbstractClientEndpoint.Endpoint(method, type, clientType,
+                endpointDescriptor.path, endpointDescriptor.requestMethodType);
+        final AbstractClientEndpoint clientEndpoint;
 
-    public ClientBuilder<T> setTargetProvider(final TargetProvider targetProvider) {
-        this.targetProvider = targetProvider == null ? new EmptyTargetProvider() : targetProvider;
-        return this;
-    }
-
-    public ClientBuilder<T> bindEndpoint(final String methodName, final String path, final ServiceFilter... filters) {
-        bindEndpoint(methodName, HttpRequestMethodType.ANY, path, filters);
-        return this;
-    }
-
-    public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType) {
-        bindEndpoint(methodName, requestMethodType, methodName);
-        return this;
-    }
-
-    public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType, final ServiceFilter... filters) {
-        bindEndpoint(methodName, requestMethodType, methodName, filters);
-        return this;
-    }
-
-    public ClientBuilder<T> bindEndpoint(final String methodName, final ServiceFilter... filters) {
-        bindEndpoint(methodName, HttpRequestMethodType.ANY, methodName, filters);
-        return this;
-    }
-
-    public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType, final String path, final ServiceFilter... filters) {
-        final List<? extends ServiceFilter> serviceFilters;
-        if (filters == null) {
-            serviceFilters = new ArrayList<>();
+        if (isAsync(method)) {
+          final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, endpointDescriptor.filters);
+          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]));
+        } else if (isStreaming(method)) {
+          final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
+          clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
         } else {
-            serviceFilters = Arrays.asList(filters);
-        }
-        endpointDescriptors.put(methodName, new EndpointDescriptor(methodName, path, serviceFilters, requestMethodType));
-        return this;
-    }
-
-    public ClientBuilder<T> setCompression(final boolean compression) {
-        this.compression = compression;
-        return this;
-    }
-
-    public ClientBuilder<T> setMaxConnectionsPerHost(final int maxConnectionsPerHost) {
-        this.maxConnectionsPerHost = maxConnectionsPerHost;
-        if (maxConnectionsPerHost > totalMaxConnections) {
-            this.totalMaxConnections = maxConnectionsPerHost * 2;
+          final List<SyncFilter> filters = mergeFilters(SyncFilter.class, syncFilters, endpointDescriptor.filters);
+          clientEndpoint = new SyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new SyncFilter[filters.size()]));
         }
 
-        return this;
+        endpoints.put(method, clientEndpoint);
+      }
     }
 
-    public ClientBuilder<T> setTotalMaxConnections(final int maxConnections) {
-        this.totalMaxConnections = maxConnections;
-        return this;
-    }
+    return endpoints;
+  }
 
-    public T build() {
-        return createHttpClient();
-    }
+  private EndpointDescriptor getEndpointDescriptor(final String methodName) {
+    return endpointDescriptors.containsKey(methodName) ?
+            endpointDescriptors.get(methodName) :
+            new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
+  }
 
-    private T createHttpClient() {
-        final ClassLoader loader = ClientBuilder.class.getClassLoader();
-        final HttpClient client = new HttpClient(createRegistry(type), retries, connectionTimeout, requestTimeout,
-            compression, false, followRedirect, maxConnectionsPerHost, totalMaxConnections, metricFactory);
+  private boolean isValidEndpoint(final Method method) {
+    final int modifiers = method.getModifiers();
+    return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
+  }
 
-        final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(type, client,
-            asyncFilters, syncFilters, streamFilters, clientType, endpointDescriptors);
-
-        final HttpInvocationHandler handler = new HttpInvocationHandler(targetProvider, client, endpoints);
-
-        @SuppressWarnings("unchecked")
-        final T res = (T) Proxy.newProxyInstance(loader, new Class[]{type, Closeable.class}, handler);
-        return res;
-    }
-
-    private static RequestMarshallerRegistry createRegistry(final Class type) {
-        final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
-
-        final Method[] methods = type.getDeclaredMethods();
-        for (final Method method : methods) {
-            registry.registerTypes(TypeHelper.extractTypes(method));
+  private static <T extends ServiceFilter> List<T> mergeFilters(final Class<T> filterType, final List<T> baseFilters,
+                                                                final List<? extends ServiceFilter> specificFilters) {
+    final List<T> filters = new ArrayList<>();
+    filters.addAll(baseFilters);
+    if (specificFilters != null) {
+      for (final ServiceFilter filter : specificFilters) {
+        if (filter instanceof AsyncFilter) {
+          filters.add(filterType.cast(filter));
         }
-
-        return registry;
+      }
     }
 
-    private static Map<Method, AbstractClientEndpoint> extractEndpointsFromType(final Class type, final HttpClient client,
-                                                                                final List<AsyncFilter> asyncFilters,
-                                                                                final List<SyncFilter> syncFilters,
-                                                                                final List<StreamFilter> streamFilters,
-                                                                                final ContentType contentType,
-                                                                                final Map<String, EndpointDescriptor> endpointDescriptors) {
+    return filters;
+  }
 
-        final Map<Method, AbstractClientEndpoint> endpoints = new HashMap<>();
-        final Method[] methods = type.getDeclaredMethods();
-        final Map<Method, List<String>> methodParams;
-        try {
-            methodParams = MethodParamNamesExtractor.extract(type, Arrays.asList(methods));
-        } catch (final Exception e) {
-            throw new RuntimeException("Service " + type.toString() + " can't be analyzed", e);
-        }
-        for (final Method method : methods) {
-            final int modifiers = method.getModifiers();
-            if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
-                final String methodName = method.getName();
-                final EndpointDescriptor methodDescriptor = endpointDescriptors.containsKey(methodName) ?
-                    endpointDescriptors.get(methodName) :
-                    new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
-                if (isAsync(method)) {
-                    final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, methodDescriptor.filters);
-                    endpoints.put(method, new AsyncClientEndpoint(method, methodParams.get(method), type, client, filters.toArray(new AsyncFilter[filters.size()]), contentType,
-                        methodDescriptor.path, methodDescriptor.requestMethodType));
-                } else if (isStreaming(method)) {
-                    final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, methodDescriptor.filters);
-                    endpoints.put(method, new StreamClientEndpoint(method, methodParams.get(method), type, client, filters.toArray(new StreamFilter[filters.size()]), contentType,
-                        methodDescriptor.path, methodDescriptor.requestMethodType));
-                } else {
-                    final List<SyncFilter> filters = mergeFilters(SyncFilter.class, syncFilters, methodDescriptor.filters);
-                    endpoints.put(method, new SyncClientEndpoint(method, methodParams.get(method), type, client, filters.toArray(new SyncFilter[filters.size()]), contentType,
-                        methodDescriptor.path, methodDescriptor.requestMethodType));
-                }
-            }
-        }
+  private static boolean isAsync(final Method method) {
+    return method.getReturnType() == ComposableFuture.class;
+  }
 
-        return endpoints;
+  private static boolean isStreaming(final Method method) {
+    return method.getReturnType() == Observable.class;
+  }
+
+  /**
+   * Describes how endpoint of service looks for the client builder
+   *
+   * @author marenzon
+   */
+  private class EndpointDescriptor {
+
+    public final String method;
+    public final String path;
+    public final List<? extends ServiceFilter> filters;
+    public final HttpRequestMethodType requestMethodType;
+
+    public EndpointDescriptor(final String method, final String path, final List<? extends ServiceFilter> filters,
+                              final HttpRequestMethodType requestMethodType) {
+      this.method = method;
+      this.path = path;
+      this.filters = filters;
+      this.requestMethodType = requestMethodType;
     }
-
-    private static <T extends ServiceFilter> List<T> mergeFilters(final Class<T> filterType, final List<T> baseFilters, final List<? extends ServiceFilter> specificFilters) {
-        final List<T> filters = new ArrayList<>();
-        filters.addAll(baseFilters);
-        if (specificFilters != null) {
-            for (final ServiceFilter filter : specificFilters) {
-                if (filter instanceof AsyncFilter) {
-                    filters.add(filterType.cast(filter));
-                }
-            }
-        }
-
-        return filters;
-    }
-
-    private static boolean isAsync(final Method method) {
-        return method.getReturnType() == ComposableFuture.class;
-    }
-
-    private static boolean isStreaming(final Method method) {
-        return method.getReturnType() == Observable.class;
-    }
-
-    /**
-     * Describes how endpoint of service looks for the client builder
-     *
-     * @author marenzon
-     */
-    private static class EndpointDescriptor {
-        public final String method;
-        public final String path;
-        public final List<? extends ServiceFilter> filters;
-        public final HttpRequestMethodType requestMethodType;
-
-        public EndpointDescriptor(final String method, final String path, final List<? extends ServiceFilter> filters, final HttpRequestMethodType requestMethodType) {
-            this.method = method;
-            this.path = path;
-            this.filters = filters;
-            this.requestMethodType = requestMethodType;
-        }
-    }
+  }
 }

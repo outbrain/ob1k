@@ -1,16 +1,17 @@
 package com.outbrain.ob1k.common.marshalling;
 
+import com.outbrain.ob1k.http.common.ContentType;
+
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * User: aronen
- * Date: 8/18/13
- * Time: 3:29 PM
+ * @author aronen
  */
 public class RequestMarshallerRegistry {
-  private Map<String, RequestMarshaller> marshallers;
+
+  private final Map<String, RequestMarshaller> marshallers;
 
   public RequestMarshallerRegistry() {
     marshallers = new HashMap<>();

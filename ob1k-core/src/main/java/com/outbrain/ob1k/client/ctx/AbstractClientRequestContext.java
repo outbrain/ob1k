@@ -10,7 +10,7 @@ import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 public abstract class AbstractClientRequestContext<Endpoint extends AbstractClientEndpoint> implements ClientRequestContext {
   protected final String remoteTarget;
   protected final Object[] params;
-  protected final Endpoint endpoint;
+  protected final Endpoint clientEndpoint;
   protected final int executionIndex;
   protected final String url;
 
@@ -18,16 +18,17 @@ public abstract class AbstractClientRequestContext<Endpoint extends AbstractClie
     this(remoteTarget, params, endpoint, 0);
   }
 
-  protected AbstractClientRequestContext(final String remoteTarget, final Object[] params, final Endpoint endpoint, final int executionIndex) {
+  protected AbstractClientRequestContext(final String remoteTarget, final Object[] params, final Endpoint clientEndpoint,
+                                         final int executionIndex) {
     this.remoteTarget = remoteTarget;
     this.params = params;
-    this.endpoint = endpoint;
+    this.clientEndpoint = clientEndpoint;
     this.executionIndex = executionIndex;
-    this.url = createUrl(remoteTarget, endpoint);
+    this.url = createUrl(remoteTarget, clientEndpoint);
   }
 
-  private static String createUrl(final String remoteTarget, final AbstractClientEndpoint endpoint) {
-    final String methodPath = endpoint.methodPath;
+  private static String createUrl(final String remoteTarget, final AbstractClientEndpoint clientEndpoint) {
+    final String methodPath = clientEndpoint.endpoint.getMethodPath();
     return remoteTarget.endsWith("/") || methodPath.startsWith("/") ? remoteTarget + methodPath : remoteTarget + "/" + methodPath;
   }
 
@@ -53,11 +54,11 @@ public abstract class AbstractClientRequestContext<Endpoint extends AbstractClie
 
   @Override
   public String getServiceMethodName() {
-    return endpoint.method.getName();
+    return clientEndpoint.endpoint.getMethod().getName();
   }
 
   @Override
   public String getServiceClassName() {
-    return endpoint.serviceType.getSimpleName();
+    return clientEndpoint.endpoint.getServiceType().getSimpleName();
   }
 }

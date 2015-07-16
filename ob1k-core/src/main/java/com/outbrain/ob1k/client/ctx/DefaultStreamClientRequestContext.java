@@ -19,11 +19,11 @@ public class DefaultStreamClientRequestContext extends AbstractClientRequestCont
 
   @Override
   public StreamClientRequestContext nextPhase() {
-    return new DefaultStreamClientRequestContext(remoteTarget, params, endpoint, executionIndex + 1);
+    return new DefaultStreamClientRequestContext(remoteTarget, params, clientEndpoint, executionIndex + 1);
   }
 
   @Override
   public <T> Observable<T> invokeStream() {
-    return endpoint.invokeStream(this);
+    return clientEndpoint.invokeStream(this);
   }
 }

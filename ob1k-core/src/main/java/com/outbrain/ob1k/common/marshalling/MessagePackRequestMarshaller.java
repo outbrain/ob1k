@@ -1,9 +1,11 @@
 package com.outbrain.ob1k.common.marshalling;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.http.Response;
+import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.http.marshalling.MessagePackMarshallingStrategy;
+import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -28,7 +30,9 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -52,10 +56,12 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   private static final byte[] HTML_NEW_LINE = "<br/>\n".getBytes(CharsetUtil.UTF_8);
   private static final byte[] HEADER = ChunkHeader.ELEMENT_HEADER.getBytes(CharsetUtil.UTF_8);
 
+  private final MarshallingStrategy msgPackMarshallingStrategy;
   private final MessagePack msgPack;
 
   public MessagePackRequestMarshaller() {
     msgPack = new MessagePack();
+    msgPackMarshallingStrategy = new MessagePackMarshallingStrategy(msgPack);
   }
 
   @Override
@@ -204,7 +210,8 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   }
 
   @Override
-  public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder, final Object[] requestParams) throws IOException {
+  public byte[] marshallRequestParams(final Object[] requestParams) throws IOException {
+
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     final Packer packer = msgPack.createPacker(outputStream);
 
@@ -221,27 +228,49 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     }
     packer.writeArrayEnd();
 
-    final byte[] body = outputStream.toByteArray();
-    requestBuilder.setBody(body);
-    requestBuilder.setContentLength(body.length);
-    requestBuilder.setBodyEncoding("UTF8");
-    requestBuilder.setHeader("Content-Type", ContentType.MESSAGE_PACK.requestEncoding());
+    return outputStream.toByteArray();
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Object unmarshallResponse(final Response httpResponse, final Type resType, final boolean failOnError) throws IOException {
-    final int statusCode = httpResponse.getStatusCode();
-    if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
-      return null;
-    } else if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
-      final byte[] body = httpResponse.getResponseBodyAsBytes();
-      final Template template = msgPack.lookup(resType);
-      final Value value = msgPack.read(body);
-      return template.read(new Converter(msgPack, value), null);
-    } else {
-      throw new IOException(httpResponse.getResponseBody());
+  public <T> T unmarshallResponse(final Response response, final Type type) throws IOException {
+
+    return msgPackMarshallingStrategy.unmarshall(type, response);
+  }
+
+  @Override
+  public <T> T unmarshallStreamResponse(final com.outbrain.ob1k.http.Response response, final Type type) throws IOException {
+
+    final ByteBuffer byteBufferBody = response.getResponseBodyAsByteBuffer();
+
+    if (byteBufferBody.remaining() < HEADER.length) {
+      throw new IOException("bad stream response - no chunk header");
     }
+
+    final byte[] header = new byte[HEADER.length];
+    byteBufferBody.get(header);
+
+    final int remaining = byteBufferBody.remaining();
+
+    if (Arrays.equals(HEADER, header)) {
+
+      if (remaining == 0) {
+        // on empty streamBody the msgpack reader throws EOF
+        return null;
+      }
+
+      final Value value = msgPack.read(byteBufferBody);
+      @SuppressWarnings("unchecked")
+      final Template<T> template = (Template<T>) msgPack.lookup(type);
+      return template.read(new Converter(msgPack, value), null);
+
+    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(), header)) {
+
+      final byte[] body = new byte[remaining];
+      byteBufferBody.get(body);
+      throw new RuntimeException(new String(body));
+    }
+
+    throw new IOException("invalid chunk header - unsupported " + new String(header));
   }
 
   private void registerBean(final Set<Class> processed, final Class cls) {

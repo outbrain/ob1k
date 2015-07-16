@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.client.http;
 
 import com.outbrain.ob1k.Response;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
@@ -10,8 +10,11 @@ import rx.Observable;
 import rx.functions.Func1;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
 /**
  * User: aronen
@@ -20,18 +23,29 @@ import java.util.concurrent.TimeUnit;
  */
 public class HelloService implements IHelloService {
 
+  private final Random random = new Random();
+
   @Override
   public ComposableFuture<String> hello(final String name) {
     if ("moshe".equals(name)) {
       throw new IllegalArgumentException("bad name.");
     }
+    return fromValue("hello " + name);
+  }
 
-    return ComposableFutures.fromValue("hello " + name);
+  @Override
+  public ComposableFuture<String> helloWorld() {
+    return fromValue("hello world");
+  }
+
+  @Override
+  public ComposableFuture<Integer> getRandomNumber() {
+    return fromValue(random.nextInt(9) + 1);
   }
 
   @Override
   public ComposableFuture<String> helloFilter(final String name) {
-    return ComposableFutures.fromValue("hello " + name);
+    return fromValue("hello " + name);
   }
 
   @Override
@@ -41,7 +55,7 @@ public class HelloService implements IHelloService {
 
   @Override
   public ComposableFuture<Response> emptyString() {
-    return ComposableFutures.fromValue(ResponseBuilder.ok().build());
+    return fromValue(ResponseBuilder.ok().build());
   }
 
   @Override
@@ -64,7 +78,7 @@ public class HelloService implements IHelloService {
       bean.getHabits().add(newHabit);
     }
 
-    return ComposableFutures.fromValue(beans);
+    return fromValue(beans);
   }
 
   @Override
@@ -87,10 +101,10 @@ public class HelloService implements IHelloService {
   }
 
   public ComposableFuture<Response> noJsonContent() {
-    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.JSON.responseEncoding()).build());
+    return fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.JSON.responseEncoding()).build());
   }
 
   public ComposableFuture<Response> noMsgPackContent() {
-    return ComposableFutures.fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.MESSAGE_PACK.responseEncoding()).build());
+    return fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).setContentType(ContentType.MESSAGE_PACK.responseEncoding()).build());
   }
 }

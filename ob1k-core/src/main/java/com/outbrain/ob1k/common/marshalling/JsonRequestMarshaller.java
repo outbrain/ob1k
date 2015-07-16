@@ -10,7 +10,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -23,11 +25,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.google.common.base.Strings;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.http.Response;
+import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
+import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -49,13 +52,15 @@ import io.netty.util.CharsetUtil;
 public class JsonRequestMarshaller implements RequestMarshaller {
   private final ObjectMapper mapper;
   private final JsonFactory factory;
+  private final MarshallingStrategy jsonMarshallingStrategy;
 
   public JsonRequestMarshaller() {
-    this.factory = new JsonFactory();
-    this.mapper = new ObjectMapper(factory);
+    factory = new JsonFactory();
+    mapper = new ObjectMapper(factory);
     mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    jsonMarshallingStrategy = new JacksonMarshallingStrategy(mapper);
   }
 
   @Override
@@ -89,19 +94,14 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   }
 
   @Override
-  public void marshallRequestParams(final AsyncHttpClient.BoundRequestBuilder requestBuilder,
-                                    final Object[] requestParams) throws IOException {
+  public byte[] marshallRequestParams(final Object[] requestParams) throws IOException {
     // requests can come from a regular httpClient post request with a single param that get wrapped inside an array
     // or in case of a real RPC call with a single param. in both cases we unwrap it and send it as is.
     // the code in unmarshallRequestParams() know how to deal with both single object or array of objects.
     final Object params = requestParams == null ? new Object[0] :
       requestParams.length == 1 ? requestParams[0] : requestParams;
 
-    final String body = mapper.writeValueAsString(params);
-    requestBuilder.setBody(body);
-    requestBuilder.setContentLength(body.getBytes("UTF8").length);
-    requestBuilder.setBodyEncoding("UTF8");
-    requestBuilder.setHeader("Content-Type", ContentType.JSON.requestEncoding());
+    return mapper.writeValueAsBytes(params);
   }
 
   @Override
@@ -133,29 +133,49 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     res.headers().add(TRANSFER_ENCODING, CHUNKED);
     res.headers().add(CONNECTION, KEEP_ALIVE);
     res.headers().add(CONTENT_TYPE,
-                      rawStream ? ContentType.TEXT_HTML.responseEncoding() : ContentType.JSON.responseEncoding());
+            rawStream ? ContentType.TEXT_HTML.responseEncoding() : ContentType.JSON.responseEncoding());
 
     return res;
   }
 
   @Override
-  public Object unmarshallResponse(final Response httpResponse,
-                                   final Type resType,
-                                   final boolean failOnError) throws IOException {
-    final String body = httpResponse.getResponseBody();
-    final int statusCode = httpResponse.getStatusCode();
-    if (HttpResponseStatus.NO_CONTENT.code() == statusCode) {
-      // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
-      return null;
-    } else if (!failOnError || (statusCode >= 200 && statusCode < 300)) {
-      if (Strings.isNullOrEmpty(body)) {
-        return null;
-      } else {
-        return mapper.readValue(body, getJacksonType(resType));
-      }
-    } else {
-      throw new IOException("called failed for:" + httpResponse + "\n" + body);
+  public <T> T unmarshallResponse(final Response response, final Type type) throws IOException {
+
+    return jsonMarshallingStrategy.unmarshall(type, response);
+  }
+
+  @Override
+  public <T> T unmarshallStreamResponse(final Response response, final Type type) throws IOException {
+
+    final ByteBuffer byteBufferBody = response.getResponseBodyAsByteBuffer();
+    final int chunkHeaderSize = ChunkHeader.ELEMENT_HEADER.length();
+
+    if (byteBufferBody.remaining() < chunkHeaderSize) {
+      throw new IOException("bad stream response - no chunk header");
     }
+
+    final byte[] header = new byte[chunkHeaderSize];
+    byteBufferBody.get(header);
+
+    final int remaining = byteBufferBody.remaining();
+    final byte[] body = new byte[remaining];
+    byteBufferBody.get(body);
+
+    if (Arrays.equals(ChunkHeader.ELEMENT_HEADER.getBytes(), header)) {
+
+      if (remaining == 0) {
+        // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
+        return null;
+      }
+
+      return mapper.readValue(body, getJacksonType(type));
+
+    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(), header)) {
+
+      throw new RuntimeException(new String(body));
+    }
+
+    throw new IOException("invalid chunk header - unsupported " + new String(header));
   }
 
   private Object[] parseURLRequestParams(final Request request,
@@ -248,5 +268,4 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     return typeFactory.constructType(type);
   }
-
 }

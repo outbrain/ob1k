@@ -3,7 +3,7 @@ package com.outbrain.ob1k.consul;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 
 import java.util.concurrent.TimeUnit;
 

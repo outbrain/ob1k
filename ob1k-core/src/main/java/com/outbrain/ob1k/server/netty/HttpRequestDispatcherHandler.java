@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.outbrain.ob1k.common.marshalling.ContentType;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.StaticPathResolver;

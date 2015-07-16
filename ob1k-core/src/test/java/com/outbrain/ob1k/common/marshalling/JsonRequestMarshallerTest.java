@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.common.marshalling;
 
-import com.ning.http.client.Response;
+import com.outbrain.ob1k.http.Response;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
 import org.junit.Before;
@@ -38,37 +38,29 @@ public class JsonRequestMarshallerTest {
   @Test
   public void testUnmarshallNoContent() throws IOException {
     final Response response = mockResponse(HttpResponseStatus.NO_CONTENT.code(), null);
-    assertNull(jsonRequestMarshaller.unmarshallResponse(response, TestBody.class, true));
+    assertNull(jsonRequestMarshaller.unmarshallResponse(response, TestBody.class));
   }
 
   @Test
   public void testUnmarshalWithOK() throws IOException {
     final String body = "{\"prop\": \"test\"}";
     final Response response = mockResponse(HttpResponseStatus.OK.code(), body);
-    final TestBody result = (TestBody) jsonRequestMarshaller.unmarshallResponse(response, TestBody.class, true);
-    assertEquals("test", result.getProp());
-  }
-
-  @Test
-  public void testUnmarshalWithErrorWithoutFail() throws IOException {
-    final String body = "{\"prop\": \"test\"}";
-    final Response response = mockResponse(HttpResponseStatus.NOT_FOUND.code(), body);
-    final TestBody result = (TestBody) jsonRequestMarshaller.unmarshallResponse(response, TestBody.class, false);
+    final TestBody result = jsonRequestMarshaller.unmarshallResponse(response, TestBody.class);
     assertEquals("test", result.getProp());
   }
 
   @Test
   public void testUnmarshalWithError() throws IOException {
     expectedException.expect(IOException.class);
-
     final Response response = mockResponse(HttpResponseStatus.NOT_FOUND.code(), null);
-    jsonRequestMarshaller.unmarshallResponse(response, TestBody.class, true);
+    jsonRequestMarshaller.unmarshallResponse(response, TestBody.class);
   }
 
   private Response mockResponse(final int statusCode, final String body) throws IOException {
     final Response response = mock(Response.class);
     when(response.getStatusCode()).thenReturn(statusCode);
     when(response.getResponseBody()).thenReturn(body);
+    when(response.hasResponseBody()).thenReturn(true);
     return response;
   }
 
