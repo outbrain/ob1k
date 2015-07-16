@@ -98,5 +98,4 @@ public class SyncClientEndpoint extends AbstractClientEndpoint {
     final DefaultSyncClientRequestContext ctx = new DefaultSyncClientRequestContext(remoteTarget, params, this);
     return invokeSync(ctx);
   }
-
 }

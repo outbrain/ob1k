@@ -8,11 +8,11 @@ import com.google.common.base.Preconditions;
  */
 public class SimpleTargetProvider implements TargetProvider {
 
-    private final String target;
+  private final String target;
 
-    public SimpleTargetProvider(final String target) {
-        this.target = Preconditions.checkNotNull(target, "target must not be null");
-    }
+  public SimpleTargetProvider(final String target) {
+    this.target = Preconditions.checkNotNull(target, "target must not be null");
+  }
 
   @Override
   public String getTargetLogicalName() {
@@ -20,7 +20,7 @@ public class SimpleTargetProvider implements TargetProvider {
   }
 
   @Override
-    public String provideTarget() {
-        return target;
-    }
+  public String provideTarget() {
+    return target;
+  }
 }

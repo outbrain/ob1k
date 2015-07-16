@@ -401,7 +401,7 @@ public class BasicClientRpcTest {
     return new ClientBuilder<>(IHelloService.class).
             setProtocol(protocol).
             setRequestTimeout(120000). // heavily loaded testing environment.
-      setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
+            setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
             build();
   }
 
@@ -411,12 +411,12 @@ public class BasicClientRpcTest {
             setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH)).
             bindEndpoint("getNextCode", "/next").
             bindEndpoint("getRandomCode", "/random", createCachingFilter()).
-      build();
+            build();
   }
 
   private IHelloService createClient(final int port, final int requestTimeout, final int retries) {
     return new ClientBuilder<>(IHelloService.class).
-      setProtocol(ContentType.JSON).
+            setProtocol(ContentType.JSON).
             setRequestTimeout(requestTimeout).
             setRetries(retries).
             setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
@@ -465,7 +465,7 @@ public class BasicClientRpcTest {
   @Test(expected=ExecutionException.class)
   public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
     IHelloService service = new ClientBuilder<>(IHelloService.class).build();
-    final ComposableFuture<Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
+    final ComposableFuture<com.outbrain.ob1k.Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
     Assert.assertNotNull(future);
     try {
       future.get();
