@@ -51,6 +51,16 @@ public class HttpClient implements Closeable {
   }
 
   /**
+   * Creates new instance of HttpClient with default configuration
+   *
+   * @return new HttpClient
+   */
+  public static HttpClient createDefault() {
+
+    return HttpClient.newBuilder().build();
+  }
+
+  /**
    * Http get request
    *
    * @param url url for the request
