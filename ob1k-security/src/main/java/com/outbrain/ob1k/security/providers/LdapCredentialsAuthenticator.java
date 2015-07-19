@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.security.ldap;
+package com.outbrain.ob1k.security.providers;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
