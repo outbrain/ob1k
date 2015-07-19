@@ -4,6 +4,11 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.DefaultAsyncClientRequestContext;
+import com.outbrain.ob1k.client.targets.TargetProvider;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.common.filters.AsyncFilter;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -82,8 +87,13 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
   }
 
   @Override
-  public Object invoke(final String remoteTarget, final Object[] params) throws Throwable {
-
+  public Object invoke(final TargetProvider targetProvider, final Object[] params) throws Throwable {
+    final String remoteTarget;
+    try{
+      remoteTarget = targetProvider.provideTarget();
+    } catch (final Throwable t) {
+      return ComposableFutures.fromError(t);
+    }
     final DefaultAsyncClientRequestContext ctx = new DefaultAsyncClientRequestContext(remoteTarget, params, this);
     return invokeAsync(ctx);
   }

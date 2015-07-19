@@ -2,8 +2,11 @@ package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.client.ctx.DefaultSyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
+
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.http.HttpClient;
@@ -89,7 +92,8 @@ public class SyncClientEndpoint extends AbstractClientEndpoint {
   }
 
   @Override
-  public Object invoke(final String remoteTarget, final Object[] params) throws Throwable {
+  public Object invoke(final TargetProvider targetProvider, final Object[] params) throws Throwable {
+    final String remoteTarget = targetProvider.provideTarget();
 
     final DefaultSyncClientRequestContext ctx = new DefaultSyncClientRequestContext(remoteTarget, params, this);
     return invokeSync(ctx);

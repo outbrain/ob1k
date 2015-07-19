@@ -6,5 +6,6 @@ package com.outbrain.ob1k.client.targets;
  * @author eran 6/21/15.
  */
 public interface TargetProvider {
+    String getTargetLogicalName();
     String provideTarget();
 }

@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.client.ctx.ClientRequestContext;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
@@ -11,6 +12,7 @@ import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
+
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -55,7 +57,7 @@ public abstract class AbstractClientEndpoint {
     return marshaller.marshallRequestParams((Object[]) value);
   }
 
-  public abstract Object invoke(final String remoteTarget, final Object[] params) throws Throwable;
+  public abstract Object invoke(final TargetProvider remoteTarget, final Object[] params) throws Throwable;
 
   public static class Endpoint {
 

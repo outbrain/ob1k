@@ -2,9 +2,11 @@ package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.client.ctx.DefaultStreamClientRequestContext;
 import com.outbrain.ob1k.client.ctx.StreamClientRequestContext;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.http.HttpClient;
+
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
@@ -79,9 +81,15 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   }
 
   @Override
-  public Object invoke(final String remoteTarget, final Object[] params) throws Throwable {
-
+  public Object invoke(final TargetProvider targetProvider, final Object[] params) throws Throwable {
+    final String remoteTarget;
+    try{
+      remoteTarget = targetProvider.provideTarget();
+    } catch (final Throwable t) {
+      return Observable.error(t);
+    }
     final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
     return invokeStream(ctx);
   }
+
 }

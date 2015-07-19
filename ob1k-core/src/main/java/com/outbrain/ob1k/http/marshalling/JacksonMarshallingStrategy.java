@@ -1,5 +1,8 @@
 package com.outbrain.ob1k.http.marshalling;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -24,7 +27,7 @@ public class JacksonMarshallingStrategy implements MarshallingStrategy {
 
   public JacksonMarshallingStrategy() {
 
-    this(new ObjectMapper());
+    this(createDefaultObjectMapper());
   }
 
   public JacksonMarshallingStrategy(final ObjectMapper objectMapper) {
@@ -60,5 +63,16 @@ public class JacksonMarshallingStrategy implements MarshallingStrategy {
 
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     return typeFactory.constructType(type);
+  }
+
+  private static ObjectMapper createDefaultObjectMapper() {
+
+    final ObjectMapper objectMapper = new ObjectMapper();
+
+    objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+    return objectMapper;
   }
 }
