@@ -9,7 +9,6 @@ import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +23,10 @@ import java.util.Map;
  * @author marenzon
  */
 public interface RequestBuilder {
+
+  String USER_AGENT_HEADER = "User-Agent";
+  String CONTENT_TYPE_HEADER = "Content-Type";
+  String DEFAULT_CHARSET = "UTF8";
 
   RequestBuilder setContentType(ContentType contentType);
 
@@ -47,11 +50,9 @@ public interface RequestBuilder {
 
   RequestBuilder setBody(byte[] body);
 
-  RequestBuilder setBody(Object value) throws IOException;
+  RequestBuilder setBody(Object body);
 
   RequestBuilder setBodyEncoding(String charset);
-
-  RequestBuilder setContentLength(int length);
 
   RequestBuilder addQueryParam(String name, String value);
 

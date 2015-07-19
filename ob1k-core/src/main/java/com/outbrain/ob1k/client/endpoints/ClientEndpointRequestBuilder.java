@@ -27,8 +27,6 @@ public class ClientEndpointRequestBuilder {
 
     requestBuilder.setMarshallingStrategy(marshallingStrategy);
     requestBuilder.setBody(requestValues);
-    requestBuilder.setContentLength(requestValues.length);
-    requestBuilder.setBodyEncoding("UTF8");
     requestBuilder.setContentType(endpoint.getContentType());
 
     return requestBuilder;

@@ -28,6 +28,7 @@ import rx.functions.Func1;
 import rx.subjects.PublishSubject;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
@@ -37,15 +38,17 @@ import java.util.Map;
  */
 public class NingRequestBuilder implements RequestBuilder {
 
-  public static final String USER_AGENT_HEADER = "User-Agent";
-  public static final String CONTENT_TYPE_HEADER = "Content-Type";
-
   private final AsyncHttpClient asyncHttpClient;
   private final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder;
   private final MetricFactory metricFactory;
+
   private MarshallingStrategy marshallingStrategy;
   private String requestUrl;
   private long responseMaxSize;
+  private String charset = DEFAULT_CHARSET;
+  private String bodyString;
+  private byte[] bodyByteArray;
+  private Object bodyObject;
 
   public NingRequestBuilder(final AsyncHttpClient asyncHttpClient, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder,
                             final String requestUrl, final MetricFactory metricFactory, final long responseMaxSize,
@@ -90,7 +93,6 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder setPathParams(final List<Param> params) throws EncoderException {
 
     for (final Param param : params) {
-
       setPathParam(param);
     }
 
@@ -120,7 +122,6 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder addHeaders(final List<Header> headers) {
 
     for (final Header header : headers) {
-
       addHeader(header);
     }
 
@@ -130,34 +131,28 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder setBody(final String body) {
 
-    ningRequestBuilder.setBody(body);
+    this.bodyString = body;
     return this;
   }
 
   @Override
   public RequestBuilder setBody(final byte[] body) {
 
-    ningRequestBuilder.setBody(body);
+    this.bodyByteArray = body;
     return this;
   }
 
   @Override
-  public RequestBuilder setBody(final Object value) throws IOException {
+  public RequestBuilder setBody(final Object body) {
 
-    return setBody(marshallingStrategy.marshall(value));
+    this.bodyObject = body;
+    return this;
   }
 
   @Override
   public RequestBuilder setBodyEncoding(final String charset) {
 
-    ningRequestBuilder.setBodyEncoding(charset);
-    return this;
-  }
-
-  @Override
-  public RequestBuilder setContentLength(final int length) {
-
-    ningRequestBuilder.setContentLength(length);
+    this.charset = charset;
     return this;
   }
 
@@ -172,7 +167,6 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder addQueryParams(final Map<String, String> params) {
 
     for (final Map.Entry<String, String> param : params.entrySet()) {
-
       addQueryParam(param.getKey(), param.getValue());
     }
 
@@ -189,7 +183,6 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder addQueryParams(final List<Param> params) {
 
     for (final Param param : params) {
-
       addQueryParam(param);
     }
 
@@ -228,6 +221,12 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public ComposableFuture<Response> asResponse() {
 
+    try {
+      prepareRequestBody();
+    } catch (final IOException e) {
+      return ComposableFutures.fromError(e);
+    }
+
     final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
 
     return responseFuture.continueOnSuccess(new FutureSuccessHandler<com.ning.http.client.Response, Response>() {
@@ -245,6 +244,12 @@ public class NingRequestBuilder implements RequestBuilder {
 
   @Override
   public Observable<Response> asStream() {
+
+    try {
+      prepareRequestBody();
+    } catch (final IOException e) {
+      return Observable.error(e);
+    }
 
     setRequestTimeout(-1);
 
@@ -287,6 +292,12 @@ public class NingRequestBuilder implements RequestBuilder {
 
   @Override
   public <T> Observable<TypedResponse<T>> asTypedStream(final Type type) {
+
+    try {
+      prepareRequestBody();
+    } catch (final IOException e) {
+      return Observable.error(e);
+    }
 
     setRequestTimeout(-1);
 
@@ -344,6 +355,49 @@ public class NingRequestBuilder implements RequestBuilder {
     });
   }
 
+  private ComposableFuture<com.ning.http.client.Response> executeAndTransformRequest() {
+
+    try {
+      prepareRequestBody();
+    } catch (final IOException e) {
+      return ComposableFutures.fromError(e);
+    }
+
+    final Request ningRequest = ningRequestBuilder.build();
+
+    return fromListenableFuture(
+            new Provider<com.ning.http.client.Response>() {
+              private boolean aborted = false;
+              private long size;
+
+              @Override
+              public ListenableFuture<com.ning.http.client.Response> provide() {
+                return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<com.ning.http.client.Response>() {
+                  @Override
+                  public com.ning.http.client.Response onCompleted(final com.ning.http.client.Response response) throws Exception {
+                    if (aborted) {
+                      throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
+                    }
+                    return response;
+                  }
+
+                  @Override
+                  public STATE onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
+                    if (responseMaxSize > 0) {
+                      size += content.length();
+                      if (size > responseMaxSize) {
+                        aborted = true;
+                        return STATE.ABORT;
+                      }
+                    }
+                    return super.onBodyPartReceived(content);
+                  }
+                });
+              }
+            }, metricFactory, ningRequest.getUri().getHost()
+    );
+  }
+
   private com.ning.http.client.cookie.Cookie transformToNingCookie(final Cookie cookie) {
 
     return com.ning.http.client.cookie.Cookie.newValidCookie(cookie.getName(), cookie.getValue(), cookie.getDomain(),
@@ -351,39 +405,42 @@ public class NingRequestBuilder implements RequestBuilder {
             cookie.getMaxAge(), cookie.isSecure(), cookie.isHttpOnly());
   }
 
-  private ComposableFuture<com.ning.http.client.Response> executeAndTransformRequest() {
+  /**
+   * Prepares the request body - setting the body, charset and
+   * content length by body type
+   *
+   * @throws IOException
+   */
+  private void prepareRequestBody() throws IOException {
 
-    final Request ningRequest = ningRequestBuilder.build();
+    if (bodyByteArray != null) {
+      setByteArrayBody();
+    } else if (bodyString != null) {
+      setStringBody();
+    } else if (bodyObject != null) {
+      setTypedBody();
+    }
+  }
 
-    return fromListenableFuture(new Provider<com.ning.http.client.Response>() {
-        private boolean aborted = false;
-        private long size;
+  private void setTypedBody() throws IOException {
 
-        @Override
-        public ListenableFuture<com.ning.http.client.Response> provide() {
-          return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<com.ning.http.client.Response>() {
-            @Override
-            public com.ning.http.client.Response onCompleted(final com.ning.http.client.Response response) throws Exception {
-              if (aborted) {
-                throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
-              }
-              return response;
-            }
+    final byte[] body = marshallingStrategy.marshall(bodyObject);
+    ningRequestBuilder.setBody(body);
+    ningRequestBuilder.setContentLength(body.length);
+    ningRequestBuilder.setBodyEncoding(charset);
+  }
 
-            @Override
-            public STATE onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
-              if (responseMaxSize > 0) {
-                size += content.length();
-                if (size > responseMaxSize) {
-                  aborted = true;
-                  return STATE.ABORT;
-                }
-              }
-              return super.onBodyPartReceived(content);
-            }
-          });
-        }
-      }, metricFactory, ningRequest.getUri().getHost()
-    );
+  private void setStringBody() throws UnsupportedEncodingException {
+
+    ningRequestBuilder.setBody(bodyString);
+    ningRequestBuilder.setContentLength(bodyString.getBytes(charset).length);
+    ningRequestBuilder.setBodyEncoding(charset);
+  }
+
+  private void setByteArrayBody() {
+
+    ningRequestBuilder.setBody(bodyByteArray);
+    ningRequestBuilder.setContentLength(bodyByteArray.length);
+    ningRequestBuilder.setBodyEncoding(charset);
   }
 }
