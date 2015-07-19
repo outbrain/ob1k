@@ -57,7 +57,6 @@
     <module>ob1k-cql</module>
     <module>ob1k-example</module>
     <module>ob1k-security</module>
-    <module>ob1k-ldap</module>
     <module>ob1k-consul</module>
   </modules>
 
@@ -65,8 +64,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.compiler.source>1.7</java.compiler.source>
     <java.compiler.target>1.7</java.compiler.target>
-
-
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
@@ -225,6 +222,7 @@
         <groupId>org.springframework.ldap</groupId>
         <artifactId>spring-ldap-core</artifactId>
         <version>${spring-ldap-core.version}</version>
+        <scope>provided</scope>
       </dependency>
 
       <dependency>

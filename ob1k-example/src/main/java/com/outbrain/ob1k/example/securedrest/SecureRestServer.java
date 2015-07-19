@@ -3,7 +3,7 @@ package com.outbrain.ob1k.example.securedrest;
 import com.google.common.collect.Lists;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.example.rest.server.endpoints.UsersService;
-import com.outbrain.ob1k.security.ldap.LdapCredentialsAuthenticator;
+import com.outbrain.ob1k.security.providers.LdapCredentialsAuthenticator;
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
 import com.outbrain.ob1k.server.Server;

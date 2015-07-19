@@ -46,11 +46,6 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>${project.parent.groupId}</groupId>
-      <artifactId>ob1k-ldap</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
