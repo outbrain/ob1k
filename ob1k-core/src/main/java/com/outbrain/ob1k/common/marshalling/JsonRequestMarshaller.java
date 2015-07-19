@@ -44,15 +44,12 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aronen
- * Date: 8/18/13
- * Time: 3:22 PM
+ * @author aronen
  */
 public class JsonRequestMarshaller implements RequestMarshaller {
   private final ObjectMapper mapper;
   private final JsonFactory factory;
-  private final MarshallingStrategy jsonMarshallingStrategy;
+  private final MarshallingStrategy marshallingStrategy;
 
   public JsonRequestMarshaller() {
     factory = new JsonFactory();
@@ -60,7 +57,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    jsonMarshallingStrategy = new JacksonMarshallingStrategy(mapper);
+    marshallingStrategy = new JacksonMarshallingStrategy(mapper);
   }
 
   @Override
@@ -101,7 +98,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     final Object params = requestParams == null ? new Object[0] :
       requestParams.length == 1 ? requestParams[0] : requestParams;
 
-    return mapper.writeValueAsBytes(params);
+    return marshallingStrategy.marshall(params);
   }
 
   @Override
@@ -141,7 +138,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   @Override
   public <T> T unmarshallResponse(final Response response, final Type type) throws IOException {
 
-    return jsonMarshallingStrategy.unmarshall(type, response);
+    return marshallingStrategy.unmarshall(type, response);
   }
 
   @Override
