@@ -7,12 +7,8 @@ import com.outbrain.ob1k.client.ctx.DefaultAsyncClientRequestContext;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
@@ -91,8 +87,8 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     final String remoteTarget;
     try{
       remoteTarget = targetProvider.provideTarget();
-    } catch (final Throwable t) {
-      return ComposableFutures.fromError(t);
+    } catch (final RuntimeException e) {
+      return fromError(e);
     }
     final DefaultAsyncClientRequestContext ctx = new DefaultAsyncClientRequestContext(remoteTarget, params, this);
     return invokeAsync(ctx);
