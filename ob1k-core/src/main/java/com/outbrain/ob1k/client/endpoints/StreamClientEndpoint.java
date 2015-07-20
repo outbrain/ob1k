@@ -13,6 +13,7 @@ import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
+import static rx.Observable.*;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -85,8 +86,8 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
     final String remoteTarget;
     try{
       remoteTarget = targetProvider.provideTarget();
-    } catch (final Throwable t) {
-      return Observable.error(t);
+    } catch (final RuntimeException e) {
+      return error(e);
     }
     final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
     return invokeStream(ctx);

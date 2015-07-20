@@ -2,6 +2,7 @@ package com.outbrain.ob1k.client.http;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -465,7 +466,7 @@ public class BasicClientRpcTest {
   @Test(expected=ExecutionException.class)
   public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
     IHelloService service = new ClientBuilder<>(IHelloService.class).build();
-    final ComposableFuture<com.outbrain.ob1k.Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
+    final ComposableFuture<String> future =  service.helloWorld();
     Assert.assertNotNull(future);
     try {
       future.get();
@@ -473,6 +474,14 @@ public class BasicClientRpcTest {
       Assert.assertEquals(NoSuchElementException.class,e.getCause().getClass());
       throw e;
     }
+  }
+
+  @Test(expected=RuntimeException.class)
+  public void testEmptyTargetStreamBehavior() throws ExecutionException, InterruptedException {
+    IHelloService service = new ClientBuilder<>(IHelloService.class).build();
+    final Observable<String> observable =  service.getMessages("name", 1, false);
+    Assert.assertNotNull(observable);
+    observable.toBlocking().first();
   }
 
 }
