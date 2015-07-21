@@ -11,20 +11,18 @@ public class Cookie {
   private final String value;
   private final String domain;
   private final String path;
-  private final int maxAge;
+  private final long maxAge;
   private final boolean isSecure;
   private final boolean isHttpOnly;
-  private final long expires;
 
-  public Cookie(final String name, final String value, final String domain, final String path, final int maxAge,
-                final long expires, final boolean isSecure, final boolean isHttpOnly) {
+  public Cookie(final String name, final String value, final String domain, final String path, final long maxAge,
+                final boolean isSecure, final boolean isHttpOnly) {
 
     this.name = name;
     this.value = value;
     this.domain = domain;
     this.path = path;
     this.maxAge = maxAge;
-    this.expires = expires;
     this.isSecure = isSecure;
     this.isHttpOnly = isHttpOnly;
   }
@@ -39,11 +37,6 @@ public class Cookie {
     return value;
   }
 
-  public long getExpires() {
-
-    return expires;
-  }
-
   public String getDomain() {
 
     return domain;
@@ -54,7 +47,7 @@ public class Cookie {
     return path;
   }
 
-  public int getMaxAge() {
+  public long getMaxAge() {
 
     return maxAge;
   }

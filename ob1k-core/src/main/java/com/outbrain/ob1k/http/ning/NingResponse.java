@@ -158,8 +158,9 @@ public class NingResponse<T> implements TypedResponse<T> {
     final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = new Function<com.ning.http.client.cookie.Cookie, Cookie>() {
       @Override
       public Cookie apply(final com.ning.http.client.cookie.Cookie ningCookie) {
-        return new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(), ningCookie.getPath(),
-                ningCookie.getMaxAge(), ningCookie.getExpires(), ningCookie.isSecure(), ningCookie.isHttpOnly());
+        return new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(),
+                ningCookie.getPath(), ningCookie.getMaxAge(),
+                ningCookie.isSecure(), ningCookie.isHttpOnly());
       }
     };
 
