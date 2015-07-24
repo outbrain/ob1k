@@ -26,17 +26,17 @@ import scala.util.Try;
  * @author aronen 8/25/14.
  */
 public class BasicTestingDao extends BasicDao implements AutoCloseable {
-  public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutSeconds) throws Exception {
+  public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password, final long connectTimeoutMilliSeconds,long queryTimeoutMilliSeconds) throws Exception {
     // using a single connection in the pool so that every command will run on it.
-      super(createTestConnnectionPool(host, port, database, userName, password, connectTimeoutSeconds));
+      super(createTestConnnectionPool(host, port, database, userName, password, connectTimeoutMilliSeconds,queryTimeoutMilliSeconds));
   }
 
-  private static DbConnectionPool createTestConnnectionPool(String host, int port, String database, String userName, String password, long connectTimeoutSeconds) throws Exception {
-    return MySqlConnectionPoolBuilder.newBuilder(createNonCommittingSingleConnectionFactory(host, port, database, userName, password, connectTimeoutSeconds)).maxConnections(1).build();
+  private static DbConnectionPool createTestConnnectionPool(String host, int port, String database, String userName, String password, long connectTimeoutMilliSeconds,long queryTimeoutMilliSeconds) throws Exception {
+    return MySqlConnectionPoolBuilder.newBuilder(createNonCommittingSingleConnectionFactory(host, port, database, userName, password, connectTimeoutMilliSeconds,queryTimeoutMilliSeconds)).maxConnections(1).build();
   }
 
-  private static NonCommittingSingleConnectionFactory createNonCommittingSingleConnectionFactory(String host, int port, String database, String userName, String password, long connectTimeoutSeconds) throws Exception {
-    return new NonCommittingSingleConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, Option.apply(database), userName, Option.apply(password), connectTimeoutSeconds));
+  private static NonCommittingSingleConnectionFactory createNonCommittingSingleConnectionFactory(String host, int port, String database, String userName, String password, long connectTimeoutMilliSeconds,long queryTimeoutMilliSeconds) throws Exception {
+    return new NonCommittingSingleConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, Option.apply(database), userName, Option.apply(password), connectTimeoutMilliSeconds,queryTimeoutMilliSeconds));
   }
 
   @Override

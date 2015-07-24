@@ -28,7 +28,7 @@
     <dependency>
       <groupId>com.github.mauricio</groupId>
       <artifactId>mysql-async_2.10</artifactId>
-      <version>0.2.16</version>
+      <version>0.2.17</version>
     </dependency>
 
     <dependency>
