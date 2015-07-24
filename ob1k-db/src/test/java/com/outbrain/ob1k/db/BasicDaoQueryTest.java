@@ -203,7 +203,7 @@ public class BasicDaoQueryTest {
     @Ignore
     @Test
     public void testGetDeploymentBySource() {
-        try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2/*msec*/,3000/*ms*/)) {
+        try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2000/*msec*/,3000/*ms*/)) {
             final Deployment deployment =
                 insertDeployment(dao, 666L, "test123").
                     continueOnSuccess(new FutureSuccessHandler<Long, Deployment>() {
