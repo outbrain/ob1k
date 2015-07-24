@@ -20,18 +20,15 @@ public abstract class AbstractBasicDaoTestCase {
   private final String scheme;
   private final String user;
   private final String password;
-  private final long connectTimeoutMilliSeconds;
-  private final long queryTimeoutMilliSeconds;
+  private final long connectTimeoutSecond;
 
-  protected AbstractBasicDaoTestCase(final String hostname, final int port, final String scheme, final String user, final String password,
-                                     final long connectMilliTimeoutSeconds, final long queryTimeoutMilliSeconds) {
+  protected AbstractBasicDaoTestCase(final String hostname, final int port, final String scheme, final String user, final String password, final long connectTimeoutSeconds) {
     this.hostname = hostname;
     this.port = port;
     this.scheme = scheme;
     this.user = user;
     this.password = password;
-    this.connectTimeoutMilliSeconds = connectMilliTimeoutSeconds;
-    this.queryTimeoutMilliSeconds = queryTimeoutMilliSeconds;
+    this.connectTimeoutSecond = connectTimeoutSeconds;
   }
 
   @After
@@ -41,7 +38,7 @@ public abstract class AbstractBasicDaoTestCase {
 
   @Before
   public final void initDao() throws Exception {
-    this.dao = new BasicTestingDao(hostname, port, scheme, user, password, connectTimeoutMilliSeconds,queryTimeoutMilliSeconds);
+    this.dao = new BasicTestingDao(hostname, port, scheme, user, password, connectTimeoutSecond);
   }
 
   public BasicDao getDao() {
