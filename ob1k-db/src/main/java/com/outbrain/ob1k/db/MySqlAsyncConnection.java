@@ -35,13 +35,10 @@ public class MySqlAsyncConnection {
     this.conn = conn;
   }
 
-  public static Configuration createConfiguration(final String host, final int port, final Option<String> database, final String userName,
-                                                  final Option<String> password, final long connectTimeoutMilliSeconds, final long queryTimeoutMilliSeconds) {
+  public static Configuration createConfiguration(final String host, final int port, final Option<String> database, final String userName, final Option<String> password, final long connectTimeoutSeconds) {
     final Option<String> empty = Option.apply(null);
     return new Configuration(userName, host, port, password, database, CharsetUtil.UTF_8, 16777216,
-        PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutMilliSeconds, TimeUnit.MILLISECONDS),
-        Duration.apply(4000, TimeUnit.MILLISECONDS),
-        Duration.apply(queryTimeoutMilliSeconds, TimeUnit.MILLISECONDS));
+        PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutSeconds, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS));
   }
 
   MySQLConnection getInnerConnection() {
