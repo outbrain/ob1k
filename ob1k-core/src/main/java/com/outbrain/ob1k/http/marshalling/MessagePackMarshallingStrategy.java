@@ -3,12 +3,14 @@ package com.outbrain.ob1k.http.marshalling;
 import com.outbrain.ob1k.http.Response;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.msgpack.MessagePack;
+import org.msgpack.packer.Packer;
 import org.msgpack.template.Template;
 import org.msgpack.type.Value;
 import org.msgpack.unpacker.Converter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
@@ -52,6 +54,11 @@ public class MessagePackMarshallingStrategy implements MarshallingStrategy {
   @Override
   public byte[] marshall(final Object value) throws IOException {
 
-    return messagePack.write(value);
+    final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    final Packer packer = messagePack.createPacker(outputStream);
+
+    packer.write(value);
+
+    return outputStream.toByteArray();
   }
 }
