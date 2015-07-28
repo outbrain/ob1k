@@ -45,6 +45,12 @@
       <artifactId>ob1k-security</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <!-- overriding the scope from the parent pom so this server have spring ldap in its classpath -->
+    <dependency>
+      <groupId>org.springframework.ldap</groupId>
+      <artifactId>spring-ldap-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
