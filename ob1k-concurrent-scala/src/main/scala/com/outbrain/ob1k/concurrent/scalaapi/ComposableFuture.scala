@@ -250,4 +250,6 @@ trait ComposableFuture[T] {
     case Duration.Inf => Try(future.get())
     case duration => Try(future.withTimeout(atMost.toNanos, TimeUnit.NANOSECONDS).get())
   }
+
+  def asJavaComposableFuture(): JavaComposableFuture[T] = future
 }
