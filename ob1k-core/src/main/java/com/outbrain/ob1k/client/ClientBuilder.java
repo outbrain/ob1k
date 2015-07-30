@@ -7,6 +7,7 @@ import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.SyncClientEndpoint;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
+import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
@@ -240,7 +241,7 @@ public class ClientBuilder<T extends Service> {
   }
 
   private static boolean isAsync(final Method method) {
-    return method.getReturnType() == ComposableFuture.class;
+    return ComposableFutureHelper.isComposableFuture(method.getReturnType());
   }
 
   private static boolean isStreaming(final Method method) {

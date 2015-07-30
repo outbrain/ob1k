@@ -5,6 +5,7 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.DefaultAsyncClientRequestContext;
 import com.outbrain.ob1k.client.targets.TargetProvider;
+import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
@@ -53,7 +54,7 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
 
       final AsyncFilter filter = filters[ctx.getExecutionIndex()];
-      return (ComposableFuture<T>) filter.handleAsync(ctx.nextPhase());
+      return ComposableFutureHelper.cast(filter.handleAsync(ctx.nextPhase()));
 
     } else {
 
@@ -69,13 +70,13 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
 
       // If the client requested to get the response object
       if (responseType == Response.class) {
-        return (ComposableFuture<T>) requestBuilder.asResponse();
+        return ComposableFutureHelper.cast(requestBuilder.asResponse());
       }
 
       // If the client requested to get the <T>, together with the whole response object
       if (isTypedResponse(responseType)) {
         final Type type = ((ParameterizedType) responseType).getActualTypeArguments()[0];
-        return (ComposableFuture<T>) requestBuilder.asTypedResponse(type);
+        return ComposableFutureHelper.cast(requestBuilder.asTypedResponse(type));
       }
 
       return requestBuilder.asValue(responseType);

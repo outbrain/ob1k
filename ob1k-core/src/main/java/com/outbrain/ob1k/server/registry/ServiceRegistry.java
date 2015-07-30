@@ -13,9 +13,9 @@ import java.util.SortedMap;
 import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
@@ -315,7 +315,7 @@ public class ServiceRegistry {
   }
 
   private boolean isAsyncMethod(final Method m) {
-    return m.getReturnType() == ComposableFuture.class;
+    return ComposableFutureHelper.isComposableFuture(m.getReturnType());
   }
 
   private boolean isStreamingMethod(final Method m) {
