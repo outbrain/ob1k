@@ -6,7 +6,7 @@
   <parent>
     <artifactId>ob1k</artifactId>
     <groupId>com.outbrain.swinfra</groupId>
-    <version>0.91-SNAPSHOT</version>
+    <version>0.97-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-example</artifactId>
@@ -36,28 +36,38 @@
 
   <dependencies>
     <dependency>
-      <groupId>${project.parent.groupId}</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-core</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>${project.parent.groupId}</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-security</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
+
+    <!-- overriding the scope from the parent pom so this server have spring ldap in its classpath -->
+    <dependency>
+      <groupId>org.springframework.ldap</groupId>
+      <artifactId>spring-ldap-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
+
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>

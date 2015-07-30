@@ -59,7 +59,7 @@ public class ServiceRegistration {
     }
 
     public Check(final String url, final int intervalSec) {
-      this.script = "curl -v --fail --max-time 1 " + Preconditions.checkNotNull(url, "url must not be null");
+      this.script = "curl -v --fail --max-time 1 '" + Preconditions.checkNotNull(url, "url must not be null")+"'";
       Preconditions.checkArgument(0 < intervalSec, "intervalSec must be greater than zero");
       this.interval = intervalSec + "s";
     }

@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.91-SNAPSHOT</version>
+    <version>0.97-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-jetty</artifactId>
@@ -18,15 +18,13 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-core</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>util-metrics</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
 
     <!-- Jetty for newer (OB1K) services -->
@@ -36,18 +34,21 @@
       <version>${org.eclipse.jetty.version}</version>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>
       <version>${org.eclipse.jetty.version}</version>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlets</artifactId>
       <version>${org.eclipse.jetty.version}</version>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-jsp</artifactId>
@@ -61,18 +62,21 @@
         </exclusion>
       </exclusions>
     </dependency>
+
     <!-- and including again the org.glassfish javax.el package, just this time not a SNAPSHOT version -->
     <dependency>
       <groupId>org.glassfish</groupId>
       <artifactId>javax.el</artifactId>
       <version>3.0.1-b06</version>
     </dependency>
+
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-jmx</artifactId>
       <version>${org.eclipse.jetty.version}</version>
       <scope>compile</scope>
     </dependency>
+
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
@@ -83,20 +87,16 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.5</version>
     </dependency>
 
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>16.0.1</version>
     </dependency>
 
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
-      <version>2.2</version>
     </dependency>
-
   </dependencies>
 </project>

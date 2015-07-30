@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.91-SNAPSHOT</version>
+    <version>0.97-SNAPSHOT</version>
   </parent>
   <artifactId>ob1k-consul</artifactId>
   <name>ob1k-consul</name>
@@ -13,14 +13,13 @@
   <dependencies>
 
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-core</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-concurrent</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
 
     <dependency>
@@ -32,6 +31,5 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
     </dependency>
-
   </dependencies>
 </project>

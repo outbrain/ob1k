@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.91-SNAPSHOT</version>
+    <version>0.97-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-core</artifactId>
@@ -13,26 +13,27 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>util-metrics</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-concurrent</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-cache</artifactId>
       <scope>provided</scope>
-      <version>${project.parent.version}</version>
     </dependency>
+
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
       <version>5.0.3</version>
     </dependency>
+
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
@@ -43,66 +44,70 @@
       <artifactId>netty-all</artifactId>
       <version>4.0.18.Final</version>
     </dependency>
+
     <dependency>
       <groupId>com.ning</groupId>
       <artifactId>async-http-client</artifactId>
       <version>1.9.30</version>
     </dependency>
+
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>2.2.2</version>
     </dependency>
+
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
       <version>2.2.2</version>
     </dependency>
+
     <dependency>
       <groupId>com.netflix.rxjava</groupId>
       <artifactId>rxjava-core</artifactId>
       <version>0.19.4</version>
     </dependency>
+
     <dependency>
       <groupId>com.github.stephenc.high-scale-lib</groupId>
       <artifactId>high-scale-lib</artifactId>
       <version>1.1.4</version>
     </dependency>
+
     <dependency>
       <groupId>org.msgpack</groupId>
       <artifactId>msgpack</artifactId>
       <version>0.6.7</version>
     </dependency>
+
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
       <!-- this is an optional dependency - needed only if the SpringBeanContext is used -->
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.5</version>
     </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.5</version>
-      <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.10</version>
     </dependency>
+
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-    </dependency>
+
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
