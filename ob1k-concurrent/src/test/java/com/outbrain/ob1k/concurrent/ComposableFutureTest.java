@@ -1,10 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -88,6 +84,84 @@ public class ComposableFutureTest {
             }
         });
         Assert.assertEquals(10, (int) future.get());
+    }
+
+    @Test
+    public void testBatch() throws Exception {
+        List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        ComposableFuture<List<String>> res = batch(nums, 2, new FutureSuccessHandler<Integer, String>() {
+            @Override
+            public ComposableFuture<String> handle(final Integer result) {
+                return schedule(new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
+                        return "num:" + result;
+                    }
+                }, 1, TimeUnit.SECONDS);
+            }
+        });
+
+        List<String> results = res.get();
+        Assert.assertEquals(results.size(), nums.size());
+
+        for (String element : results) {
+            System.out.println(element);
+        }
+    }
+
+    @Test
+    public void testBatchUnordered() throws Exception {
+        List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        ComposableFuture<List<String>> res = batchUnordered(nums, 2, new FutureSuccessHandler<Integer, String>() {
+            @Override
+            public ComposableFuture<String> handle(final Integer result) {
+                return schedule(new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
+                        return "num:" + result;
+                    }
+                }, 1, TimeUnit.SECONDS);
+            }
+        });
+
+        List<String> results = res.get();
+        Assert.assertEquals(results.size(), nums.size());
+
+        for (String element : results) {
+            System.out.println(element);
+        }
+    }
+
+    @Test
+    public void testBatchToStream() throws Exception {
+        List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        Observable<List<String>> stream = batchToStream(nums, 2, new FutureSuccessHandler<Integer, String>() {
+            @Override
+            public ComposableFuture<String> handle(final Integer result) {
+                return schedule(new Callable<String>() {
+                    @Override
+                    public String call() throws Exception {
+                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
+                        return "num:" + result;
+                    }
+                }, 1, TimeUnit.SECONDS);
+            }
+        });
+
+        Iterable<List<String>> iterator = stream.toBlocking().toIterable();
+        int totalElements = 0;
+        for(List<String> batch : iterator) {
+            int batchSize = batch.size();
+            totalElements += batchSize;
+            Assert.assertEquals(batchSize, 2);
+            for (String element : batch) {
+                System.out.println(element);
+            }
+            System.out.println(" --- end of batch ---");
+        }
+        Assert.assertEquals(totalElements, nums.size());
     }
 
     @Test
