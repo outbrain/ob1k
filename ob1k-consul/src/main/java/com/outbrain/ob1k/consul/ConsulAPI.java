@@ -46,11 +46,11 @@ public class ConsulAPI {
         private static ConsulCatalog createCatalog() {
             return new ClientBuilder<>(ConsulCatalog.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "catalog"))
-                    .bindEndpoint("findInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}")
-                    .bindEndpoint("findDcLocalInstances", HttpRequestMethodType.GET, "service/{service}")
-                    .bindEndpoint("filterDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}")
-                    .bindEndpoint("pollDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&index={index}&wait={maxWaitSec}s")
-                    .bindEndpoint("services", HttpRequestMethodType.GET, "services?dc={dc}")
+                    .bindEndpoint("findInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
+                    .bindEndpoint("findDcLocalInstances", HttpRequestMethodType.GET, "service/{service}&stale=true")
+                    .bindEndpoint("filterDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&stale=true")
+                    .bindEndpoint("pollDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&index={index}&wait={maxWaitSec}s&stale=true")
+                    .bindEndpoint("services", HttpRequestMethodType.GET, "services?dc={dc}&stale=true")
                     .setProtocol(ContentType.JSON)
                     .setRequestTimeout(10000)
                     .build();
@@ -64,8 +64,8 @@ public class ConsulAPI {
             final int timeoutSeconds = 30;
             return new ClientBuilder<>(ConsulHealth.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
-                    .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}")
-                    .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&index={index}&wait=" + timeoutSeconds + "s")
+                    .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
+                    .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + timeoutSeconds + "s")
                     .setProtocol(ContentType.JSON)
                     .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(timeoutSeconds))
                     .build();
