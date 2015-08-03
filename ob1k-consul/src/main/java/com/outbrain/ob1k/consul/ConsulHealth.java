@@ -2,6 +2,7 @@ package com.outbrain.ob1k.consul;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.http.TypedResponse;
 
 import java.util.List;
 
@@ -12,5 +13,5 @@ import java.util.List;
 public interface ConsulHealth extends Service {
 
     ComposableFuture<List<HealthInfoInstance>> filterDcLocalHealthyInstances(final String service, final String filterTag);
-    ComposableFuture<List<HealthInfoInstance>> pollHealthyInstances(final String service, final String filterTag, final long index);
+    ComposableFuture<TypedResponse<List<HealthInfoInstance>>> pollHealthyInstances(final String service, final String filterTag, final long index);
 }
