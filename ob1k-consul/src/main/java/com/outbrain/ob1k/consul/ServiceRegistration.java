@@ -50,8 +50,9 @@ public class ServiceRegistration {
   }
 
   public static class Check {
-    private final String script;
+    private final String http;
     private final String interval;
+    private final String timeout;
 
     // I need to make some marshalers happy ;)
     Check() {
@@ -59,17 +60,22 @@ public class ServiceRegistration {
     }
 
     public Check(final String url, final int intervalSec) {
-      this.script = "curl -v --fail --max-time 1 '" + Preconditions.checkNotNull(url, "url must not be null")+"'";
+      this.http = Preconditions.checkNotNull(url, "url must not be null");
       Preconditions.checkArgument(0 < intervalSec, "intervalSec must be greater than zero");
       this.interval = intervalSec + "s";
+      this.timeout = interval;
     }
 
-    public String getScript() {
-      return script;
+    public String getHttp() {
+      return http;
     }
 
     public String getInterval() {
       return interval;
+    }
+
+    public String getTimeout() {
+      return timeout;
     }
   }
 }
