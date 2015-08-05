@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.newPromise;
 
@@ -38,6 +39,8 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     private final Counter cacheMiss;
     private final Counter cacheErrors;
     private final Counter loaderErrors;
+    private final Counter cacheTimeouts;
+    private final Counter loaderTimeouts;
 
     public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName) {
         this(cache, loader, cacheName, null);
@@ -70,12 +73,16 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             cacheMiss = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "miss");
             cacheErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheErrors");
             loaderErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderErrors");
+            cacheTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheTimeouts");
+            loaderTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderTimeouts");
 
         } else {
             cacheHits = null;
             cacheMiss = null;
             cacheErrors = null;
             loaderErrors = null;
+            cacheTimeouts = null;
+            loaderTimeouts = null;
         }
     }
 
@@ -111,10 +118,14 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                                 futureValues.remove(key);
                             }
                         } else {
+                            final Throwable error = res.getError();
                             if (cacheErrors != null) {
                                 cacheErrors.inc();
+                                if(error instanceof TimeoutException) {
+                                    cacheTimeouts.inc();
+                                }
                             }
-                            promise.setException(res.getError());
+                            promise.setException(error);
                             futureValues.remove(key);
                         }
                     }
@@ -141,10 +152,14 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                             }
                         });
                     } else {
+                        final Throwable error = loadedRes.getError();
                         if (loaderErrors != null) {
                             loaderErrors.inc();
+                            if(error instanceof TimeoutException) {
+                                loaderTimeouts.inc();
+                            }
                         }
-                        promise.setException(loadedRes.getError());
+                        promise.setException(error);
                         futureValues.remove(key);
                     }
                 }
