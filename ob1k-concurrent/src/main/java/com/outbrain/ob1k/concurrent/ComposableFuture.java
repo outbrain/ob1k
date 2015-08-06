@@ -132,5 +132,17 @@ public interface ComposableFuture<T> {
   ComposableFuture<T> withTimeout(long duration, final TimeUnit unit);
   ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit);
 
+  /**
+   * caps the max time for producing a value(or error) for this future.
+   * the returned future will return the original result if available within the specified time or a TimeoutException.
+   * @param duration max wait time for a result before producing a timeout
+   * @param unit the duration timeout.
+   * @param taskDescription a description that will be added to the timeout error message that will help identify
+   *                           the context of the timeout
+   * @return the future with a caped time.
+   */
+  ComposableFuture<T> withTimeout(long duration, final TimeUnit unit, final String taskDescription);
+  ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit, final String taskDescription);
+
   <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function);
 }

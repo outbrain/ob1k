@@ -67,6 +67,7 @@ public class TestLoadingCacheDelegate {
     }
   }
 
+  @Test
   public void testLoaderTimeoutHandling() throws InterruptedException {
     final TypedCache<String, String> cache = new LocalAsyncCache<>();
     final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, SLOW_CACHE_LOADER, "meh", metricFactory, 1, TimeUnit.MILLISECONDS);

@@ -320,20 +320,30 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
     }
 
     @Override
-    public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit) {
+    public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit, final String taskDescription) {
         final LazyComposableFuture<T> deadline = new LazyComposableFuture<>(new Producer<T>() {
             @Override
             public void produce(final Consumer<T> consumer) {
                 scheduler.schedule(new Runnable() {
                     @Override
                     public void run() {
-                        consumer.consume(Try.<T>fromError(new TimeoutException("timeout ended with no result.")));
+                        consumer.consume(Try.<T>fromError(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")")));
                     }
                 }, timeout, unit);
             }
         });
 
         return collectFirst(Arrays.<ComposableFuture<T>>asList(this, deadline));
+    }
+
+    @Override
+    public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit) {
+        return withTimeout(scheduler, timeout, unit, "unspecified context");
+    }
+
+    @Override
+    public LazyComposableFuture<T> withTimeout(final long timeout, final TimeUnit unit, final String taskDescription) {
+        return withTimeout(ComposableFutures.getScheduler(), timeout, unit, taskDescription);
     }
 
     @Override

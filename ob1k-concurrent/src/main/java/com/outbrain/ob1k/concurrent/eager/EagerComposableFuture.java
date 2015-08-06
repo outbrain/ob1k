@@ -374,17 +374,17 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> withTimeout(final long duration, final TimeUnit unit) {
-    return withTimeout(ComposableFutures.getScheduler(), duration, unit);
+  public ComposableFuture<T> withTimeout(final long duration, final TimeUnit unit, final String taskDescription) {
+    return withTimeout(ComposableFutures.getScheduler(), duration, unit, taskDescription);
   }
 
   @Override
-  public ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit) {
+  public ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit, final String taskDescription) {
     final ComposablePromise<T> deadline = new EagerComposableFuture<>();
     final CancellationToken cancellationToken =  scheduler.schedule(new Runnable() {
       @Override
       public void run() {
-          deadline.setException(new TimeoutException("Timeout occurred on future(" + timeout + " " + unit + ")"));
+        deadline.setException(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")"));
       }
     }, timeout, unit);
 
@@ -395,6 +395,16 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       }
     });
     return collectFirst(Arrays.asList(this, deadline.future()));
+  }
+
+  @Override
+  public ComposableFuture<T> withTimeout(final long duration, final TimeUnit unit) {
+    return withTimeout(ComposableFutures.getScheduler(), duration, unit);
+  }
+
+  @Override
+  public ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit) {
+    return withTimeout(scheduler, timeout, unit, "unspecified task");
   }
 
   @Override

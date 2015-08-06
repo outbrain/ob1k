@@ -98,7 +98,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     return;
                 }
 
-                final ComposableFuture<V> cachedResult = cache.getAsync(key).withTimeout(duration, timeUnit);
+                final ComposableFuture<V> cachedResult = cache.getAsync(key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from cache");
                 cachedResult.consume(new Consumer<V>() {
                     @Override
                     public void consume(final Try<V> res) {
@@ -138,7 +138,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     private void fetchFromLoader(final K key, final ComposablePromise<V> promise) {
         try {
-            final ComposableFuture<V> loadedResult = loader.load(cacheName, key).withTimeout(duration, timeUnit);
+            final ComposableFuture<V> loadedResult = loader.load(cacheName, key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from loader");
 
             loadedResult.consume(new Consumer<V>() {
                 @Override
