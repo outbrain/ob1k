@@ -22,7 +22,7 @@ public class TagsUtil {
         return null;
     }
 
-    public static Integer extractPort(final Set<String> tags, String portType) {
+    public static Integer extractPort(final Set<String> tags, final String portType) {
         final String tag = extractTag(tags, portType + "Port-");
         return tag == null ? null : Integer.valueOf(tag);
     }
