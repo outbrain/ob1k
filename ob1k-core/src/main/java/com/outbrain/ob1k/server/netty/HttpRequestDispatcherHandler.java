@@ -61,6 +61,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private final ChannelGroup activeChannels;
 
   private final Counter internalErrors;
+  private final Counter requestTimeoutErrors;
   private final Counter notFoundErrors;
   private final Counter unexpectedErrors;
   private final long requestTimeoutMs;
@@ -83,6 +84,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
 
     if (metricFactory != null) {
       this.internalErrors = metricFactory.createCounter("Ob1kDispatcher", "internalErrors");
+      this.requestTimeoutErrors = metricFactory.createCounter("Ob1kDispatcher", "requestTimeoutErrors");
       this.notFoundErrors = metricFactory.createCounter("Ob1kDispatcher", "notFoundErrors");
       this.unexpectedErrors = metricFactory.createCounter("Ob1kDispatcher", "unexpectedErrors");
       metricFactory.registerGauge("Ob1kDispatcher", "currentConnections", new Gauge<Integer>() {
@@ -93,6 +95,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       });
     } else {
       internalErrors = null;
+      requestTimeoutErrors = null;
       notFoundErrors = null;
       unexpectedErrors = null;
     }
@@ -162,6 +165,9 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
           ctx.channel().eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
+              if (requestTimeoutErrors != null) {
+                requestTimeoutErrors.inc();
+              }
               consumer.consume(Try.fromError(new TimeoutException("calculating response took too long.")));
             }
           }, requestTimeoutMs, TimeUnit.MILLISECONDS);
