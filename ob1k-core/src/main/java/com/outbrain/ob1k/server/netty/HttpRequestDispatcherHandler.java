@@ -12,7 +12,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import com.outbrain.ob1k.common.marshalling.ChunkHeader;
 import com.outbrain.ob1k.concurrent.*;
@@ -165,10 +164,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
           ctx.channel().eventLoop().schedule(new Runnable() {
             @Override
             public void run() {
-              if (requestTimeoutErrors != null) {
-                requestTimeoutErrors.inc();
-              }
-              consumer.consume(Try.fromError(new TimeoutException("calculating response took too long.")));
+              consumer.consume(Try.fromError(new RequestTimeoutException("calculating response took too long.")));
             }
           }, requestTimeoutMs, TimeUnit.MILLISECONDS);
         }
@@ -186,7 +182,13 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
           if (result.isSuccess()) {
             handleOK(result.getValue(), request, ctx);
           } else {
-            handleInternalError(result.getError(), request, ctx);
+            final Throwable error = result.getError();
+            if (error instanceof RequestTimeoutException) {
+              if (requestTimeoutErrors != null) {
+                requestTimeoutErrors.inc();
+              }
+            }
+            handleInternalError(error, request, ctx);
           }
         } catch (final IOException error) {
           handleInternalError(error, request, ctx);
