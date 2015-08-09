@@ -40,8 +40,12 @@ public class MySqlConnectionPoolFactoryBean implements FactoryBean {
     builder.password(password);
   }
 
-  public void setConnectTimeoutSeconds(final long connectTimeoutSeconds) {
-    builder.connectTimeoutSeconds(connectTimeoutSeconds);
+  public void setConnectTimeout(final long connectTimeoutMilliSeconds) {
+    builder.connectTimeout(connectTimeoutMilliSeconds);
+  }
+
+  public void setQueryTimeout(final long queryTimeoutMilliSeconds) {
+    builder.queryTimeout(queryTimeoutMilliSeconds);
   }
 
   public void setMaxConnections(final int maxConnections) {
