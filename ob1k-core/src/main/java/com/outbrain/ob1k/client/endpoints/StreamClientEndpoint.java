@@ -13,7 +13,7 @@ import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
-import static rx.Observable.*;
+import static rx.Observable.error;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;

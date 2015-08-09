@@ -19,7 +19,8 @@ public class MySqlConnectionPoolBuilder {
   private MySQLConnectionFactory connectionFactory;
   private Option<String> password = Option.empty();
   private Option<String> database = Option.empty();
-  private long connectTimeoutSeconds = 2;
+  private long connectTimeoutMilliSeconds = 2000;
+  private long queryTimeoutMilliSeconds = -1;
   private int maxConnections = 10;
   private Option<Integer> maxQueueSize = Option.empty();
 
@@ -79,8 +80,13 @@ public class MySqlConnectionPoolBuilder {
     return this;
   }
 
-  public MySqlConnectionPoolBuilder connectTimeoutSeconds(final long connectTimeoutSeconds) {
-    this.connectTimeoutSeconds = connectTimeoutSeconds;
+  public MySqlConnectionPoolBuilder connectTimeout(final long connectTimeoutMilliSeconds) {
+    this.connectTimeoutMilliSeconds = connectTimeoutMilliSeconds;
+    return this;
+  }
+
+  public MySqlConnectionPoolBuilder queryTimeout(final long queryTimeoutMilliSeconds) {
+    this.queryTimeoutMilliSeconds = queryTimeoutMilliSeconds;
     return this;
   }
 
@@ -111,9 +117,10 @@ public class MySqlConnectionPoolBuilder {
 
   public DbConnectionPool build() {
     final MySQLConnectionFactory connFactory = connectionFactory == null ?
-            new MySQLConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, database, username, password, connectTimeoutSeconds))
+            new MySQLConnectionFactory(MySqlAsyncConnection.createConfiguration(host, port, database, username, password,
+              connectTimeoutMilliSeconds, queryTimeoutMilliSeconds))
             : connectionFactory;
-    int finalMaxQueueSize = maxQueueSize.isEmpty() ? maxConnections * 2 : maxQueueSize.get();
+    final int finalMaxQueueSize = maxQueueSize.isEmpty() ? maxConnections * 2 : maxQueueSize.get();
     final PoolConfiguration configuration = new PoolConfiguration(maxConnections, maxIdleTimeMs, finalMaxQueueSize, validationIntervalMs);
 
     return new MySqlConnectionPool(connFactory, configuration, metricFactory);

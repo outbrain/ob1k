@@ -466,7 +466,7 @@ public class BasicClientRpcTest {
   @Test(expected=ExecutionException.class)
   public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
     IHelloService service = new ClientBuilder<>(IHelloService.class).build();
-    final ComposableFuture<String> future =  service.helloWorld();
+    final ComposableFuture<com.outbrain.ob1k.Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
     Assert.assertNotNull(future);
     try {
       future.get();
