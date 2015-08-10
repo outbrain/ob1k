@@ -13,4 +13,6 @@ public interface ConsulServiceRegistry extends Service {
   ComposableFuture<String> register(ServiceRegistration serviceRegistrationData);
 
   ComposableFuture<String> deregister(String serviceId);
+
+  ComposableFuture<String> maintenance(final String service, final boolean enable, final String reason);
 }

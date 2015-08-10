@@ -34,6 +34,7 @@ public class ConsulAPI {
             return new ClientBuilder<>(ConsulServiceRegistry.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "agent/service/"))
                     .bindEndpoint("deregister", HttpRequestMethodType.GET, "deregister/{serviceId}")
+                    .bindEndpoint("maintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable={enable}&reason={reason}")
                     .setProtocol(ContentType.JSON)
                     .setRequestTimeout(1000)
                     .build();
@@ -76,8 +77,9 @@ public class ConsulAPI {
     }
 
     public static void main(final String[] args) throws Exception {
-        System.out.println(getHealth().pollHealthyInstances("MyApp", "environment-dev", 0).get());
-        System.out.println(getHealth().filterDcLocalHealthyInstances("MyApp", "environment-dev").get());
+        System.out.println(getServiceRegistry().maintenance("MyApp", false, null).get());
+//        System.out.println(getHealth().pollHealthyInstances("MyApp", "environment-dev", 0).get());
+//        System.out.println(getHealth().filterDcLocalHealthyInstances("MyApp", "environment-dev").get());
 //        System.out.println(getCatalog().findDcLocalInstances("MyApp").get());
     }
 }
