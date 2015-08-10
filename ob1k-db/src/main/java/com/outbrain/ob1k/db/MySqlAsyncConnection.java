@@ -4,8 +4,6 @@ import com.github.mauricio.async.db.Configuration;
 import com.github.mauricio.async.db.Connection;
 import com.github.mauricio.async.db.QueryResult;
 import com.github.mauricio.async.db.mysql.MySQLConnection;
-import com.github.mauricio.async.db.mysql.util.CharsetMapper;
-import com.github.mauricio.async.db.util.NettyUtils;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
@@ -13,7 +11,6 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import scala.Option;
-import scala.Some;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
 import scala.concurrent.Future;
@@ -29,16 +26,22 @@ import java.util.concurrent.TimeUnit;
  * Time: 4:55 PM
  */
 public class MySqlAsyncConnection {
+  public static final int MAXIMUM_MESSAGE_SIZE = 16*1024*1024;
   private final MySQLConnection conn;
 
   public MySqlAsyncConnection(final MySQLConnection conn) {
     this.conn = conn;
   }
 
-  public static Configuration createConfiguration(final String host, final int port, final Option<String> database, final String userName, final Option<String> password, final long connectTimeoutSeconds) {
-    final Option<String> empty = Option.apply(null);
-    return new Configuration(userName, host, port, password, database, CharsetUtil.UTF_8, 16777216,
-        PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutSeconds, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS));
+  public static Configuration createConfiguration(final String host, final int port, final Option<String> database, final String userName, final Option<String> password,
+                                                  final long connectTimeoutMilliSeconds, final long queryTimeoutMilliSeconds) {
+    final Option<Duration> queryTimeout = queryTimeoutMilliSeconds == -1 ?
+      Option.<Duration>apply(null) :
+      Option.<Duration>apply(Duration.apply(queryTimeoutMilliSeconds, TimeUnit.MILLISECONDS));
+
+    return new Configuration(userName, host, port, password, database, CharsetUtil.UTF_8, MAXIMUM_MESSAGE_SIZE,
+      PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutMilliSeconds, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS),
+      queryTimeout);
   }
 
   MySQLConnection getInnerConnection() {
