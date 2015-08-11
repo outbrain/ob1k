@@ -76,10 +76,4 @@ public class ConsulAPI {
         }
     }
 
-    public static void main(final String[] args) throws Exception {
-        System.out.println(getServiceRegistry().maintenance("MyApp", false, null).get());
-//        System.out.println(getHealth().pollHealthyInstances("MyApp", "environment-dev", 0).get());
-//        System.out.println(getHealth().filterDcLocalHealthyInstances("MyApp", "environment-dev").get());
-//        System.out.println(getCatalog().findDcLocalInstances("MyApp").get());
-    }
 }
