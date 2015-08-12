@@ -2,6 +2,7 @@ package com.outbrain.ob1k.consul;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.http.Response;
 
 /**
  * A Consul API simplifying operations for the local module instance.
@@ -14,5 +15,7 @@ public interface ConsulServiceRegistry extends Service {
 
   ComposableFuture<String> deregister(String serviceId);
 
-  ComposableFuture<String> maintenance(final String service, final boolean enable, final String reason);
+  ComposableFuture<Response> enableMaintenance(final String service, final String reason);
+
+  ComposableFuture<Response> disableMaintenance(final String service);
 }

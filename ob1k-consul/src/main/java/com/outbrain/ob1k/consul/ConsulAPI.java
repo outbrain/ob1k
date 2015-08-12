@@ -34,7 +34,8 @@ public class ConsulAPI {
             return new ClientBuilder<>(ConsulServiceRegistry.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "agent/service/"))
                     .bindEndpoint("deregister", HttpRequestMethodType.GET, "deregister/{serviceId}")
-                    .bindEndpoint("maintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable={enable}&reason={reason}")
+                    .bindEndpoint("enableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=true&reason={reason}")
+                    .bindEndpoint("disableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=false")
                     .setProtocol(ContentType.JSON)
                     .setRequestTimeout(1000)
                     .build();
@@ -67,9 +68,9 @@ public class ConsulAPI {
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
                     .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
                     .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + timeoutSeconds + "s")
-                    .bindEndpoint("getInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
-                    .bindEndpoint("getInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
-                    .bindEndpoint("getInstancesAtState", HttpRequestMethodType.GET, "state/{state}?dc={dc}&stale=true")
+                    .bindEndpoint("fetchInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
+                    .bindEndpoint("fetchInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
+                    .bindEndpoint("fetchInstancesAtState", HttpRequestMethodType.GET, "state/{state}?dc={dc}&stale=true")
                     .setProtocol(ContentType.JSON)
                     .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(timeoutSeconds))
                     .build();
