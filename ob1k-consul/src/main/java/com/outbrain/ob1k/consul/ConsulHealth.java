@@ -17,11 +17,11 @@ public interface ConsulHealth extends Service {
 
   ComposableFuture<TypedResponse<List<HealthInfoInstance>>> pollHealthyInstances(final String service, final String filterTag, final long index);
 
-  ComposableFuture<List<HealthInfoInstance>> getInstancesHealth(final String service, final String dc);
+  ComposableFuture<List<HealthInfoInstance>> fetchInstancesHealth(final String service, final String dc);
 
-  ComposableFuture<List<HealthInfoInstance.Check>> getInstancesChecks(final String service, final String dc);
+  ComposableFuture<List<HealthInfoInstance.Check>> fetchInstancesChecks(final String service, final String dc);
 
-  ComposableFuture<List<HealthInfoInstance.Check>> getInstancesAtState(final States state, final String dc);
+  ComposableFuture<List<HealthInfoInstance.Check>> fetchInstancesAtState(final States state, final String dc);
 
   enum States {
     ANY,
