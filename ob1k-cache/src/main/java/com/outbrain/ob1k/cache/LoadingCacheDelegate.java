@@ -200,7 +200,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     }
                 }
 
-                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit);
+                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache");
                 cachedResults.consume(new Consumer<Map<K, V>>() {
                     @Override
                     public void consume(final Try<Map<K, V>> res) {
@@ -248,7 +248,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     private void fetchFromLoader(final List<K> missingFromCacheKeys) {
         try {
-            final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys).withTimeout(duration, timeUnit);
+            final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from loader");
             loadedResults.consume(new Consumer<Map<K, V>>() {
                 @Override
                 public void consume(final Try<Map<K, V>> loadedRes) {
