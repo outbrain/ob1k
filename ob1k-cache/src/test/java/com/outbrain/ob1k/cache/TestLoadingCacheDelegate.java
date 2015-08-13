@@ -30,24 +30,24 @@ public class TestLoadingCacheDelegate {
   private static final CacheLoader<String, String> SLOW_CACHE_LOADER = new CacheLoader<String, String>() {
 
     @Override
-    public ComposableFuture<String> load(String cacheName, String key) {
+    public ComposableFuture<String> load(final String cacheName, final String key) {
       return slowResponse(2);
     }
 
     @Override
-    public ComposableFuture<Map<String, String>> load(String cacheName, Iterable<? extends String> keys) {
+    public ComposableFuture<Map<String, String>> load(final String cacheName, final Iterable<? extends String> keys) {
       return null;
     }
   };
 
   private static final TypedCache<String, String> SLOW_CACHE = new LocalAsyncCache<String, String>() {
     @Override
-    public ComposableFuture<String> getAsync(String key) {
+    public ComposableFuture<String> getAsync(final String key) {
       return slowResponse(100);
     }
   };
 
-  private static ComposableFuture<String> slowResponse(int responseDuration) {
+  private static ComposableFuture<String> slowResponse(final int responseDuration) {
     return ComposableFutures.schedule(new Callable<String>() {
       @Override
       public String call() throws Exception {
@@ -62,7 +62,7 @@ public class TestLoadingCacheDelegate {
 
     try {
       loadingCache.getAsync("key").get();
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       Assert.assertEquals("cache timeouts", 1, registry.getCounters().get("LoadingCacheDelegate.meh.cacheTimeouts").getCount());
     }
   }
@@ -74,7 +74,7 @@ public class TestLoadingCacheDelegate {
 
     try {
       loadingCache.getAsync("key").get();
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       Assert.assertEquals("cache timeouts", 1, registry.getCounters().get("LoadingCacheDelegate.meh.loaderTimeouts").getCount());
     }
   }
