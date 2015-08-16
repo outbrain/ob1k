@@ -175,7 +175,7 @@ public class ComposableFutures {
     private static <T, R> ComposableFuture<List<R>> batch(final List<T> elements, final int index, final int batchSize,
                                                          final FutureSuccessHandler<T, R> producer) {
         if (index >= elements.size()) {
-            return ComposableFutures.<List<R>>fromValue(new ArrayList<R>());
+            return ComposableFutures.fromValue(Collections.<R>emptyList());
         }
 
         final List<ComposableFuture<R>> singleBatch = new ArrayList<>(batchSize);
@@ -243,7 +243,7 @@ public class ComposableFutures {
                                                                    final FutureSuccessHandler<T, R> producer) {
         final int currentIndex = index.getAndIncrement();
         if (currentIndex >= elements.size()) {
-            return ComposableFutures.<List<R>>fromValue(new ArrayList<R>());
+            return ComposableFutures.fromValue(Collections.<R>emptyList());
         } else {
             return producer.handle(elements.get(currentIndex)).continueOnSuccess(new FutureSuccessHandler<R, List<R>>() {
                 @Override
