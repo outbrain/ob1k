@@ -153,12 +153,12 @@ public class ComposableFutures {
     }
 
     /**
-     * execute the producer on each element in the list in batches.
+     * Execute the producer on each element in the list in batches.
      * every batch is executed in parallel and the next batch begins only after the previous one ended.
-     * an error in one of the futures produced by the producer will end the flow and return a future containing the error
+     * An error in one of the futures produced by the producer will end the flow and return a future containing the error
      *
-     * the batches are created in order i.e. the first batch is the first section of the list and so on.
-     * the order within a single batch is undefined since it runs in parallel.
+     * The batches are created in order i.e. the first batch is the first section of the list and so on.
+     * The order within a single batch is undefined since it runs in parallel.
      *
      * @param elements the input to the producer
      * @param batchSize how many items will be processed in parallel
@@ -187,11 +187,11 @@ public class ComposableFutures {
         return batchRes.continueOnSuccess(new FutureSuccessHandler<List<R>, List<R>>() {
             @Override
             public ComposableFuture<List<R>> handle(final List<R> batchResult) {
-                ComposableFuture<List<R>> rest = batch(elements, index + batchSize, batchSize, producer);
+                final ComposableFuture<List<R>> rest = batch(elements, index + batchSize, batchSize, producer);
                 return rest.continueOnSuccess(new SuccessHandler<List<R>, List<R>>() {
                     @Override
-                    public List<R> handle(List<R> result) throws ExecutionException {
-                        ArrayList<R> res = new ArrayList<R>(result.size() + batchResult.size());
+                    public List<R> handle(final List<R> result) throws ExecutionException {
+                        final ArrayList<R> res = new ArrayList<>(result.size() + batchResult.size());
                         res.addAll(batchResult);
                         res.addAll(result);
                         return res;
@@ -202,13 +202,13 @@ public class ComposableFutures {
     }
 
     /**
-     * execute the producer on each element in the list in batches.
-     * the batch size represent the max level of parallelism and each parallel flow will opportunistically try to process
-     * the next available item on the list upon completion of the previous one.
-     * use this method when execution time for each element is highly irregular so that slow elements
-     * in the beginning of the list won't necessarily hold up the rest of the execution.
+     * Execute the producer on each element in the list in batches.
+     * The batch size represent the max level of parallelism and each parallel flow will opportunistically try to process
+     * The next available item on the list upon completion of the previous one.
+     * Use this method when execution time for each element is highly irregular so that slow elements
+     * In the beginning of the list won't necessarily hold up the rest of the execution.
      *
-     * an error in one of the futures produced by the producer will end the flow and return a future containing the error
+     * An error in one of the futures produced by the producer will end the flow and return a future containing the error
      *
      * @param elements the input to the producer
      * @param batchSize how many items will be processed in parallel
@@ -220,17 +220,17 @@ public class ComposableFutures {
     public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int batchSize,
                                                           final FutureSuccessHandler<T, R> producer) {
 
-        AtomicInteger index = new AtomicInteger(0);
-        List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
+        final AtomicInteger index = new AtomicInteger(0);
+        final List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
         for (int i=0; i< batchSize; i++) {
             futures.add(seqUnordered(elements, index, producer));
         }
 
         return all(true, futures).continueOnSuccess(new SuccessHandler<List<List<R>>, List<R>>() {
             @Override
-            public List<R> handle(List<List<R>> result) throws ExecutionException {
-                ArrayList<R> combined = new ArrayList<>(elements.size());
-                for (List<R> lst : result) {
+            public List<R> handle(final List<List<R>> result) throws ExecutionException {
+                final ArrayList<R> combined = new ArrayList<>(elements.size());
+                for (final List<R> lst : result) {
                     combined.addAll(lst);
                 }
 
@@ -241,18 +241,18 @@ public class ComposableFutures {
 
     private static <T, R> ComposableFuture<List<R>> seqUnordered(final List<T> elements, final AtomicInteger index,
                                                                    final FutureSuccessHandler<T, R> producer) {
-        int currentIndex = index.getAndIncrement();
+        final int currentIndex = index.getAndIncrement();
         if (currentIndex >= elements.size()) {
             return ComposableFutures.<List<R>>fromValue(new ArrayList<R>());
         } else {
             return producer.handle(elements.get(currentIndex)).continueOnSuccess(new FutureSuccessHandler<R, List<R>>() {
                 @Override
                 public ComposableFuture<List<R>> handle(final R result) {
-                    ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
+                    final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
                     return rest.continueOnSuccess(new SuccessHandler<List<R>, List<R>>() {
                         @Override
-                        public List<R> handle(List<R> restResult) throws ExecutionException {
-                            ArrayList<R> combined = new ArrayList<>(restResult.size() + 1);
+                        public List<R> handle(final List<R> restResult) throws ExecutionException {
+                            final ArrayList<R> combined = new ArrayList<>(restResult.size() + 1);
                             combined.addAll(restResult);
                             combined.add(result);
                             return combined;
@@ -264,10 +264,10 @@ public class ComposableFutures {
     }
 
     /**
-     * execute the producer on each element in the list in batches and return a stream of batch results
-     * every batch is executed in parallel and the next batch begins only after the previous one ended.
-     * the result of each batch is the next element in the stream.
-     * an error in one of the futures produced by the producer will end the stream with the error
+     * Execute the producer on each element in the list in batches and return a stream of batch results.
+     * Every batch is executed in parallel and the next batch begins only after the previous one ended.
+     * The result of each batch is the next element in the stream.
+     * An error in one of the futures produced by the producer will end the stream with the error
      *
      * @param elements the input to the producer
      * @param batchSize how many items will be processed in parallel
@@ -280,7 +280,7 @@ public class ComposableFutures {
                                                            final FutureSuccessHandler<T, R> producer) {
         return Observable.create(new Observable.OnSubscribe<List<R>>() {
             @Override
-            public void call(Subscriber<? super List<R>> subscriber) {
+            public void call(final Subscriber<? super List<R>> subscriber) {
                 batchToStream(elements, batchSize, 0, subscriber, producer);
             }
         });
@@ -301,7 +301,7 @@ public class ComposableFutures {
             final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
             batchRes.consume(new Consumer<List<R>>() {
                 @Override
-                public void consume(Try<List<R>> result) {
+                public void consume(final Try<List<R>> result) {
                     if (result.isSuccess()) {
                         subscriber.onNext(result.getValue());
                         batchToStream(elements, batchSize, index + batchSize, subscriber, producer);
