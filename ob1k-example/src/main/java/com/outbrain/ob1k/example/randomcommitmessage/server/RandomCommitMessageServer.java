@@ -7,8 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.outbrain.ob1k.HttpRequestMethodType.*;
-
 /**
  * Main class for the random commit message server.
  * Sets up a service that will fetch random commit messages from http://whatthecommit.com/
@@ -45,12 +43,8 @@ public class RandomCommitMessageServer {
     return ServerBuilder.newBuilder().
       configurePorts(builder -> builder.setPort(port)).
       setContextPath(CTX_PATH).
-      withServices(builder -> builder.defineService(new RandomCommitMessageServiceImpl(), SERVICE_PATH, serviceBuilder -> {
-        serviceBuilder.addEndpoint(GET, "single", "/single");
-        serviceBuilder.addEndpoint(GET, "multi", "/multi/{numMessages}");
-      })).
+      withServices(builder -> builder.addService(new RandomCommitMessageServiceImpl(), SERVICE_PATH)).
       configureExtraParams(builder -> builder.setRequestTimeout(2000, TimeUnit.MILLISECONDS)).
       build();
   }
-
 }

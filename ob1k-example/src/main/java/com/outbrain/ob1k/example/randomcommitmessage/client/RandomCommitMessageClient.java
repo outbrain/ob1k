@@ -4,15 +4,15 @@ import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.example.randomcommitmessage.common.RandomCommitMessageService;
-
-import static com.outbrain.ob1k.HttpRequestMethodType.GET;
+import rx.Observable;
 
 /**
- * Created by eran on 8/20/15.
+ * @author Eran Harel
  */
 public class RandomCommitMessageClient {
 
   public static final RandomCommitMessageService SERVICE = new RandomCommitMessageClient().randomCommitMessageService;
+  public static final String SERVER_HOST = "http://localhost:8080";
 
   private final RandomCommitMessageService randomCommitMessageService;
 
@@ -21,15 +21,18 @@ public class RandomCommitMessageClient {
       .setReadTimeout(1000)
       .setRequestTimeout(800)
       .setConnectionTimeout(400)
-      .setTargetProvider(new SimpleTargetProvider("http://localhost:8080/rcm/whatthecommit"))
-      .bindEndpoint("single", GET, "/single")
-      .bindEndpoint("multi", GET, "/multi/{numMessages}")
+      .setTargetProvider(new SimpleTargetProvider(SERVER_HOST + "/rcm/whatthecommit"))
       .build();
   }
 
   public static void main(final String[] args) throws Exception {
     System.out.println("Your message Sir: " + SERVICE.single().get());
-    System.out.println("Your messages Sir:\n" + SERVICE.multi(2).get());
+    System.out.println("Your messages Sir: " + SERVICE.multi(2).get());
+
+    final Observable<String> messagesStream = SERVICE.stream(10);
+    messagesStream.toBlocking().forEach(message -> System.out.println("Your message from stream: " + message));
+
+    System.out.println("Done.");
 
     Clients.close(SERVICE);
   }
