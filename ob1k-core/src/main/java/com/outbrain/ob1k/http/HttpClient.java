@@ -159,6 +159,7 @@ public class HttpClient implements Closeable {
     private MetricFactory metricFactory;
     private int connectionTimeout = HttpClient.CONNECTION_TIMEOUT;
     private int requestTimeout = HttpClient.REQUEST_TIMEOUT;
+    private Integer readTimeout = null;
     private int retries = HttpClient.RETRIES;
     private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
     private int maxTotalConnections = HttpClient.MAX_TOTAL_CONNECTIONS;
@@ -256,6 +257,18 @@ public class HttpClient implements Closeable {
     }
 
     /**
+     * Read timeout (optional, defaults to 60 sec).
+     *
+     * @param readTimeout read timeout in ms
+     * @return builder
+     */
+    public Builder setReadTimeout(final int readTimeout) {
+
+      this.readTimeout = readTimeout;
+      return this;
+    }
+
+    /**
      * Enforce compression on the request
      *
      * @param compressionEnforced enforce compression
@@ -321,20 +334,24 @@ public class HttpClient implements Closeable {
      */
     public HttpClient build() {
 
-      final AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().
-              setConnectTimeout(connectionTimeout).
-              setMaxRequestRetry(retries).
-              setRequestTimeout(requestTimeout).
-              setCompressionEnforced(compressionEnforced).
-              setDisableUrlEncodingForBoundedRequests(disableUrlEncoding).
-              setMaxConnectionsPerHost(maxConnectionsPerHost).
-              setMaxConnections(maxTotalConnections).
-              setAsyncHttpClientProviderConfig(NettyConfigHolder.INSTANCE).
-              setFollowRedirect(followRedirect).
-              setAcceptAnyCertificate(acceptAnySslCertificate).
-              build();
+      final AsyncHttpClientConfig.Builder configBuilder = new AsyncHttpClientConfig.Builder().
+        setConnectTimeout(connectionTimeout).
+        setMaxRequestRetry(retries).
+        setRequestTimeout(requestTimeout).
+        setCompressionEnforced(compressionEnforced).
+        setDisableUrlEncodingForBoundedRequests(disableUrlEncoding).
+        setMaxConnectionsPerHost(maxConnectionsPerHost).
+        setMaxConnections(maxTotalConnections).
+        setAsyncHttpClientProviderConfig(NettyConfigHolder.INSTANCE).
+        setFollowRedirect(followRedirect).
+        setAcceptAnyCertificate(acceptAnySslCertificate);
 
-      return new HttpClient(new AsyncHttpClient(config), metricFactory, responseMaxSize, marshallingStrategy);
+      if (readTimeout != null) {
+        configBuilder.setReadTimeout(readTimeout);
+      }
+
+      return new HttpClient(new AsyncHttpClient(configBuilder.
+        build()), metricFactory, responseMaxSize, marshallingStrategy);
     }
   }
 

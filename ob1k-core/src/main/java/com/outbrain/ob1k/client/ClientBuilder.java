@@ -122,6 +122,11 @@ public class ClientBuilder<T extends Service> {
     return this;
   }
 
+  public ClientBuilder<T> setReadTimeout(final int timeout) {
+    httpClientBuilder.setReadTimeout(timeout);
+    return this;
+  }
+
   public ClientBuilder<T> setTargetProvider(final TargetProvider targetProvider) {
     this.targetProvider = targetProvider == null ? new EmptyTargetProvider() : targetProvider;
     return this;
