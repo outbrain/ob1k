@@ -45,7 +45,7 @@ public class RandomCommitMessageServer {
     return ServerBuilder.newBuilder().
       configurePorts(builder -> builder.setPort(port)).
       setContextPath(CTX_PATH).
-      withServices(builder -> builder.defineService(new RandomCommitMessageService(), SERVICE_PATH, serviceBuilder -> {
+      withServices(builder -> builder.defineService(new RandomCommitMessageServiceImpl(), SERVICE_PATH, serviceBuilder -> {
         serviceBuilder.addEndpoint(GET, "single", "/single");
         serviceBuilder.addEndpoint(GET, "multi", "/multi/{numMessages}");
       })).
