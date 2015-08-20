@@ -21,8 +21,9 @@ Ob1k Consists of the following sub libraries
 
 
 ##Getting started 
-
-In order to create an Ob1k service you will need to add dependency to ob1k-core in your pom:
+In order to use Ob1k you will need to implement a server and a client 
+###Ob1k server
+In order to create an Ob1k server you will need to add dependency to ob1k-core in your pom:
 
 ```xml
 <dependency>
@@ -32,33 +33,43 @@ In order to create an Ob1k service you will need to add dependency to ob1k-core 
 </dependency>
 ```
 
-The next step will be to create a service. For that you will need to create an interface and a class to implement it:
+The next step will be to create a service. For that you will need to create an interface and a class which implements it:
 ```java
 public interface IHelloService extends Service {
    ComposableFuture<String> helloWorld();
 }
 ```
 And a class 
-  public class HelloService implements IHelloService {
+```java 
+public class HelloService implements IHelloService {
+   @Override
+   public ComposableFuture<String> helloWorld() {
+     return fromValue("Hello World!");
+   }
+}
+```
 
-      @Override
-       public ComposableFuture<String> helloWorld() {
-          return fromValue("Hello World!");
-      }
-  }
  
-The most simple ob1k server looks like that 
+Now that you have the service endpoint we can buil the Ob1k server:
 
-    Server server = ServerBuilder.newBuilder().
-            configurePorts(builder -> builder.setPort(8080)).
-            setContextPath(CTX_PATH).
-            withServices(builder -> builder.addService(new HelloService(), "/hello")).
-            configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
-            build();
+```java 
+Server server = ServerBuilder.newBuilder().
+  configurePorts(builder -> builder.setPort(8080)).
+     setContextPath("/services").
+     withServices(builder -> builder.addService(new HelloService(), "/hello")).
+     configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
+     build();
+```
+To start the server:
+```java
+server.start(); 
+```
+Now you can access the service endpoint just go to 
+    http://localhost:8080/services/hello
 
-And read the examples :)
 
 ##Examples
+More examples can be found here 
 [ob1k-example](https://github.com/outbrain/ob1k/tree/master/ob1k-example/src/main/java/com/outbrain/ob1k/example/)
 
 ##Links
