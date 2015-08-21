@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.example.rest.server.services;
 
-import com.google.common.collect.ForwardingConcurrentMap;
 import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.example.rest.api.User;
@@ -37,13 +36,12 @@ public class UsersServiceImpl implements UsersService {
 
   private final PublishSubject<Map<Integer, User>> subject = PublishSubject.create();
   private final AtomicInteger userIdCounter = new AtomicInteger(1);
-  private final ConcurrentMap<Integer, User> internalMap = new ConcurrentHashMap<Integer, User>() {{
+  private final ConcurrentMap<Integer, User> users = new ConcurrentHashMap<Integer, User>() {{
     final int id = userIdCounter.getAndIncrement();
     final User user = new User("Mister Null", "Somewhere over the rainbow", "Coding for beer");
     user.setId(id);
     put(id, user);
   }};
-  private final Map<Integer, User> users = createForwardingMap();
 
   @Override
   public ComposableFuture<List<User>> fetchAll() {
@@ -67,6 +65,7 @@ public class UsersServiceImpl implements UsersService {
     user.setId(id);
     users.put(id, user);
     logger.info("Created user: " + user.toString());
+    publishChanged();
     return fromValue(user);
   }
 
@@ -78,8 +77,8 @@ public class UsersServiceImpl implements UsersService {
     }
 
     user.updateFrom(userData);
-
     logger.info("Updated user: " + user.getId());
+    publishChanged();
     return fromValue(ResponseBuilder.fromStatus(HttpResponseStatus.NO_CONTENT).build());
   }
 
@@ -91,6 +90,7 @@ public class UsersServiceImpl implements UsersService {
 
     final User removed = users.remove(id);
     logger.info("Deleted user: " + id);
+    publishChanged();
     return fromValue(removed);
   }
 
@@ -102,13 +102,7 @@ public class UsersServiceImpl implements UsersService {
     return subject;
   }
 
-  private ForwardingConcurrentMap<Integer, User> createForwardingMap() {
-    return new ForwardingConcurrentMap<Integer, User>() {
-      @Override
-      protected ConcurrentMap<Integer, User> delegate() {
-        subject.onNext(internalMap);
-        return internalMap;
-      }
-    };
+  private void publishChanged() {
+    subject.onNext(users);
   }
 }
