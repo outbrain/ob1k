@@ -9,3 +9,7 @@ To start the server, do one of the following:
 After that, go to: `http://localhost:8080/services/hello/helloWorld`
 
 Go ahead and read the code
+
+##RPC client
+This example contains RPC client bounded to our hello service.
+Go ahead and run: `mvn exec:java -Dexec.mainClass="com.outbrain.ob1k.example.hello.client.HelloServiceClient" -pl ob1k-example` (or via your IDE)

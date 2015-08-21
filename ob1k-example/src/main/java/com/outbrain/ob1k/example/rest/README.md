@@ -1,55 +1,55 @@
-#Rest - A Simple Rest Server Example
+#Rest Server Example
 This example attempts to show a usage of ob1k with the option of binding endpoints with specific http method type.
-To start the service, open the example via your favorite IDE and run "RestServer.java", then go to: `http://localhost:8080/api/users`
 
-##Abstract - Server Endpoints Registration
-As you may see in RestServer, we have the following bindings:
+To start the server, do one of the following:
+* Go to project root and run `mvn exec:java -Dexec.mainClass="com.outbrain.ob1k.example.rest.server.RestServer" -pl ob1k-example`
+* Open the example via your favorite IDE and run RestServer main
+
+##Registration phase
+As you can see in RestServer, we have the following bindings:
 
 ```java
-builder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
-builder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
-builder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
-builder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
-builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
+serviceBuilder.addEndpoint(GET, "fetchAll", "/");
+serviceBuilder.addEndpoint(POST, "createUser", "/");
+serviceBuilder.addEndpoint(GET, "fetchUser", "/{id}");
+serviceBuilder.addEndpoint(PUT, "updateUser", "/{id}");
+serviceBuilder.addEndpoint(DELETE, "deleteUser", "/{id}");
+serviceBuilder.addEndpoint(ANY, "subscribeChanges", "/subscribe");
 ```
 
-Each addEndpoint describes its path (i.e. for getAll, it's "/") with its method inside the service class
-and with the http method type. This example shows you how to register different http method types on the same uri
-path, with an usage of path params.
+Each binding describes what method to call on what uri. We see that for uri "/", the method "fetchAll"
+from UsersService class will be called. Also, in this example we're also limiting to a specific method type
+for the requests.
 
 **Note**: Defining the http method type is not required, calling just addEndpoint without the method will lead
-to a default method of ANY - which means that the method doesn't care about its request method type.
+to a default method of ANY - which means that the method does not care about its method type.
 
-##Explaining Method Signatures
-Having the following method signature: `updateUser(final int id, final User userData)` bounded to the path: `/{id}`
-We see that the method receives its id from the path param, while the User object (after the un-marshalling) comes in the request body.
-This behavior basically gives us the ability of expressing of **which** resource we're updating, with **what** data.
+##How it works
+Having the following method signature: `updateUser(final int id, final User userData)` bounded to the path: `/{id}`,
+we see that the method receives its id from a path param, while the User object comes from the request body.
+This behavior basically gives us the ability of expressing **which** resource we're updating, with **what** data.
 
-**Important note**: When using path params in POST or PUT, each path param should always be in the beginning of your method signature, else you'll be having
-exceptions in your ServiceBuilder. That means if your path looks like: `/hello/{world}`, the method bounded to it should look like `hello(String world, String moreData)`
+**Important note**: When using path params in POST or PUT, each path param should always be in the beginning of your method signature, else you'll the server
+won't initialize. For example: for the following path: `/hello/{world}`, the method bounded to it should be: `hello(String world, String moreData)`
 
-
-##Client API Usage
+##How to use
 The following example defines a resource service called **UsersService**
 which exposes the following endpoints:
 
 > [**GET**]: "/" => Fetches all users
 > 
-> [**PUT**]: "/" => Creates a new user (Required fields: name, address,
-> profession)
-> 
-> [**DELETE**]: "/{id}" => Deletes an user
-> 
+> [**POST**]: "/" => Creates a new user (Required fields: name, address, profession)
+>
 > [**GET**]: "/{id}" => Fetches a specific user
-> 
-> [**POST**]: "/{id}" => Updates an user (Optional fields: name, address,
-> profession)
+>
+> [**DELETE**]: "/{id}" => Deletes an user
+>
+> [**PUT**]: "/{id}" => Updates an user (Optional fields: name, address, profession)
+>
+> [**ANY**]: "/subscribe" => Stream of users map, on each modification
 
-The requests should be in either JSON format or MessagePack.
+The requests should be in either JSON or MessagePack.
 
-##Interface
-This example doesn't contains with it some web interface which interacts with the service.
-You're encouraged to use a simple nice tool called [Postman](http://www.getpostman.com/).
-
-##Todo
-Add ob1k client example
+##RPC client
+This example contains RPC client bounded to our Users service.
+Go ahead and run: `mvn exec:java -Dexec.mainClass="com.outbrain.ob1k.example.rest.client.UsersServiceClient" -pl ob1k-example` (or via your IDE)

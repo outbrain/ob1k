@@ -1,10 +1,10 @@
-package com.outbrain.ob1k.example.rest.model;
+package com.outbrain.ob1k.example.rest.api;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 /**
- * Simple pojo which describes an User entity for the example
+ * Simple pojo which describes a User entity for the example
  *
  * @author marenzon
  */
@@ -15,14 +15,10 @@ public class User {
   private String address;
   private String profession;
 
-  /**
-   * Note: empty constructor for the marshallers
-   */
-  public User() {
-  }
+  // Empty constructor for the marshallers
+  public User() {}
 
-  public User(final int id, final String name, final String address, final String profession) {
-    this.id = id;
+  public User(final String name, final String address, final String profession) {
     this.name = Preconditions.checkNotNull(name, "name may not be null");
     this.address = Preconditions.checkNotNull(address, "address may not be null");
     this.profession = Preconditions.checkNotNull(profession, "profession may not be null");
@@ -30,6 +26,10 @@ public class User {
 
   public int getId() {
     return id;
+  }
+
+  public void setId(final int id) {
+    this.id = id;
   }
 
   public String getName() {

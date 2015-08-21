@@ -10,3 +10,7 @@ To start the server, do one of the following:
 After that, go to: `http://localhost:8080/rcm/whatthecommit/single`
 
 Go ahead and read the code
+
+##RPC client
+This example contains RPC client bounded to our RCM service.
+Go ahead and run: `mvn exec:java -Dexec.mainClass="com.outbrain.ob1k.example.randomcommitmessage.client.RandomCommitMessageClient" -pl ob1k-example` (or via your IDE)
