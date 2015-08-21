@@ -1,14 +1,23 @@
 package com.outbrain.ob1k.example.hello.server;
 
-import com.outbrain.ob1k.example.hello.server.services.HelloService;
+import com.outbrain.ob1k.example.hello.server.services.HelloServiceImpl;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.build.ServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Hello Server
+ *
+ * This class is our main, which initializing a new server,
+ * registering our services and binding on port 8080
+ *
+ * Here we're basically describing which services do we want to register,
+ * how to configure the server and set define the routing
+ *
  * @author marenzon
  */
 public class HelloServer {
@@ -25,10 +34,11 @@ public class HelloServer {
     new HelloServer().start(PORT);
   }
 
-  public void start(final int port) {
+  public InetSocketAddress start(final int port) {
     server = buildServer(port);
-    server.start();
+    final InetSocketAddress address = server.start();
     logger.info("## HelloServer is started on port: {} ##", port);
+    return address;
   }
 
   public void stop() {
@@ -38,10 +48,10 @@ public class HelloServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-            configurePorts(builder -> builder.setPort(port)).
-            setContextPath(CTX_PATH).
-            withServices(builder -> builder.addService(new HelloService(), HELLO_SERVICE_PATH)).
-            configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
-            build();
+      configurePorts(builder -> builder.setPort(port)).
+      setContextPath(CTX_PATH).
+      withServices(builder -> builder.addService(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
+      configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
+      build();
   }
 }

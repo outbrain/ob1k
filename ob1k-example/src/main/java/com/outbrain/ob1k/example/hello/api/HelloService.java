@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.example.hello.client;
+package com.outbrain.ob1k.example.hello.api;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -7,7 +7,7 @@ import rx.Observable;
 /**
  * @author marenzon
  */
-public interface IHelloService extends Service {
+public interface HelloService extends Service {
 
   ComposableFuture<String> helloWorld();
 
