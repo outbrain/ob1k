@@ -11,25 +11,24 @@ The coordintation of asynchronous request is performed by using composable futur
 you to easily compose and combine asynchonous operations.      
 
 ##Anatomy 
-Ob1k project consists of the following sub libraries
+Ob1k project consists of the following sub libraries:
  - **ob1k-concurrent**        - Introduces composable futures, an alternative implementation of futures in Java.
- - **ob1k-concurrent-scala**  - A scala wrapper for ob1k-concurrent
- - **ob1k-core**              - RPC framework Client and server infrastructure
- - **ob1k-db**                - A composable futures based asynchronous MySQL client
+ - **ob1k-core**              - RPC framework Client and server infrastructure.
+ - **ob1k-db**                - A composable futures based asynchronous MySQL client.
  - **ob1k-cache**             - A composable futures based asynchronous [Memcached client](https://code.google.com/p/spymemcached/), and guava cache wrapper.
- - **ob1k-cql**               - A composable futures based asynchronous Cassandra client
- - **ob1k-security**          - Authentication and authorization for Ob1k
- - **ob1k-consul**            - Ob1k based [Consul](https://consul.io/) API which simplifies registration and discovery for Ob1k services
+ - **ob1k-cql**               - A composable futures based asynchronous Cassandra client.
+ - **ob1k-security**          - Authentication and authorization for Ob1k.
+ - **ob1k-consul**            - Ob1k based [Consul](https://consul.io/) API which simplifies registration and discovery for Ob1k services.
+ - **ob1k-concurrent-scala**  - A scala wrapper for ob1k-concurrent.
 
 
 ##Getting started 
 Micro services architecture consists of a group of different services which communicate with each other.
-Ob1k supply the infrastructure to build such microservices and means for them to communicate. 
-The communication between services is performed over HTTP and an Ob1k server is actually an HTTP server.
-In addition Ob1k equip you with a way to supply a Java RPC client which communicates with the server. 
-As mentioned before is done over HTTP and the payload sent between server and client can be either JSON or msgpack.
-  
- 
+Ob1k supplies the infrastructure to build such microservices and means for them to communicate.
+The communication between services is based on an HTTP with JSON or [MessagePack](http://msgpack.org/) payload RPC protocol, using a user provided strongly typed interface.
+That said, the Ob1k server is actually an HTTP server, and you can use your favorite HTTP client to talk to your service, though we recommend you use ours ;)
+
+
 ###Ob1k Server
 Let's start with creating an Ob1k server. Create a new maven project and add dependency to ob1k-core in your pom:
 
