@@ -25,7 +25,7 @@ Ob1k project consists of the following sub libraries:
 ##Getting started 
 Micro services architecture consists of a group of different services which communicate with each other.
 Ob1k supplies the infrastructure to build such microservices and means for them to communicate.
-The communication between services is based on an HTTP with JSON or [MessagePack](http://msgpack.org/) payload RPC protocol, using a user provided strongly typed interface.
+The communication between services is based on a RPC protocol, (HTTP with JSON or [MessagePack](http://msgpack.org/) payload), using a user provided strongly typed interface.
 That said, the Ob1k server is actually an HTTP server, and you can use your favorite HTTP client to talk to your service, though we recommend you use ours ;)
 
 
@@ -88,7 +88,7 @@ final IHelloService helloService = new ClientBuilder<>(IHelloService.class).
             setTargetProvider(new SimpleTargetProvider(target)).
             build();
 ```
-Now that we have helloService we can invoke methods on it which will be directed automatically to the server.
+Now that we have `helloService` we can invoke methods on it which will be directed automatically to the server.
 ```java
 final ComposableFuture<String> helloWorld = helloService.helloWorld();
 System.out.println(helloWorld.get());
