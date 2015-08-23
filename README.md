@@ -40,9 +40,9 @@ Let's start with creating an Ob1k server. Create a new maven project and add dep
 </dependency>
 ```
 
-The next step will be to create a service end point. A service endpoint is an interface and an implementation. 
+The next step will be to create a service endpoint. A service endpoint is an interface and an implementation.
 Each method in the implementation will be mapped to a URL which clients as well as a simple web browser can invoke.
-In the next example we are creating a service with on endpoint named helloWorld which gets no arguments and returns a string.
+In the next example we are creating a service with on endpoint named `helloWorld` which gets no arguments and returns a string.
 ```java
 public interface IHelloService extends Service {
    ComposableFuture<String> helloWorld();
@@ -78,8 +78,8 @@ Now you can access the service endpoint just go to
 
 
 ###Ob1k Client
-Now we are going to create an Ob1k client. Most of the times Ob1k clients are going to be Ob1k servers themselves but for simplicity we will show just the client flow for now
-We use the ClientBuilder to build the client by specifying URL the interface we are invoking content type (which is controlled by the client) and can be either JSON or msgpack. 
+Now we are going to create an Ob1k client. Most of the times Ob1k clients are going to be executed inside an Ob1k service, but for simplicity we will show just the client code for now.
+We use the `ClientBuilder` to build the client by specifying a target URL, the interface of the service we're invoking, content type (which is controlled by the client) and can be either JSON or MessagePack, timeouts, etc.
 ```java
 final String target = "http://localhost:8080/services/hello";
 final IHelloService helloService = new ClientBuilder<>(IHelloService.class).
