@@ -6,7 +6,7 @@
 ##Overview and Motivation 
 Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro services.
 You can start an Ob1k embedded server from your code and once started it will serve HTTP requests based on the endpoints you have configured. 
-Unlike traditional servlet containers, Ob1k is based on Netty asynchronous event-driven model, and uses a fixed thread-per-code pool for serving.
+Unlike traditional servlet containers, Ob1k is based on [Netty](http://netty.io/) asynchronous event-driven model, and uses a fixed thread-per-code pool for serving.
 The coordintation of asynchronous request is performed by using composable futures which enable
 you to easily compose and combine asynchonous operations.      
 
