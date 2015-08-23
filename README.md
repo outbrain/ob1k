@@ -7,13 +7,13 @@
 Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro services.
 You can start an Ob1k embedded server from your code and once started it will serve HTTP requests based on the endpoints you have configured. 
 Unlike traditional servlet containers, Ob1k is based on [Netty](http://netty.io/) asynchronous event-driven model, and uses a fixed thread-per-code pool for serving.
-The coordintation of asynchronous request is performed by using composable futures which enable
-you to easily compose and combine asynchonous operations.      
+The coordination of an asynchronous request is performed by using composable futures which enable
+you to easily compose and combine asynchonous operations.
 
 ##Anatomy 
 Ob1k project consists of the following sub libraries:
  - **ob1k-concurrent**        - Introduces composable futures, an alternative implementation of futures in Java.
- - **ob1k-core**              - RPC framework Client and server infrastructure.
+ - **ob1k-core**              - RPC framework client and server infrastructure.
  - **ob1k-db**                - A composable futures based asynchronous MySQL client.
  - **ob1k-cache**             - A composable futures based asynchronous [Memcached client](https://code.google.com/p/spymemcached/), and guava cache wrapper.
  - **ob1k-cql**               - A composable futures based asynchronous Cassandra client.
@@ -24,8 +24,8 @@ Ob1k project consists of the following sub libraries:
 
 ##Getting started 
 Micro services architecture consists of a group of different services which communicate with each other.
-Ob1k supplies the infrastructure to build such microservices and means for them to communicate.
-The communication between services is based on a RPC protocol, (HTTP with JSON or [MessagePack](http://msgpack.org/) payload), using a user provided strongly typed interface.
+Ob1k supplies the infrastructure to build such microservices and the means for them to communicate.
+The communication between services is based on a RPC protocol, (HTTP with JSON or [MessagePack](http://msgpack.org/) payload), using a user provided, strongly typed interface.
 That said, the Ob1k server is actually an HTTP server, and you can use your favorite HTTP client to talk to your service, though we recommend you use ours ;)
 
 
@@ -41,8 +41,8 @@ Let's start with creating an Ob1k server. Create a new maven project and add dep
 ```
 
 The next step will be to create a service endpoint. A service endpoint is an interface and an implementation.
-Each method in the implementation will be mapped to a URL which clients as well as a simple web browser can invoke.
-In the next example we are creating a service with on endpoint named `helloWorld` which gets no arguments and returns a string.
+Each method in the implementation will be mapped to a URL which clients as well as a simple web browsers can invoke.
+In the next example we are create a service with an endpoint named `helloWorld` which gets no arguments and returns a string.
 ```java
 public interface IHelloService extends Service {
    ComposableFuture<String> helloWorld();
@@ -58,7 +58,7 @@ public class HelloService implements IHelloService {
 }
 ```
  
-Now that you have the service endpoint we can build the Ob1k server. For that we will need to set the port to use and the base URL which is called context. 
+Now that you have the service endpoint we can build the Ob1k server. For that, we will need to set the port to use and the base URL which is called context.
 In addition we need to bind our services to a URL under the context. After setting some more properties (e.g. requestTimeout) we call the build method and this creates a server.
 
 ```java 
