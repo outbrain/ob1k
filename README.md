@@ -19,7 +19,6 @@ Ob1k project consists of the following sub libraries:
  - **ob1k-cql**               - A composable futures based asynchronous Cassandra client.
  - **ob1k-security**          - Authentication and authorization for Ob1k.
  - **ob1k-consul**            - Ob1k based [Consul](https://consul.io/) API which simplifies registration and discovery for Ob1k services.
- - **ob1k-concurrent-scala**  - A scala wrapper for ob1k-concurrent.
 
 
 ##Getting started 
