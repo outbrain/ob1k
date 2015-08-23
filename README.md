@@ -4,9 +4,10 @@
 [![Download](https://api.bintray.com/packages/harel-eran/Ob1k/com.outbrain.swinfra/images/download.svg)](https://bintray.com/harel-eran/Ob1k/com.outbrain.swinfra/_latestVersion)
 
 ##Overview and Motivation 
-Ob1k is an asynchronous RPC framework for rapid development of async, high performance micro services. 
+Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro services.
 You can start an Ob1k embedded server from your code and once started it will serve HTTP requests based on the endpoints you have configured. 
-Ob1k does not require a thread per request and it is based on an async stack of Netty. The coordintation of asynchronous request is performed by using composable futures which enable 
+Unlike traditional servlet containers, Ob1k is based on Netty asynchronous event-driven model, and uses a fixed thread-per-code pool for serving.
+The coordintation of asynchronous request is performed by using composable futures which enable
 you to easily compose and combine asynchonous operations.      
 
 ##Anatomy 
