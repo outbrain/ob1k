@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--suppress ALL -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
   <version>0.112-SNAPSHOT</version>
@@ -83,40 +84,14 @@
   </profiles>
 
   <distributionManagement>
-    <!--
     <repository>
-      <id>nexus-3rdparty</id>
-      <name>3rd party repository</name>
-      <url>http://mavenrepo:8081/nexus/content/repositories/thirdparty</url>
+      <id>Outbrain-Bintray</id>
+      <url>https://api.bintray.com/maven/outbrain/OutbrainOSS</url>
     </repository>
-    -->
-    <!-- Temp Bintray repo
-    <repository>
-      <id>bintray-harel-eran-Ob1k-com.outbrain.swinfra</id>
-      <name>harel-eran-Ob1k-com.outbrain.swinfra</name>
-      <url>https://api.bintray.com/maven/harel-eran/Ob1k/com.outbrain.swinfra</url>
-    </repository>
-    -->
   </distributionManagement>
 
   <build>
     <plugins>
-      <!--
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>versions-maven-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-scm-plugin</artifactId>
-        <version>1.9.2</version>
-        <configuration>
-          <tag>${project.artifactId}-${project.version}</tag>
-        </configuration>
-      </plugin>
-      -->
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
