@@ -36,7 +36,7 @@ public class ServiceDispatcher {
     try { // If someone tries to send request with invalid/unsupported method type, translating the exception
       methodType = request.getMethod();
     } catch (final IllegalArgumentException e) {
-      throw new UnsupportedOperationException("Unsupported http method type");
+      throw new IllegalArgumentException("Unsupported http method type");
     }
 
     final AbstractServerEndpoint endpoint = registry.findEndpoint(path, methodType, request.getPathParams());
