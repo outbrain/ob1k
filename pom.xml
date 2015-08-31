@@ -85,7 +85,7 @@
   <distributionManagement>
     <repository>
       <id>Outbrain-Bintray</id>
-      <url>https://api.bintray.com/content/outbrain/OutbrainOSS/OB1K/</url>
+      <url>https://api.bintray.com/maven/outbrain/OutbrainOSS/OB1K/</url>
     </repository>
   </distributionManagement>
 
