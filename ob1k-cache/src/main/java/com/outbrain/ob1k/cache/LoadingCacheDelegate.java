@@ -1,8 +1,13 @@
 package com.outbrain.ob1k.cache;
 
 import com.google.common.collect.Lists;
-import com.outbrain.ob1k.concurrent.*;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Producer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
+import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -25,15 +30,15 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.newPromise;
  * Created by aronen on 10/26/14.
  */
 public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
-    private static final long DEFAULT_DURATION_MS = 500;
+    private static final long DEFAULT_GLOBAL_TIMEOUT_MS = 500;
 
     private final TypedCache<K, V> cache;
     private final CacheLoader<K, V> loader;
     private final String cacheName;
     private final ConcurrentMap<K, ComposablePromise<V>> futureValues;
 
-    private final long duration;
-    private final TimeUnit timeUnit;
+    private final long globalTimeout;
+    private final TimeUnit timeoutUnit;
 
     private final Counter cacheHits;
     private final Counter cacheMiss;
@@ -41,6 +46,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     private final Counter loaderErrors;
     private final Counter cacheTimeouts;
     private final Counter loaderTimeouts;
+    private final Counter globalTimeouts;
 
     public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName) {
         this(cache, loader, cacheName, null);
@@ -48,18 +54,18 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName,
                                 final MetricFactory metricFactory) {
-        this(cache, loader, cacheName, metricFactory, DEFAULT_DURATION_MS, TimeUnit.MILLISECONDS);
+        this(cache, loader, cacheName, metricFactory, DEFAULT_GLOBAL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
     }
 
     public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName,
-                                final MetricFactory metricFactory, final long duration, final TimeUnit timeUnit) {
+                                final MetricFactory metricFactory, final long globalTimeout, final TimeUnit timeoutUnit) {
         this.cache = cache;
         this.loader = loader;
         this.cacheName = cacheName;
         this.futureValues = new ConcurrentHashMap<>();
 
-        this.duration = duration;
-        this.timeUnit = timeUnit;
+        this.globalTimeout = globalTimeout;
+        this.timeoutUnit = timeoutUnit;
 
         if (metricFactory != null) {
             metricFactory.registerGauge("LoadingCacheDelegate." + cacheName, "mapSize", new Gauge<Integer>() {
@@ -75,6 +81,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             loaderErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderErrors");
             cacheTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheTimeouts");
             loaderTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderTimeouts");
+            globalTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "globalTimeouts");
 
         } else {
             cacheHits = null;
@@ -83,6 +90,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             loaderErrors = null;
             cacheTimeouts = null;
             loaderTimeouts = null;
+            globalTimeouts = null;
         }
     }
 
@@ -98,37 +106,37 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     return;
                 }
 
-                final ComposableFuture<V> cachedResult = cache.getAsync(key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from cache");
-                cachedResult.consume(new Consumer<V>() {
-                    @Override
-                    public void consume(final Try<V> res) {
-                        if (res.isSuccess()) {
-                            final V result = res.getValue();
-                            if (result == null) {
-                                if (cacheMiss != null) {
-                                    cacheMiss.inc();
-                                }
+                final ComposableFuture<V> cachedResult = cache.getAsync(key)
+                  .continueOnError(handleCacheErrors(promise, key))
+                  .withTimeout(globalTimeout, timeoutUnit, "LoadingCacheDelegate.getAsync(" + key + ")");
 
-                                fetchFromLoader(key, promise);
-                            } else {
-                                if (cacheHits != null) {
-                                    cacheHits.inc();
-                                }
-                                promise.set(result);
-                                futureValues.remove(key);
-                            }
-                        } else {
-                            final Throwable error = res.getError();
-                            if (cacheErrors != null) {
-                                cacheErrors.inc();
-                                if(error instanceof TimeoutException) {
-                                    cacheTimeouts.inc();
-                                }
-                            }
-                            promise.setException(error);
-                            futureValues.remove(key);
+                cachedResult.consume(new Consumer<V>() {
+                  @Override
+                  public void consume(final Try<V> res) {
+                    if (res.isSuccess()) {
+                      final V result = res.getValue();
+                      if (result == null) {
+                        if (cacheMiss != null) {
+                          cacheMiss.inc();
                         }
+
+                        fetchFromLoader(key, promise);
+                      } else {
+                        if (cacheHits != null) {
+                          cacheHits.inc();
+                        }
+                        promise.set(result);
+                        futureValues.remove(key);
+                      }
+                    } else {
+                      final Throwable error = res.getError();
+                      if(error instanceof TimeoutException && globalTimeouts != null) {
+                        globalTimeouts.inc();
+                      }
+                      promise.setException(error);
+                      futureValues.remove(key);
                     }
+                  }
                 });
 
                 consumeFrom(promise.future(), consumer);
@@ -136,39 +144,52 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         });
     }
 
-    private void fetchFromLoader(final K key, final ComposablePromise<V> promise) {
-        try {
-            final ComposableFuture<V> loadedResult = loader.load(cacheName, key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from loader");
-
-            loadedResult.consume(new Consumer<V>() {
-                @Override
-                public void consume(final Try<V> loadedRes) {
-                    if (loadedRes.isSuccess()) {
-                        promise.set(loadedRes.getValue());
-                        cache.setAsync(key, loadedRes.getValue()).consume(new Consumer<Boolean>() {
-                            @Override
-                            public void consume(final Try<Boolean> result) {
-                                futureValues.remove(key);
-                            }
-                        });
-                    } else {
-                        final Throwable error = loadedRes.getError();
-                        if (loaderErrors != null) {
-                            loaderErrors.inc();
-                            if(error instanceof TimeoutException) {
-                                loaderTimeouts.inc();
-                            }
-                        }
-                        promise.setException(error);
-                        futureValues.remove(key);
-                    }
-                }
-            });
-        } catch (final Exception e) {
-            // defensive coding, loader should not throw exceptions.
-            promise.setException(e);
-            futureValues.remove(key);
+  private FutureErrorHandler<V> handleCacheErrors(final ComposablePromise<V> promise, final K key) {
+    return new FutureErrorHandler<V>() {
+      @Override
+      public ComposableFuture<V> handle(final Throwable error) {
+        if (cacheErrors != null) {
+          cacheErrors.inc();
+          if(error instanceof TimeoutException) {
+            cacheTimeouts.inc();
+            return fetchFromLoader(key, promise);
+          }
         }
+
+        return ComposableFutures.fromError(error);
+      }
+    };
+  }
+
+  private ComposableFuture<V> fetchFromLoader(final K key, final ComposablePromise<V> promise) {
+        final ComposableFuture<V> loadedResult = loader.load(cacheName, key);
+
+        loadedResult.consume(new Consumer<V>() {
+            @Override
+            public void consume(final Try<V> loadedRes) {
+                if (loadedRes.isSuccess()) {
+                    promise.set(loadedRes.getValue());
+                    cache.setAsync(key, loadedRes.getValue()).consume(new Consumer<Boolean>() {
+                        @Override
+                        public void consume(final Try<Boolean> result) {
+                            futureValues.remove(key);
+                        }
+                    });
+                } else {
+                    final Throwable error = loadedRes.getError();
+                    if (loaderErrors != null) {
+                        loaderErrors.inc();
+                        if(error instanceof TimeoutException) {
+                            loaderTimeouts.inc();
+                        }
+                    }
+                    promise.setException(error);
+                    futureValues.remove(key);
+                }
+            }
+        });
+
+        return loadedResult;
     }
 
     private static <T> void consumeFrom(final ComposableFuture<T> source, final Consumer<T> consumer) {
@@ -200,7 +221,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                     }
                 }
 
-                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache");
+                final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(globalTimeout, timeoutUnit, "LoadingCacheDelegate fetch bulk from cache");
                 cachedResults.consume(new Consumer<Map<K, V>>() {
                     @Override
                     public void consume(final Try<Map<K, V>> res) {
@@ -248,7 +269,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
     private void fetchFromLoader(final List<K> missingFromCacheKeys) {
         try {
-            final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from loader");
+            final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys).withTimeout(globalTimeout, timeoutUnit, "LoadingCacheDelegate fetch bulk from loader");
             loadedResults.consume(new Consumer<Map<K, V>>() {
                 @Override
                 public void consume(final Try<Map<K, V>> loadedRes) {

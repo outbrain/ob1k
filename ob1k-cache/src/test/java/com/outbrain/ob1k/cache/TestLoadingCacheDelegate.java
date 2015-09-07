@@ -7,6 +7,10 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.codahale3.CodahaleMetricsFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,6 +19,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,9 +27,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * emulate a loader that takes a while and test to se that values are loaded only once.
  */
+@RunWith(MockitoJUnitRunner.class)
 public class TestLoadingCacheDelegate {
 
+  @Mock
+  private TypedCache<String, String> cacheMock;
+  @Mock
+  private CacheLoader<String,String> loaderMock;
+
   private final MetricRegistry registry = new MetricRegistry();
+
   private final MetricFactory metricFactory = new CodahaleMetricsFactory(registry);
 
   private static final CacheLoader<String, String> SLOW_CACHE_LOADER = new CacheLoader<String, String>() {
@@ -39,7 +51,6 @@ public class TestLoadingCacheDelegate {
       return null;
     }
   };
-
   private static final TypedCache<String, String> SLOW_CACHE = new LocalAsyncCache<String, String>() {
     @Override
     public ComposableFuture<String> getAsync(final String key) {
@@ -57,14 +68,30 @@ public class TestLoadingCacheDelegate {
   }
 
   @Test
-  public void testCacheTimeoutHandling() throws InterruptedException {
+  public void testGlobalTimeoutHandling() throws InterruptedException {
     final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(SLOW_CACHE, SLOW_CACHE_LOADER, "meh", metricFactory, 1, TimeUnit.MILLISECONDS);
 
     try {
       loadingCache.getAsync("key").get();
     } catch (final ExecutionException e) {
-      Assert.assertEquals("cache timeouts", 1, registry.getCounters().get("LoadingCacheDelegate.meh.cacheTimeouts").getCount());
+      Assert.assertEquals("cache timeouts", 0, registry.getCounters().get("LoadingCacheDelegate.meh.cacheTimeouts").getCount());
+      Assert.assertEquals("loader timeouts", 0, registry.getCounters().get("LoadingCacheDelegate.meh.loaderTimeouts").getCount());
+      Assert.assertEquals("global timeouts", 1, registry.getCounters().get("LoadingCacheDelegate.meh.globalTimeouts").getCount());
+      Assert.assertEquals("root cause is timeout", TimeoutException.class, e.getCause().getClass());
     }
+  }
+
+  @Test
+  public void testCacheTimeoutHandling() throws InterruptedException, ExecutionException {
+    final String key = "LoadingCacheDelegate.meh.cacheTimeouts";
+    final String cacheName = "meh";
+    mockCacheTimeout(key);
+    final String value = "value";
+    Mockito.when(loaderMock.load(cacheName, key)).thenReturn(ComposableFutures.fromValue(value));
+    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cacheMock, loaderMock, cacheName, metricFactory, 10000, TimeUnit.MILLISECONDS);
+
+    Assert.assertEquals("value returned from loader", value, loadingCache.getAsync(key).get());
+    Assert.assertEquals("cache timeouts", 1, registry.getCounters().get(key).getCount());
   }
 
   @Test
@@ -141,6 +168,10 @@ public class TestLoadingCacheDelegate {
       System.out.println("---------------------------");
     }
 
+  }
+
+  private void mockCacheTimeout(final String key) {
+    Mockito.when(cacheMock.getAsync(key)).thenReturn(ComposableFutures.<String>fromError(new TimeoutException("bah")));
   }
 
 }
