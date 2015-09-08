@@ -9,7 +9,7 @@
   <packaging>pom</packaging>
   <url>http://www.outbrain.com</url>
   <description>
-    Ob1k is the RPC framework used by Outbrain
+    Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro services.
   </description>
   <licenses>
     <license>
