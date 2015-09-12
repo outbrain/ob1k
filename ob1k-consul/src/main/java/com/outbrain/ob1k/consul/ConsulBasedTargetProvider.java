@@ -55,7 +55,7 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     final int index = currIndex.get();
     currIndex.set(index + 1);
     final List<String> currTargets = targets;
-    return currTargets.get(index % currTargets.size());
+    return currTargets.get(Math.abs(index % currTargets.size()));
   }
 
   private int instanceWeight(final HealthInfoInstance.Service instance) {
