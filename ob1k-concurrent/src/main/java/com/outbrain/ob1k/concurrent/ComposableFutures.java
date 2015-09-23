@@ -605,28 +605,7 @@ public class ComposableFutures {
                 final AtomicBoolean errorTrigger = new AtomicBoolean(false);
 
                 for (final ComposableFuture<T> future : futures) {
-                    future.consume(new Consumer<T>() {
-                        @Override
-                        public void consume(final Try<T> result) {
-                            if (result.isSuccess()) {
-                                subscriber.onNext(result.getValue());
-                                if (counter.decrementAndGet() == 0) {
-                                    subscriber.onCompleted();
-                                }
-                            } else {
-                                if (failOnError) {
-                                    if (errorTrigger.compareAndSet(false, true)) {
-                                        subscriber.onError(result.getError());
-                                    }
-                                    counter.set(0);
-                                } else {
-                                    if (counter.decrementAndGet() == 0) {
-                                        subscriber.onCompleted();
-                                    }
-                                }
-                            }
-                        }
-                    });
+                    future.consume(provideObserverResult(subscriber, counter, errorTrigger, failOnError));
                 }
             }
         });
@@ -647,35 +626,49 @@ public class ComposableFutures {
         final AtomicBoolean errorTrigger = new AtomicBoolean(false);
 
         for (final ComposableFuture<T> future : futures) {
-            future.consume(new Consumer<T>() {
-                @Override
-                public void consume(final Try<T> result) {
-                    if (result.isSuccess()) {
-                        subject.onNext(result.getValue());
-                        if (counter.decrementAndGet() == 0) {
-                            subject.onCompleted();
-                        }
-                    } else {
-                        if (failOnError) {
-                            if (errorTrigger.compareAndSet(false, true)) {
-                                subject.onError(result.getError());
-                            }
-                            counter.set(0);
-                        } else {
-                            if (counter.decrementAndGet() == 0) {
-                                subject.onCompleted();
-                            }
-                        }
-                    }
-                }
-            });
+            future.consume(provideObserverResult(subject, counter, errorTrigger, failOnError));
         }
 
         return subject;
     }
 
+    /**
+     * creates new observable given future provider,
+     * translating the future results into stream.
+     * the sequence will be evaluated on subscribe.
+     *
+     * @param provider  the future provider for translation
+     * @param <T>       the stream type
+     * @return          the stream
+     */
     public static <T> Observable<T> toObservable(final FutureProvider<T> provider) {
         return Observable.create(new FutureProviderToStreamHandler<>(provider));
+    }
+
+    private static <T> Consumer<T> provideObserverResult(final rx.Observer<? super T> observer, final AtomicInteger counter,
+                                                         final AtomicBoolean errorTrigger, final boolean failOnError) {
+        return new Consumer<T>() {
+            @Override
+            public void consume(final Try<T> result) {
+                if (result.isSuccess()) {
+                    observer.onNext(result.getValue());
+                    if (counter.decrementAndGet() == 0) {
+                        observer.onCompleted();
+                    }
+                } else {
+                    if (failOnError) {
+                        if (errorTrigger.compareAndSet(false, true)) {
+                            observer.onError(result.getError());
+                        }
+                        counter.set(0);
+                    } else {
+                        if (counter.decrementAndGet() == 0) {
+                            observer.onCompleted();
+                        }
+                    }
+                }
+            }
+        };
     }
 
     public static ExecutorService getExecutor() {
