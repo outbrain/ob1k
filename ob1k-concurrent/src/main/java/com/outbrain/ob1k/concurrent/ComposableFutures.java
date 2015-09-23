@@ -612,6 +612,44 @@ public class ComposableFutures {
     }
 
     /**
+     * creates new cold observable, given future provider,
+     * on each subscribe will consume the provided future
+     * and repeat until stop criteria will exists
+     * each result will be emitted to the stream
+     *
+     * @param futureProvider the future provider
+     * @param <T> the stream type
+     * @return the stream
+     */
+    public static <T> Observable<T> toColdObservable(final RecursiveFutureProvider<T> futureProvider) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
+            @Override
+            public void call(final Subscriber<? super T> subscriber) {
+                recursiveChain(subscriber, futureProvider.createStopCriteria());
+            }
+
+            private void recursiveChain(final Subscriber<? super T> subscriber, final Predicate<T> stopCriteria) {
+                futureProvider.provide().consume(new Consumer<T>() {
+                    @Override
+                    public void consume(final Try<T> result) {
+                        if (result.isSuccess()) {
+                            final T value = result.getValue();
+                            subscriber.onNext(value);
+                            if (stopCriteria.apply(value)) {
+                                subscriber.onCompleted();
+                            } else {
+                                recursiveChain(subscriber, stopCriteria);
+                            }
+                        } else {
+                            subscriber.onError(result.getError());
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
      * translate a list of eager futures into a hot Observable stream
      * the results of the futures will be stored in the stream for any future subscriber.
      *
