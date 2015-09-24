@@ -82,9 +82,9 @@
       <artifactId>guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.netflix.rxjava</groupId>
-      <artifactId>rxjava-core</artifactId>
-      <version>0.19.4</version>
+      <groupId>io.reactivex</groupId>
+      <artifactId>rxjava</artifactId>
+      <version>1.0.14</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
