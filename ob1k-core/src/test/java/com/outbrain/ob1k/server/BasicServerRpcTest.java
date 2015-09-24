@@ -15,7 +15,7 @@ import com.outbrain.ob1k.server.services.RequestsTestService;
 import com.outbrain.ob1k.server.services.RequestsTestServiceImpl;
 import com.outbrain.ob1k.server.services.SimpleTestService;
 import com.outbrain.ob1k.server.services.SimpleTestServiceImpl;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;

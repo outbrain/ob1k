@@ -1,7 +1,5 @@
 package com.outbrain.ob1k;
 
-import io.netty.handler.codec.http.Cookie;
-
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.List;

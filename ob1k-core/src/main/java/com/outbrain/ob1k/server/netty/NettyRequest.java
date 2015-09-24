@@ -1,8 +1,6 @@
 package com.outbrain.ob1k.server.netty;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;

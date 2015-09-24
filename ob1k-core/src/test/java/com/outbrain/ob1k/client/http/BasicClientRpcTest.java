@@ -25,7 +25,7 @@ import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.server.build.*;
 import com.outbrain.ob1k.server.filters.CachingFilter;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
