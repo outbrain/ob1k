@@ -92,7 +92,8 @@ public class NettyServer implements Server {
       channel = b.bind(port).sync().channel();
       addShutdownhook();
       queueObserver.setServerChannel(channel);
-      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
+      // TEMP disable till I get an answer to https://groups.google.com/d/topic/netty/uY4n1Wjmpvs/discussion
+//      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
 
       final InetSocketAddress address = (InetSocketAddress) channel.localAddress();
       onStarted();
