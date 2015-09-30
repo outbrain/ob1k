@@ -347,7 +347,7 @@ public class NingRequestBuilder implements RequestBuilder {
       @Override
       public Observable<T> call(final TypedResponse<T> typedResponse) {
         try {
-          return Observable.from(typedResponse.getTypedBody());
+          return Observable.just(typedResponse.getTypedBody());
         } catch (final IOException e) {
           return Observable.error(e);
         }

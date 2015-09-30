@@ -1,9 +1,8 @@
 package com.outbrain.ob1k.concurrent;
 
-import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.outbrain.ob1k.concurrent.handlers.*;
 import com.outbrain.ob1k.concurrent.lazy.LazyComposableFuture;
 import junit.framework.Assert;
 import org.junit.Test;
@@ -374,5 +373,43 @@ public class LazyComposableFutureTest {
     }
 
     scheduler.shutdown();
+  }
+
+  @Test
+  public void testColdRecursiveStream() {
+
+    final AtomicInteger counter = new AtomicInteger(0);
+    final int repeats = 5;
+
+    final ComposableFuture<String> lazyString = LazyComposableFuture.apply(new Supplier<String>() {
+      @Override
+      public String get() {
+        counter.incrementAndGet();
+        return "stateless lazy evaluated";
+      }
+    });
+
+    final Observable<String> stringObservable = ComposableFutures.toColdObservable(new RecursiveFutureProvider<String>() {
+      @Override
+      public ComposableFuture<String> provide() {
+        return lazyString;
+      }
+
+      @Override
+      public Predicate<String> createStopCriteria() {
+        return new Predicate<String>() {
+          private volatile int i;
+          @Override
+          public boolean apply(final String s) {
+            return ++i >= repeats;
+          }
+        };
+      }
+    });
+
+    stringObservable.toBlocking().first();
+    stringObservable.toBlocking().first();
+
+    Assert.assertTrue("counter of evaluations should be 10", counter.get() == repeats * 2);
   }
 }
