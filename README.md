@@ -14,6 +14,7 @@ you to easily compose and combine asynchonous operations.
 Ob1k project consists of the following sub libraries:
  - **ob1k-concurrent**        - Introduces composable futures, an alternative implementation of futures in Java.
  - **ob1k-core**              - RPC framework client and server infrastructure.
+ - **ob1k-http**              - Ob1k's asynchronous http client
  - **ob1k-db**                - A composable futures based asynchronous MySQL client.
  - **ob1k-cache**             - A composable futures based asynchronous [Memcached client](https://code.google.com/p/spymemcached/), and guava cache wrapper.
  - **ob1k-cql**               - A composable futures based asynchronous Cassandra client.
