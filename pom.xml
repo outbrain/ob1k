@@ -61,6 +61,7 @@
     <module>ob1k-example</module>
     <module>ob1k-security</module>
     <module>ob1k-consul</module>
+    <module>ob1k-http</module>
   </modules>
 
   <properties>
@@ -195,6 +196,18 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>ob1k-cache</artifactId>
         <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ob1k-http</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.msgpack</groupId>
+        <artifactId>msgpack</artifactId>
+        <version>0.6.7</version>
       </dependency>
 
       <dependency>
