@@ -94,7 +94,7 @@ final ComposableFuture<String> helloWorld = helloService.helloWorld();
 System.out.println(helloWorld.get());
 ```
 
-And thats it :) 
+And that's it :)
 
 
 ##Examples
@@ -103,3 +103,6 @@ More examples can be found here
 
 ##Links
 [Ob1k Presentation Slides](http://www.slideshare.net/eranharel/ob1k-presentation-at-javail)
+
+## License
+Ob1k is released under version 2.0 of the [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
