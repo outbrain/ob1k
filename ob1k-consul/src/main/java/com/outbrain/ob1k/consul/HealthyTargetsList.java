@@ -1,9 +1,13 @@
 package com.outbrain.ob1k.consul;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.consul.filter.AllTargetsPredicate;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.Gauge;
@@ -13,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,6 +40,7 @@ public class HealthyTargetsList {
 
   private final String module;
   private final String envTag;
+  private final Predicate<HealthInfoInstance> targetsPredicate;
 
   private final ConsulHealth health;
 
@@ -51,10 +55,11 @@ public class HealthyTargetsList {
     }
   };
 
-  public HealthyTargetsList(final ConsulHealth health, final String module, final String envTag, final MetricFactory metricFactory) {
+  public HealthyTargetsList(final ConsulHealth health, final String module, final String envTag, final Predicate<HealthInfoInstance> targetsPredicate, final MetricFactory metricFactory) {
     this.health = Preconditions.checkNotNull(health, "health must not be null");
     this.module = Preconditions.checkNotNull(module, "module must not be null");
     this.envTag = Preconditions.checkNotNull(envTag, "envTag must not be null");
+    this.targetsPredicate = (targetsPredicate == null ? AllTargetsPredicate.INSTANCE : targetsPredicate);
 
     Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
     final String component = getClass().getSimpleName();
@@ -79,7 +84,10 @@ public class HealthyTargetsList {
   }
 
   private void setTargets(final List<HealthInfoInstance> newTargets){
-    this.healthyTargets = Collections.unmodifiableList(newTargets);
+    final List<HealthInfoInstance> filteredTargets = ImmutableList.copyOf(Iterables.filter(newTargets, targetsPredicate));
+    this.healthyTargets = filteredTargets;
+
+    log.debug("{} target(s) were filtered out", newTargets.size() - filteredTargets.size());
     notifyListeners();
   }
 
