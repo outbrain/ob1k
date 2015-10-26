@@ -4,9 +4,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.consul.filter.AllTargetsPredicate;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.swinfra.metrics.api.Counter;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -35,7 +38,13 @@ public class HealthyTargetsList {
 
   private static final Logger log = LoggerFactory.getLogger(HealthyTargetsList.class);
 
-  private volatile List<HealthInfoInstance> healthyTargets;
+  /*
+   * NOTE: an assumption is being made here:
+   * The targets are always initialized with the last successful value.
+   * Errors are pushed to the logs and counters, and not propagated to the clients.
+   * This is to allow making this class lazy, and allow smoother startups where needed.
+   */
+  private volatile ComposableFuture<List<HealthInfoInstance>> healthyTargetsFuture = ComposableFutures.fromValue(Collections.<HealthInfoInstance>emptyList());
   private final List<TargetsChangedListener> listeners = new CopyOnWriteArrayList<>();
 
   private final String module;
@@ -55,6 +64,8 @@ public class HealthyTargetsList {
     }
   };
 
+  private final ComposablePromise<?> initializationFuture = ComposableFutures.newPromise(false);
+
   public HealthyTargetsList(final ConsulHealth health, final String module, final String envTag, final Predicate<HealthInfoInstance> targetsPredicate, final MetricFactory metricFactory) {
     this.health = Preconditions.checkNotNull(health, "health must not be null");
     this.module = Preconditions.checkNotNull(module, "module must not be null");
@@ -69,46 +80,79 @@ public class HealthyTargetsList {
     metricFactory.registerGauge(component, "targetCount", new Gauge<Integer>() {
       @Override
       public Integer getValue() {
-        return healthyTargets == null ? 0 : healthyTargets.size();
+        return getHealthyInstancesCount();
       }
     });
 
-    setTargets(initTargets());
+    initTargetsAsync();
     pollForTargetsUpdates(0);
   }
 
-  private void notifyListeners() {
+  /**
+   * @return a future that can be waited for (or being notified on) to ensure initialization completed.
+   */
+  public ComposableFuture<?> getInitializationFuture() {
+    return initializationFuture.future();
+  }
+
+  private Integer getHealthyInstancesCount() {
+    try {
+      return healthyTargetsFuture.get().size();
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
+    } catch (final ExecutionException e) {
+      return 0;
+    }
+  }
+
+  private void notifyListeners(final List<HealthInfoInstance> newTargets) {
     for (final TargetsChangedListener listener : listeners) {
-      listener.onTargetsChanged(healthyTargets);
+      listener.onTargetsChanged(newTargets);
     }
   }
 
   private void setTargets(final List<HealthInfoInstance> newTargets){
     final List<HealthInfoInstance> filteredTargets = ImmutableList.copyOf(Iterables.filter(newTargets, targetsPredicate));
-    this.healthyTargets = filteredTargets;
+    this.healthyTargetsFuture = ComposableFutures.fromValue(filteredTargets);
 
     log.debug("{} target(s) were filtered out", newTargets.size() - filteredTargets.size());
-    notifyListeners();
+    notifyListeners(filteredTargets);
   }
 
-  public List<HealthInfoInstance> getHealthyInstances() {
-    return healthyTargets;
+  /**
+   * @return a future list of healthy targets using the provided filter. Never <code>null</code>.
+   */
+  public ComposableFuture<List<HealthInfoInstance>> getHealthyInstances() {
+    return healthyTargetsFuture;
   }
 
   public void addListener(final TargetsChangedListener listener) {
     listeners.add(listener);
-    if(null != healthyTargets) {
-      listener.onTargetsChanged(healthyTargets);
-    }
+    healthyTargetsFuture.consume(new Consumer<List<HealthInfoInstance>>() {
+      @Override
+      public void consume(final Try<List<HealthInfoInstance>> result) {
+        if (result.isSuccess()) {
+          listener.onTargetsChanged(result.getValue());
+        }
+      }
+    });
   }
 
-  private List<HealthInfoInstance> initTargets() {
-    try {
-      return health.filterDcLocalHealthyInstances(module, envTag).get();
-    } catch (InterruptedException | ExecutionException e) {
-      targetFetchErrors.inc();
-      throw new RuntimeException("Failed to fetch initial targets", e);
-    }
+  private void initTargetsAsync() {
+    health.filterDcLocalHealthyInstances(module, envTag).consume(new Consumer<List<HealthInfoInstance>>() {
+      @Override
+      public void consume(final Try<List<HealthInfoInstance>> initialTargetsTry) {
+        if (initialTargetsTry.isSuccess()) {
+          log.debug("{} initial healthy targets fetched", initialTargetsTry.getValue().size());
+          setTargets(initialTargetsTry.getValue());
+          initializationFuture.set(null);
+        } else {
+          handleTargetsFetchFailure(initialTargetsTry.getError(), false);
+          initializationFuture.setException(initialTargetsTry.getError());
+        }
+      }
+    });
   }
 
 
@@ -127,11 +171,11 @@ public class HealthyTargetsList {
             setTargets(newTargets);
             nextIndex = extractIndex(aTry);
           } catch (final IOException e) {
-            handleTargetsFetchFailure(e);
+            handleTargetsFetchFailure(e, true);
             return;
           }
         } else if (!(aTry.getError() instanceof TimeoutException)) {
-          handleTargetsFetchFailure(aTry.getError());
+          handleTargetsFetchFailure(aTry.getError(), true);
           return;
         }
 
@@ -140,10 +184,12 @@ public class HealthyTargetsList {
     });
   }
 
-  private void handleTargetsFetchFailure(final Throwable t) {
+  private void handleTargetsFetchFailure(final Throwable t, final boolean schedulRetry) {
     log.error("Failed to fetch new targets from health API: {}", t.toString());
     targetFetchErrors.inc();
-    ComposableFutures.schedule(retryPoll, 2, TimeUnit.SECONDS);
+    if (schedulRetry) {
+      ComposableFutures.schedule(retryPoll, 2, TimeUnit.SECONDS);
+    }
   }
 
   private Long extractIndex(final Try<TypedResponse<List<HealthInfoInstance>>> aTry) {
