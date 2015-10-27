@@ -73,7 +73,7 @@ public class HealthyTargetsList {
     this.targetsPredicate = (targetsPredicate == null ? AllTargetsPredicate.INSTANCE : targetsPredicate);
 
     Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
-    final String component = getClass().getSimpleName();
+    final String component = getClass().getSimpleName() + "." + module;
 
     targetFetchTime = metricFactory.createTimer(component, "targetFetchTime");
     targetFetchErrors = metricFactory.createCounter(component, "targetFetchErrors");
