@@ -2,11 +2,12 @@ package com.outbrain.ob1k.http;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+import com.ning.http.util.Base64;
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 import com.squareup.okhttp.mockwebserver.RecordedRequest;
+import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -15,8 +16,6 @@ import rx.functions.Action1;
 import rx.observables.BlockingObservable;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -219,5 +218,28 @@ public class ClientBasicFlowsTest {
     responseObservable.toBlocking().first();
 
     fail("should have throw RuntimeException - response size limit is bigger than 1");
+  }
+
+  @Test
+  public void testBasicAuth() throws Exception {
+
+    dispatcher.enqueue(new Function<RecordedRequest, MockResponse>() {
+      @Override
+      public MockResponse apply(final RecordedRequest input) {
+        final String authHeader = input.getHeader(HttpHeaders.Names.AUTHORIZATION).replace("Basic ", "");
+        final String credentials = new String(Base64.decode(authHeader));
+        return new MockResponse().setBody(credentials);
+      }
+    });
+
+    final String basicUsername = "moshe";
+    final String basicPassword = "junkhead";
+
+    final HttpClient httpClient = HttpClient.createDefault();
+    final String url = server.url("/basicAuth").toString();
+    final Response response = httpClient.get(url).withBasicAuth(basicUsername, basicPassword).asResponse().get();
+
+    final String basicAuthHeader = basicUsername + ":" + basicPassword;
+    assertEquals("response should be '" + basicAuthHeader + "'", basicAuthHeader, response.getResponseBody());
   }
 }

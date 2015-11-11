@@ -7,6 +7,7 @@ import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.HttpResponseBodyPart;
 import com.ning.http.client.ListenableFuture;
+import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -153,6 +154,20 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder setBodyEncoding(final String charset) {
 
     this.charset = charset;
+    return this;
+  }
+
+  @Override
+  public RequestBuilder withBasicAuth(final String username, final String password) {
+
+    final Realm realm = new Realm.RealmBuilder().
+      setPrincipal(username).
+      setPassword(password).
+      setUsePreemptiveAuth(true).
+      setScheme(Realm.AuthScheme.BASIC).
+      build();
+
+    ningRequestBuilder.setRealm(realm);
     return this;
   }
 

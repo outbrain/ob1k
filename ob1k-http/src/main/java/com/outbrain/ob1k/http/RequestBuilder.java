@@ -54,6 +54,8 @@ public interface RequestBuilder {
 
   RequestBuilder setBodyEncoding(String charset);
 
+  RequestBuilder withBasicAuth(String username, String password);
+
   RequestBuilder addQueryParam(String name, String value);
 
   RequestBuilder addQueryParams(Map<String, String> params);
