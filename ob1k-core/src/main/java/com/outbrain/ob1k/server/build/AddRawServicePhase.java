@@ -19,7 +19,6 @@ public interface AddRawServicePhase {
   AddRawServicePhase defineService(final Service service, final String path, final boolean bindPrefix, ServiceBindingProvider provider);
 
   AddRawServicePhase addServices(RawServiceProvider provider);
+  AddRawServicePhase addServices(RegistryServiceProvider provider, String path, ServiceFilter... filters);
 
-  AddRawServicePhase addEndpointsMappingService(final String path);
-  AddRawServicePhase addEndpointsMappingService(final String path, final AsyncFilter filter);
 }

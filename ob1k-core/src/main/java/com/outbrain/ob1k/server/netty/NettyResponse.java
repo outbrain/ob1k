@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.netty;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
@@ -47,5 +48,15 @@ public class NettyResponse implements Response {
     }
 
     return response;
+  }
+
+  @Override
+  public HttpResponseStatus getStatus() {
+    return status;
+  }
+
+  @Override
+  public String getRawContent() {
+    return rawContent.toString(Charset.defaultCharset());
   }
 }

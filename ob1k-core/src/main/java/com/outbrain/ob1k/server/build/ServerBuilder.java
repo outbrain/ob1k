@@ -12,7 +12,6 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
-import com.outbrain.ob1k.server.services.EndpointMappingService;
 import com.outbrain.ob1k.server.util.ObservableBlockingQueue;
 import com.outbrain.ob1k.server.util.SyncRequestQueueObserver;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -29,7 +28,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * User: aronen
@@ -201,16 +204,6 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   }
 
   @Override
-  public AddRawServicePhase addEndpointsMappingService(final String path) {
-    return addEndpointsMappingService(path, null);
-  }
-
-  @Override
-  public AddRawServicePhase addEndpointsMappingService(final String path, final AsyncFilter filter) {
-    return addService(new EndpointMappingService(registry), path, filter);
-  }
-
-  @Override
   public ChooseServiceCreationTypePhase withServicesFrom(final BeanContext ctx, final ContextBasedServiceProvider provider) {
     this.ctx = ctx;
     provider.addServices(this, ctx);
@@ -257,6 +250,13 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
   @Override
   public AddRawServicePhase addServices(final RawServiceProvider provider) {
     provider.addServices(this);
+    return this;
+  }
+
+
+  @Override
+  public AddRawServicePhase addServices(final RegistryServiceProvider provider, final String path, final ServiceFilter... filters) {
+    provider.addServices(this, registry, path, filters);
     return this;
   }
 

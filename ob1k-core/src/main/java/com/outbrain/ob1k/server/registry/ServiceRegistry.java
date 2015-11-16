@@ -1,27 +1,17 @@
 package com.outbrain.ob1k.server.registry;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.concurrent.Executor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-
 import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
+import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.Service;
+import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.server.MethodParamNamesExtractor;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.StreamServerEndpoint;
@@ -29,6 +19,16 @@ import com.outbrain.ob1k.server.registry.endpoints.SyncServerEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.concurrent.Executor;
 
 /**
  * User: aronen
@@ -49,6 +49,10 @@ public class ServiceRegistry {
 
   public void setContextPath(final String contextPath) {
     this.contextPath = contextPath;
+  }
+
+  public String getContextPath() {
+    return contextPath;
   }
 
   public AbstractServerEndpoint findEndpoint(final String path, final HttpRequestMethodType requestMethodType, final Map<String, String> pathParams) {
@@ -272,8 +276,7 @@ public class ServiceRegistry {
     final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> result = new HashMap<>();
 
     for (final Method m : methods) {
-      final int modifiers = m.getModifiers();
-      if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)) {
+      if (isEndpoint(m)) {
         if (isAsyncMethod(m)) {
           result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, asyncFilters, HttpRequestMethodType.ANY)));
         } else if (isStreamingMethod(m)) {
@@ -294,6 +297,12 @@ public class ServiceRegistry {
 
     return result;
   }
+
+  private boolean isEndpoint(Method method) {
+    int modifiers = method.getModifiers();
+    return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
+  }
+
 
   private Map<HttpRequestMethodType, EndpointDescriptor> singleEndpointDescToMap(final EndpointDescriptor endpointDescriptor) {
     final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptorMap = Maps.newHashMap();
