@@ -30,12 +30,14 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.Executor;
 
+import static java.util.Collections.unmodifiableSortedMap;
+
 /**
  * User: aronen
  * Date: 6/23/13
  * Time: 11:25 AM
  */
-public class ServiceRegistry {
+public class ServiceRegistry implements ServiceRegistryView {
   private static final Logger logger = LoggerFactory.getLogger(ServiceRegistry.class);
 
   private final PathTrie<Map<HttpRequestMethodType, AbstractServerEndpoint>> endpoints;
@@ -311,7 +313,7 @@ public class ServiceRegistry {
   }
 
   public SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> getRegisteredEndpoints() {
-    return endpoints.getPathToValueMapping();
+    return unmodifiableSortedMap(endpoints.getPathToValueMapping());
   }
 
   public void logRegisteredEndpoints() {

@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.server.services;
 
 import com.outbrain.ob1k.server.build.AddRawServicePhase;
-import com.outbrain.ob1k.server.registry.ServiceRegistry;
+import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -20,7 +20,7 @@ public class EndpointMappingServiceProviderTest {
   private AddRawServicePhase builder;
 
   @Mock
-  private ServiceRegistry registry;
+  private ServiceRegistryView registry;
 
   @Test
   public void shouldAddEndpointMappingServiceToBuilder() {

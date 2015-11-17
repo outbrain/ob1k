@@ -9,7 +9,7 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
-import com.outbrain.ob1k.server.registry.ServiceRegistry;
+import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.annotations.Api;
@@ -34,9 +34,9 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 
 public class SwaggerService implements Service {
 
-  private final ServiceRegistry serviceRegistry;
+  private final ServiceRegistryView serviceRegistry;
 
-  public SwaggerService(ServiceRegistry serviceRegistry) {
+  public SwaggerService(ServiceRegistryView serviceRegistry) {
     this.serviceRegistry = serviceRegistry;
   }
 

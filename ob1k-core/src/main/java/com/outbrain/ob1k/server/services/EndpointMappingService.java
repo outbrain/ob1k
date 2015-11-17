@@ -4,10 +4,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
-import com.outbrain.ob1k.server.registry.ServiceRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,9 +18,9 @@ import java.util.SortedMap;
  * @author Eran Harel
  */
 public class EndpointMappingService implements IEndpointMappingService {
-  private final ServiceRegistry registry;
+  private final ServiceRegistryView registry;
 
-  public EndpointMappingService(final ServiceRegistry registry) {
+  public EndpointMappingService(final ServiceRegistryView registry) {
     this.registry = registry;
   }
 
