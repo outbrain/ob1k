@@ -58,7 +58,7 @@ public class SwaggerServiceTest {
 
   @Test
   public void shouldReturnEndpointsThatAreUnderPath() throws Exception {
-    String expected = createData();
+    final String expected = createData();
     // when
     final Response response = service.apiDocs(request).get();
     //then
@@ -68,8 +68,8 @@ public class SwaggerServiceTest {
 
 
   private String createData() throws Exception {
-    SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap = new TreeMap<>();
-    Swagger expected = new Swagger();
+    final SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap = new TreeMap<>();
+    final Swagger expected = new Swagger();
 
     expected.host(HOST);
     when(request.getHeader("Host")).thenReturn(HOST);
@@ -101,22 +101,22 @@ public class SwaggerServiceTest {
                           final Swagger expected,
                           final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
                           final String description, final String... additional) throws Exception {
-    for (Method method : serviceClass.getDeclaredMethods()) {
+    for (final Method method : serviceClass.getDeclaredMethods()) {
       final String path = CONTEXT_PATH + servicePath + "/" + method.getName();
       int i=0;
-      String[] parameterNames = new String[method.getParameterCount()];
-      for (Parameter parameter : method.getParameters()) {
+      final String[] parameterNames = new String[method.getParameterCount()];
+      for (final Parameter parameter : method.getParameters()) {
         parameterNames[i++] = parameter.getName();
       }
       if (expected != null) {
         expected.tag(new Tag().name(serviceClass.getSimpleName()).description(description));
-        String methodName = method.getDeclaringClass().getCanonicalName() + "." + method.getName()
+        final String methodName = method.getDeclaringClass().getCanonicalName() + "." + method.getName()
                 + "(" + Joiner.on(",").join(parameterNames) + ")";
         final Operation operation = new Operation().tag(serviceClass.getSimpleName()).summary(methodName).
                 operationId(methodName + "UsingGET");
         expected.path(path, new Path().get(operation));
         i=0;
-        for (Parameter parameter : method.getParameters()) {
+        for (final Parameter parameter : method.getParameters()) {
           final String name = (additional.length > i) ? additional[i++] : parameter.getName();
           final QueryParameter param = new QueryParameter().name(name).
                   type("undefined");

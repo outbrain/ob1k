@@ -26,39 +26,36 @@ import java.io.StringWriter;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
-import static com.outbrain.ob1k.HttpRequestMethodType.DELETE;
-import static com.outbrain.ob1k.HttpRequestMethodType.GET;
-import static com.outbrain.ob1k.HttpRequestMethodType.POST;
-import static com.outbrain.ob1k.HttpRequestMethodType.PUT;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 
 public class SwaggerService implements Service {
 
   private final ServiceRegistryView serviceRegistry;
 
-  public SwaggerService(ServiceRegistryView serviceRegistry) {
+  public SwaggerService(final ServiceRegistryView serviceRegistry) {
     this.serviceRegistry = serviceRegistry;
   }
 
-  public ComposableFuture<Response> apiDocs(Request request) {
+  public ComposableFuture<Response> apiDocs(final Request request) {
     return ComposableFutures.fromValue(buildJsonResponse(buildSwagger(request)));
   }
 
-  private Swagger buildSwagger(Request request) {
-    Swagger swagger = new Swagger();
+  private Swagger buildSwagger(final Request request) {
+    final Swagger swagger = new Swagger();
     swagger.host(request.getHeader("Host"));
     swagger.info(buildInfo());
-    for (Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> entry :
+    for (final Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> entry :
             serviceRegistry.getRegisteredEndpoints().entrySet()) {
       final String path = entry.getKey();
-      for (Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : entry.getValue().entrySet()) {
+      for (final Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : entry.getValue().entrySet()) {
         final HttpRequestMethodType methodType = endpointEntry.getKey();
         final AbstractServerEndpoint endpoint = endpointEntry.getValue();
         if (!ignoreEndpoint(endpoint)) {
-          Tag tag = buildTag(endpoint.service.getClass());
+          final Tag tag = buildTag(endpoint.service.getClass());
           swagger.addTag(tag);
           switch (methodType) {
             case GET:
+            case ANY:
               swagger.path(path, new Path().get(buildOperation(endpoint, tag, methodType)));
               break;
             case POST:
@@ -70,12 +67,6 @@ public class SwaggerService implements Service {
             case DELETE:
               swagger.path(path, new Path().delete(buildOperation(endpoint, tag, methodType)));
               break;
-            case ANY:
-              swagger.path(path, new Path().get(buildOperation(endpoint, tag, GET)).
-                      post(buildOperation(endpoint, tag, POST)).
-                      put(buildOperation(endpoint, tag, PUT)).
-                      delete(buildOperation(endpoint, tag, DELETE)));
-              break;
           }
         }
       }
@@ -83,8 +74,8 @@ public class SwaggerService implements Service {
     return swagger;
   }
 
-  private Tag buildTag(Class<? extends Service> serviceClass) {
-    Api annotation = serviceClass.getAnnotation(Api.class);
+  private Tag buildTag(final Class<? extends Service> serviceClass) {
+    final Api annotation = serviceClass.getAnnotation(Api.class);
     final String name = (annotation != null) ? annotation.value() : serviceClass.getSimpleName();
     final String description = (annotation != null) ? annotation.description() : serviceClass.getCanonicalName();
     return new Tag().name(name).description(description);
@@ -99,12 +90,12 @@ public class SwaggerService implements Service {
     return new Info().description("API Documentation").version("1.0").title(buildTitle());
   }
 
-  private Operation buildOperation(AbstractServerEndpoint endpoint, Tag tag, HttpRequestMethodType methodType) {
+  private Operation buildOperation(final AbstractServerEndpoint endpoint, final Tag tag, final HttpRequestMethodType methodType) {
     final Operation operation = new Operation().summary(endpoint.getTargetAsString()).tag(tag.getName()).
             operationId(endpoint.getTargetAsString() + "Using" + methodType.name());
     int i = 0;
-    for (Parameter parameter : endpoint.method.getParameters()) {
-      ApiParam annotation = parameter.getAnnotation(ApiParam.class);
+    for (final Parameter parameter : endpoint.method.getParameters()) {
+      final ApiParam annotation = parameter.getAnnotation(ApiParam.class);
       final String type = getSwaggerDataType(parameter);
       final String paramName = (annotation != null) ? annotation.name() : endpoint.paramNames[i++];
       final QueryParameter param = new QueryParameter().type(type).name(paramName);
@@ -116,21 +107,21 @@ public class SwaggerService implements Service {
     return operation;
   }
 
-  private String getSwaggerDataType(Parameter parameter) {
+  private String getSwaggerDataType(final Parameter parameter) {
     // TODO something better
     return "undefined";
   }
 
-  private boolean ignoreEndpoint(AbstractServerEndpoint endpoint) {
+  private boolean ignoreEndpoint(final AbstractServerEndpoint endpoint) {
     return endpoint.method.getName().equals("handle") ||
             (endpoint.method.getDeclaringClass().getCanonicalName().startsWith("com.outbrain.ob1k") &&
               !endpoint.method.getDeclaringClass().getSimpleName().equals("TestService"));
   }
 
-  private Response buildJsonResponse(Object value) {
+  private Response buildJsonResponse(final Object value) {
     try {
       final StringWriter buffer = new StringWriter();
-      ObjectMapper mapper = new ObjectMapper();
+      final ObjectMapper mapper = new ObjectMapper();
       mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
       mapper.writeValue(buffer, value);
       return ResponseBuilder.ok()
@@ -138,7 +129,7 @@ public class SwaggerService implements Service {
               .addHeader(CONTENT_TYPE, "application/json; charset=UTF-8")
               .build();
 
-    } catch (IOException e) {
+    } catch (final IOException e) {
       return ResponseBuilder.fromStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR).
               withContent(e.getMessage()).build();
     }
