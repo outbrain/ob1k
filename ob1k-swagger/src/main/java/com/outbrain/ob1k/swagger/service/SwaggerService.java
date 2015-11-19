@@ -117,8 +117,8 @@ public class SwaggerService implements Service {
   }
 
   private boolean ignoreEndpoint(final AbstractServerEndpoint endpoint) {
-    return endpoint.method.getDeclaringClass().getSimpleName().equals("SwaggerService");
-//    return endpoint.method.getName().equals("handle") ||
+    return endpoint.method.getDeclaringClass().getSimpleName().equals("SwaggerService") ||
+            endpoint.method.getDeclaringClass().getCanonicalName().startsWith("com.outbrain.ob1k.server");
   }
 
   private Response buildJsonResponse(final Object value) {
