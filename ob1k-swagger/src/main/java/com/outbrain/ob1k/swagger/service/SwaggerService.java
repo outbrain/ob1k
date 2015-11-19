@@ -46,9 +46,10 @@ public class SwaggerService implements Service {
     swagger.info(buildInfo());
     for (final Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> entry :
             serviceRegistry.getRegisteredEndpoints().entrySet()) {
-      final String path = entry.getKey();
+      final Path path = new Path();
       for (final Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : entry.getValue().entrySet()) {
         final HttpRequestMethodType methodType = endpointEntry.getKey();
+        final String key = entry.getKey();
         final AbstractServerEndpoint endpoint = endpointEntry.getValue();
         if (!ignoreEndpoint(endpoint)) {
           final Tag tag = buildTag(endpoint.service.getClass());
@@ -56,18 +57,21 @@ public class SwaggerService implements Service {
           switch (methodType) {
             case GET:
             case ANY:
-              swagger.path(path, new Path().get(buildOperation(endpoint, tag, methodType)));
+              path.get(buildOperation(endpoint, tag, methodType));
               break;
             case POST:
-              swagger.path(path, new Path().post(buildOperation(endpoint, tag, methodType)));
+              path.post(buildOperation(endpoint, tag, methodType));
               break;
             case PUT:
-              swagger.path(path, new Path().put(buildOperation(endpoint, tag, methodType)));
+              path.put(buildOperation(endpoint, tag, methodType));
               break;
             case DELETE:
-              swagger.path(path, new Path().delete(buildOperation(endpoint, tag, methodType)));
+              path.delete(buildOperation(endpoint, tag, methodType));
               break;
+            default:
+              throw new UnsupportedOperationException("Unsupported method type " + methodType);
           }
+          swagger.path(key, path);
         }
       }
     }
@@ -113,9 +117,8 @@ public class SwaggerService implements Service {
   }
 
   private boolean ignoreEndpoint(final AbstractServerEndpoint endpoint) {
-    return endpoint.method.getName().equals("handle") ||
-            (endpoint.method.getDeclaringClass().getCanonicalName().startsWith("com.outbrain.ob1k") &&
-              !endpoint.method.getDeclaringClass().getSimpleName().equals("TestService"));
+    return endpoint.method.getDeclaringClass().getSimpleName().equals("SwaggerService");
+//    return endpoint.method.getName().equals("handle") ||
   }
 
   private Response buildJsonResponse(final Object value) {

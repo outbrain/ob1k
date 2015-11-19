@@ -1,4 +1,4 @@
-package com.outbrain.service;
+package com.outbrain.ob1k.swagger.service;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.concurrent.ComposableFuture;

@@ -11,8 +11,6 @@ import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
-import com.outbrain.service.AnnotatedDummyService;
-import com.outbrain.service.DummyService;
 import io.swagger.models.Info;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
@@ -28,12 +26,14 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static com.outbrain.ob1k.HttpRequestMethodType.ANY;
 import static com.outbrain.ob1k.HttpRequestMethodType.GET;
+import static com.outbrain.ob1k.HttpRequestMethodType.POST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.mockito.Mockito.when;
 
@@ -76,10 +76,10 @@ public class SwaggerServiceTest {
 
     expected.info(new Info().title(CONTEXT_PATH.substring(1)).description("API Documentation").version("1.0"));
 
-    createData(DummyService.class, "/api", expected, endpointsByPathMap);
-    createData(Ob1kDummyService.class, "/NOTapi", null, endpointsByPathMap);
+    createData(DummyService.class, "/api", expected, endpointsByPathMap, GET);
+    createData(DummyService.class, "/api", expected, endpointsByPathMap, POST);
     createData(AnnotatedDummyService.class, "/apiAnnotated", expected, endpointsByPathMap,
-            "an annotated test service", "millis", "millis since epoch");
+            "an annotated test service", ANY, "millis", "millis since epoch");
 
     when(registry.getRegisteredEndpoints()).thenReturn(endpointsByPathMap);
 
@@ -91,18 +91,19 @@ public class SwaggerServiceTest {
   private void createData(final Class<? extends Service> serviceClass,
                           final String servicePath,
                           final Swagger expected,
-                          final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap) throws Exception {
+                          final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
+                          final HttpRequestMethodType methodType) throws Exception {
     createData(serviceClass, servicePath, expected, endpointsByPathMap,
-            serviceClass.getCanonicalName());
+            serviceClass.getCanonicalName(), methodType);
   }
 
     private void createData(final Class<? extends Service> serviceClass,
-                          final String servicePath,
-                          final Swagger expected,
-                          final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
-                          final String description, final String... additional) throws Exception {
+                            final String servicePath,
+                            final Swagger expected,
+                            final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
+                            final String description, final HttpRequestMethodType methodType, final String... additional) throws Exception {
     for (final Method method : serviceClass.getDeclaredMethods()) {
-      final String path = CONTEXT_PATH + servicePath + "/" + method.getName();
+      final String pathKey = CONTEXT_PATH + servicePath + "/" + method.getName();
       int i=0;
       final String[] parameterNames = new String[method.getParameterCount()];
       for (final Parameter parameter : method.getParameters()) {
@@ -113,8 +114,21 @@ public class SwaggerServiceTest {
         final String methodName = method.getDeclaringClass().getCanonicalName() + "." + method.getName()
                 + "(" + Joiner.on(",").join(parameterNames) + ")";
         final Operation operation = new Operation().tag(serviceClass.getSimpleName()).summary(methodName).
-                operationId(methodName + "UsingGET");
-        expected.path(path, new Path().get(operation));
+                operationId(methodName + "Using"+methodType);
+        Path path = expected.getPath(pathKey);
+        if (path == null) {
+          path = new Path();
+        }
+        switch (methodType) {
+          case ANY:
+          case GET:
+            path = path.get(operation);
+            break;
+          case POST:
+            path  = path.post(operation);
+            break;
+        }
+        expected.path(pathKey, path);
         i=0;
         for (final Parameter parameter : method.getParameters()) {
           final String name = (additional.length > i) ? additional[i++] : parameter.getName();
@@ -126,13 +140,14 @@ public class SwaggerServiceTest {
           operation.parameter(param);
         }
       }
-      endpointsByPathMap.put(path, Collections.<HttpRequestMethodType, AbstractServerEndpoint>singletonMap(
-              GET,
+      endpointsByPathMap.putIfAbsent(pathKey, new HashMap<HttpRequestMethodType, AbstractServerEndpoint>());
+      final Map<HttpRequestMethodType, AbstractServerEndpoint> endpointMap = endpointsByPathMap.get(pathKey);
+      endpointMap.put(methodType,
               new AsyncServerEndpoint(serviceClass.newInstance(),
                       new AsyncFilter[0],
                       method,
-                      GET,
-                      parameterNames)));
+                      methodType,
+                      parameterNames));
     }
   }
 

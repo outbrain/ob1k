@@ -206,6 +206,12 @@
       </dependency>
 
       <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ob1k-swagger</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.msgpack</groupId>
         <artifactId>msgpack</artifactId>
         <version>0.6.7</version>
