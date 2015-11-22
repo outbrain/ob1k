@@ -1,7 +1,5 @@
 package com.outbrain.ob1k;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-
 /**
  * User: aronen
  * Date: 6/30/13
@@ -9,7 +7,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  */
 public interface Response {
 
-  HttpResponseStatus getStatus();
+  int getStatus();
 
   String getRawContent();
 }

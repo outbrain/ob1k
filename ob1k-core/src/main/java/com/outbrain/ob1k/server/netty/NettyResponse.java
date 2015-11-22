@@ -1,18 +1,17 @@
 package com.outbrain.ob1k.server.netty;
 
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
-import java.io.IOException;
-import java.nio.charset.Charset;
-
 import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
+
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
 /**
@@ -51,8 +50,8 @@ public class NettyResponse implements Response {
   }
 
   @Override
-  public HttpResponseStatus getStatus() {
-    return status;
+  public int getStatus() {
+    return status.code();
   }
 
   @Override

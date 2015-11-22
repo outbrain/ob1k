@@ -34,7 +34,6 @@ import java.util.TreeMap;
 import static com.outbrain.ob1k.HttpRequestMethodType.ANY;
 import static com.outbrain.ob1k.HttpRequestMethodType.GET;
 import static com.outbrain.ob1k.HttpRequestMethodType.POST;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -42,6 +41,7 @@ public class SwaggerServiceTest {
 
   public static final String CONTEXT_PATH = "/Ob1kService";
   public static final String HOST = "myhost:8080";
+  public static final int OK = 200;
 
   @Mock
   private ServiceRegistry registry;
