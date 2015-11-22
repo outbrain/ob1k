@@ -29,6 +29,7 @@ import java.util.Map;
 
 import static com.google.common.collect.Lists.asList;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static java.util.Collections.unmodifiableList;
 
 public class SwaggerService implements Service {
 
@@ -42,6 +43,10 @@ public class SwaggerService implements Service {
 
   public ComposableFuture<Response> apiDocs(final Request request) {
     return ComposableFutures.fromValue(buildJsonResponse(buildSwagger(request)));
+  }
+
+  public List<Class<? extends Service>> getIgnoredServices() {
+    return unmodifiableList(ignoredServices);
   }
 
   private Swagger buildSwagger(final Request request) {
