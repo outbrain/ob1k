@@ -10,7 +10,7 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpointView;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiParam;
@@ -53,15 +53,15 @@ public class SwaggerService implements Service {
     final Swagger swagger = new Swagger();
     swagger.host(request.getHeader("Host"));
     swagger.info(buildInfo());
-    for (final Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> entry :
+    for (final Map.Entry<String, Map<HttpRequestMethodType, ServerEndpointView>> entry :
             serviceRegistry.getRegisteredEndpoints().entrySet()) {
       final Path path = new Path();
-      for (final Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : entry.getValue().entrySet()) {
+      for (final Map.Entry<HttpRequestMethodType, ServerEndpointView> endpointEntry : entry.getValue().entrySet()) {
         final HttpRequestMethodType methodType = endpointEntry.getKey();
         final String key = entry.getKey();
-        final AbstractServerEndpoint endpoint = endpointEntry.getValue();
+        final ServerEndpointView endpoint = endpointEntry.getValue();
         if (!ignoreEndpoint(endpoint)) {
-          final Tag tag = buildTag(endpoint.service.getClass());
+          final Tag tag = buildTag(endpoint.getMethod().getDeclaringClass());
           swagger.addTag(tag);
           switch (methodType) {
             case GET:
@@ -87,7 +87,7 @@ public class SwaggerService implements Service {
     return swagger;
   }
 
-  private Tag buildTag(final Class<? extends Service> serviceClass) {
+  private Tag buildTag(final Class<?> serviceClass) {
     final Api annotation = serviceClass.getAnnotation(Api.class);
     final String name = (annotation != null) ? annotation.value() : serviceClass.getSimpleName();
     final String description = (annotation != null) ? annotation.description() : serviceClass.getCanonicalName();
@@ -103,14 +103,15 @@ public class SwaggerService implements Service {
     return new Info().description("API Documentation").version("1.0").title(buildTitle());
   }
 
-  private Operation buildOperation(final AbstractServerEndpoint endpoint, final Tag tag, final HttpRequestMethodType methodType) {
+  private Operation buildOperation(final ServerEndpointView endpoint, final Tag tag, final HttpRequestMethodType methodType) {
     final Operation operation = new Operation().summary(endpoint.getTargetAsString()).tag(tag.getName()).
             operationId(endpoint.getTargetAsString() + "Using" + methodType.name());
     int i = 0;
-    for (final Parameter parameter : endpoint.method.getParameters()) {
+    final String[] endpointParamNames = endpoint.getParamNames();
+    for (final Parameter parameter : endpoint.getMethod().getParameters()) {
       final ApiParam annotation = parameter.getAnnotation(ApiParam.class);
       final String type = getSwaggerDataType(parameter);
-      final String paramName = (annotation != null) ? annotation.name() : endpoint.paramNames[i++];
+      final String paramName = (annotation != null) ? annotation.name() : endpointParamNames[i++];
       final QueryParameter param = new QueryParameter().type(type).name(paramName);
       if (annotation != null) {
         param.description(annotation.value());
@@ -125,8 +126,8 @@ public class SwaggerService implements Service {
     return "undefined";
   }
 
-  private boolean ignoreEndpoint(final AbstractServerEndpoint endpoint) {
-    final Class<?> serviceClass = endpoint.method.getDeclaringClass();
+  private boolean ignoreEndpoint(final ServerEndpointView endpoint) {
+    final Class<?> serviceClass = endpoint.getMethod().getDeclaringClass();
     return ignoredServices.contains(serviceClass);
   }
 

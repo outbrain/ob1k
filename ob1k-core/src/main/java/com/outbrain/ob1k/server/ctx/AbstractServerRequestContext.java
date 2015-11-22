@@ -1,14 +1,14 @@
 package com.outbrain.ob1k.server.ctx;
 
 import com.outbrain.ob1k.Request;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpoint;
 
 /**
  * User: aronen
  * Date: 7/29/13
  * Time: 2:08 PM
  */
-public abstract class AbstractServerRequestContext<Endpoint extends AbstractServerEndpoint> implements ServerRequestContext {
+public abstract class AbstractServerRequestContext<Endpoint extends ServerEndpoint> implements ServerRequestContext {
   protected final Request request;
   protected final Endpoint endpoint;
   protected final Object[] params;
@@ -42,11 +42,11 @@ public abstract class AbstractServerRequestContext<Endpoint extends AbstractServ
 
   @Override
   public String getServiceMethodName() {
-    return endpoint.method.getName();
+    return endpoint.getMethod().getName();
   }
 
   @Override
   public String getServiceClassName() {
-    return endpoint.service.getClass().getSimpleName();
+    return endpoint.getMethod().getDeclaringClass().getSimpleName();
   }
 }

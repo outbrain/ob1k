@@ -1,16 +1,16 @@
 package com.outbrain.ob1k.server.netty;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpoint;
+
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /**
  * User: aronen
@@ -39,7 +39,7 @@ public class ServiceDispatcher {
       throw new IllegalArgumentException("Unsupported http method type");
     }
 
-    final AbstractServerEndpoint endpoint = registry.findEndpoint(path, methodType, request.getPathParams());
+    final ServerEndpoint endpoint = registry.findEndpoint(path, methodType, request.getPathParams());
     if (endpoint == null) {
       throw new IllegalArgumentException("No matching service/method found for path: " + path);
     }
@@ -47,10 +47,10 @@ public class ServiceDispatcher {
     callMethod(endpoint, request, handler);
   }
 
-  private void callMethod(final AbstractServerEndpoint endpoint, final Request request, final ResponseHandler handler) throws IOException {
+  private void callMethod(final ServerEndpoint endpoint, final Request request, final ResponseHandler handler) throws IOException {
 
     final Object[] params;
-    final Method method = endpoint.method;
+    final Method method = endpoint.getMethod();
     final Class<?>[] parameterTypes = method.getParameterTypes();
 
     if (parameterTypes.length == 0) {
@@ -59,7 +59,7 @@ public class ServiceDispatcher {
       params = new Object[]{ request };
     } else {
       final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(request.getContentType());
-      params = marshaller.unmarshallRequestParams(request, method, endpoint.paramNames);
+      params = marshaller.unmarshallRequestParams(request, method, endpoint.getParamNames());
     }
 
     endpoint.invoke(request, params, handler);

@@ -6,7 +6,7 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpointView;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,13 +25,13 @@ public class EndpointMappingService implements IEndpointMappingService {
   }
 
   public ComposableFuture<SortedMap<String, Map<String, HttpRequestMethodType>>> handle() {
-    final SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> registeredEndpoints = registry.getRegisteredEndpoints();
-    final Function<Map<HttpRequestMethodType, AbstractServerEndpoint>, Map<String, HttpRequestMethodType>> endpointsMap = new Function<Map<HttpRequestMethodType, AbstractServerEndpoint>, Map<String, HttpRequestMethodType>>() {
+    final SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> registeredEndpoints = registry.getRegisteredEndpoints();
+    final Function<Map<HttpRequestMethodType, ServerEndpointView>, Map<String, HttpRequestMethodType>> endpointsMap = new Function<Map<HttpRequestMethodType, ServerEndpointView>, Map<String, HttpRequestMethodType>>() {
       @Override
-      public Map<String, HttpRequestMethodType> apply(final Map<HttpRequestMethodType, AbstractServerEndpoint> input) {
+      public Map<String, HttpRequestMethodType> apply(final Map<HttpRequestMethodType, ServerEndpointView> input) {
         final Map<String, HttpRequestMethodType> result = new HashMap<>();
-        for (final AbstractServerEndpoint endpoint : input.values()) {
-          result.put(endpoint.getTargetAsString(), endpoint.requestMethodType);
+        for (final ServerEndpointView endpoint : input.values()) {
+          result.put(endpoint.getTargetAsString(), endpoint.getRequestMethodType());
         }
         return result;
       }

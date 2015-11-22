@@ -3,12 +3,12 @@ package com.outbrain.ob1k.server.registry.endpoints;
 import com.google.common.base.Preconditions;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.Service;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.server.ctx.DefaultSyncServerRequestContext;
-import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.ob1k.common.filters.SyncFilter;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.server.ResponseHandler;
+import com.outbrain.ob1k.server.ctx.DefaultSyncServerRequestContext;
 import com.outbrain.ob1k.server.ctx.SyncServerRequestContext;
 
 import java.lang.reflect.InvocationTargetException;
@@ -40,7 +40,7 @@ public class SyncServerEndpoint extends AbstractServerEndpoint {
     } else {
       try {
         @SuppressWarnings("unchecked") final
-        T result = (T) method.invoke(service, ctx.getParams());
+        T result = (T) invokeMethodOnService(ctx.getParams());
         return result;
       } catch (IllegalAccessException | InvocationTargetException e) {
         throw new ExecutionException(e);

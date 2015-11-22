@@ -9,8 +9,8 @@ import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpointView;
 import io.swagger.models.Info;
 import io.swagger.models.Operation;
 import io.swagger.models.Path;
@@ -48,7 +48,7 @@ public class SwaggerServiceTest {
   @Mock
   private Request request;
 
-  private SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap;
+  private SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> endpointsByPathMap;
 
   private SwaggerService service;
 
@@ -106,7 +106,7 @@ public class SwaggerServiceTest {
   private void createData(final Class<? extends Service> serviceClass,
                           final String servicePath,
                           final Swagger expected,
-                          final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
+                          final Map<String, Map<HttpRequestMethodType, ServerEndpointView>> endpointsByPathMap,
                           final HttpRequestMethodType methodType) throws Exception {
     createData(serviceClass, servicePath, expected, endpointsByPathMap,
             serviceClass.getCanonicalName(), methodType);
@@ -115,7 +115,7 @@ public class SwaggerServiceTest {
     private void createData(final Class<? extends Service> serviceClass,
                             final String servicePath,
                             final Swagger expected,
-                            final Map<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap,
+                            final Map<String, Map<HttpRequestMethodType, ServerEndpointView>> endpointsByPathMap,
                             final String description, final HttpRequestMethodType methodType, final String... additional) throws Exception {
     for (final Method method : serviceClass.getDeclaredMethods()) {
       final String pathKey = CONTEXT_PATH + servicePath + "/" + method.getName();
@@ -155,8 +155,8 @@ public class SwaggerServiceTest {
           operation.parameter(param);
         }
       }
-      endpointsByPathMap.putIfAbsent(pathKey, new HashMap<HttpRequestMethodType, AbstractServerEndpoint>());
-      final Map<HttpRequestMethodType, AbstractServerEndpoint> endpointMap = endpointsByPathMap.get(pathKey);
+      endpointsByPathMap.putIfAbsent(pathKey, new HashMap<HttpRequestMethodType, ServerEndpointView>());
+      final Map<HttpRequestMethodType, ServerEndpointView> endpointMap = endpointsByPathMap.get(pathKey);
       endpointMap.put(methodType,
               new AsyncServerEndpoint(serviceClass.newInstance(),
                       new AsyncFilter[0],

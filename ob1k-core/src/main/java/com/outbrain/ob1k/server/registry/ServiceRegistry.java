@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.registry;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
@@ -12,8 +13,9 @@ import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.server.MethodParamNamesExtractor;
-import com.outbrain.ob1k.server.registry.endpoints.AbstractServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpoint;
+import com.outbrain.ob1k.server.registry.endpoints.ServerEndpointView;
 import com.outbrain.ob1k.server.registry.endpoints.StreamServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.SyncServerEndpoint;
 import org.slf4j.Logger;
@@ -28,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
 import static java.util.Collections.unmodifiableSortedMap;
@@ -40,7 +43,7 @@ import static java.util.Collections.unmodifiableSortedMap;
 public class ServiceRegistry implements ServiceRegistryView {
   private static final Logger logger = LoggerFactory.getLogger(ServiceRegistry.class);
 
-  private final PathTrie<Map<HttpRequestMethodType, AbstractServerEndpoint>> endpoints;
+  private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints;
   private String contextPath;
   private final RequestMarshallerRegistry marshallerRegistry;
 
@@ -57,8 +60,8 @@ public class ServiceRegistry implements ServiceRegistryView {
     return contextPath;
   }
 
-  public AbstractServerEndpoint findEndpoint(final String path, final HttpRequestMethodType requestMethodType, final Map<String, String> pathParams) {
-    final Map<HttpRequestMethodType, AbstractServerEndpoint> serviceEndpoints = endpoints.retrieve(path, pathParams);
+  public ServerEndpoint findEndpoint(final String path, final HttpRequestMethodType requestMethodType, final Map<String, String> pathParams) {
+    final Map<HttpRequestMethodType, ServerEndpoint> serviceEndpoints = endpoints.retrieve(path, pathParams);
     if (serviceEndpoints == null) {
       return null;
     }
@@ -130,7 +133,7 @@ public class ServiceRegistry implements ServiceRegistryView {
       }
 
       final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptors = descriptors.get(methodBind);
-      final Map<HttpRequestMethodType, AbstractServerEndpoint> endpointsMap = new HashMap<>();
+      final Map<HttpRequestMethodType, ServerEndpoint> endpointsMap = new HashMap<>();
 
       if (endpointDescriptors.containsKey(HttpRequestMethodType.ANY) && endpointDescriptors.size() > 1) {
         throw new RuntimeException("Cannot add more request methods for the path after defining an ANY (all) endpoint path");
@@ -146,7 +149,7 @@ public class ServiceRegistry implements ServiceRegistryView {
         validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 
         final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
-        final AbstractServerEndpoint endpoint = isAsyncMethod(method) ?
+        final ServerEndpoint endpoint = isAsyncMethod(method) ?
                 new AsyncServerEndpoint(service, getAsyncFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
                 isStreamingMethod(method) ?
                         new StreamServerEndpoint(service, getStreamFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
@@ -312,15 +315,24 @@ public class ServiceRegistry implements ServiceRegistryView {
     return endpointDescriptorMap;
   }
 
-  public SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> getRegisteredEndpoints() {
-    return unmodifiableSortedMap(endpoints.getPathToValueMapping());
+  public SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> getRegisteredEndpoints() {
+    SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> copy = new TreeMap<>();
+    for (Map.Entry<String, Map<HttpRequestMethodType, ServerEndpoint>> entry : endpoints.getPathToValueMapping().entrySet()) {
+      copy.put(entry.getKey(), Maps.transformValues(entry.getValue(), new Function<ServerEndpoint, ServerEndpointView>() {
+        @Override
+        public ServerEndpointView apply(ServerEndpoint input) {
+          return input;
+        }
+      }));
+    }
+    return unmodifiableSortedMap(copy);
   }
 
   public void logRegisteredEndpoints() {
-    for (final Map.Entry<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> pathEndpointsMap : getRegisteredEndpoints().entrySet()) {
-      for (final Map.Entry<HttpRequestMethodType, AbstractServerEndpoint> endpointEntry : pathEndpointsMap.getValue().entrySet()) {
-        final AbstractServerEndpoint endpointValue = endpointEntry.getValue();
-        logger.info("Registered endpoint [{} ==> {}, via method: {}]", pathEndpointsMap.getKey(), endpointValue.getTargetAsString(), endpointValue.requestMethodType);
+    for (final Map.Entry<String, Map<HttpRequestMethodType, ServerEndpointView>> pathEndpointsMap : getRegisteredEndpoints().entrySet()) {
+      for (final Map.Entry<HttpRequestMethodType, ? extends ServerEndpointView> endpointEntry : pathEndpointsMap.getValue().entrySet()) {
+        final ServerEndpointView endpointValue = endpointEntry.getValue();
+        logger.info("Registered endpoint [{} ==> {}, via method: {}]", pathEndpointsMap.getKey(), endpointValue.getTargetAsString(), endpointValue.getRequestMethodType());
       }
     }
   }
