@@ -48,17 +48,23 @@ public class SwaggerServiceTest {
   @Mock
   private Request request;
 
+  private SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap;
+
   private SwaggerService service;
 
   @Before
   public void setup() {
-    service = new SwaggerService(registry);
+    endpointsByPathMap = new TreeMap<>();
+
     when(registry.getContextPath()).thenReturn(CONTEXT_PATH);
+    when(registry.getRegisteredEndpoints()).thenReturn(endpointsByPathMap);
   }
 
   @Test
   public void shouldReturnEndpointsThatAreUnderPath() throws Exception {
+    service = new SwaggerService(registry);
     final String expected = createData();
+
     // when
     final Response response = service.apiDocs(request).get();
     //then
@@ -66,9 +72,20 @@ public class SwaggerServiceTest {
     Assert.assertEquals(expected, response.getRawContent());
   }
 
+  @Test
+  public void shouldIgnoreEndpointsFilteredByService() throws Exception {
+    service = new SwaggerService(registry, IgnoredService.class);
+    final String expected = createData();
+    createData(IgnoredService.class, "/api", null, endpointsByPathMap, GET);
+
+    // when
+    final Response response = service.apiDocs(request).get();
+    //then
+    Assert.assertEquals(OK, response.getStatus());
+    Assert.assertEquals(expected, response.getRawContent());
+  }
 
   private String createData() throws Exception {
-    final SortedMap<String, Map<HttpRequestMethodType, AbstractServerEndpoint>> endpointsByPathMap = new TreeMap<>();
     final Swagger expected = new Swagger();
 
     expected.host(HOST);
@@ -80,8 +97,6 @@ public class SwaggerServiceTest {
     createData(DummyService.class, "/api", expected, endpointsByPathMap, POST);
     createData(AnnotatedDummyService.class, "/apiAnnotated", expected, endpointsByPathMap,
             "an annotated test service", ANY, "millis", "millis since epoch");
-
-    when(registry.getRegisteredEndpoints()).thenReturn(endpointsByPathMap);
 
     final ObjectMapper mapper = new ObjectMapper();
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);

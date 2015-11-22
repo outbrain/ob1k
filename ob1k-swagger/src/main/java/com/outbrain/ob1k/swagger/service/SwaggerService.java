@@ -24,16 +24,20 @@ import io.swagger.models.parameters.QueryParameter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Parameter;
+import java.util.List;
 import java.util.Map;
 
+import static com.google.common.collect.Lists.asList;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 
 public class SwaggerService implements Service {
 
   private final ServiceRegistryView serviceRegistry;
+  private final List<Class<? extends Service>> ignoredServices;
 
-  public SwaggerService(final ServiceRegistryView serviceRegistry) {
+  public SwaggerService(final ServiceRegistryView serviceRegistry, final Class<? extends Service>... ignoredServices) {
     this.serviceRegistry = serviceRegistry;
+    this.ignoredServices = asList(SwaggerService.class, ignoredServices);
   }
 
   public ComposableFuture<Response> apiDocs(final Request request) {
@@ -117,8 +121,8 @@ public class SwaggerService implements Service {
   }
 
   private boolean ignoreEndpoint(final AbstractServerEndpoint endpoint) {
-    return endpoint.method.getDeclaringClass().getSimpleName().equals("SwaggerService") ||
-            endpoint.method.getDeclaringClass().getCanonicalName().startsWith("com.outbrain.ob1k.server");
+    final Class<?> serviceClass = endpoint.method.getDeclaringClass();
+    return ignoredServices.contains(serviceClass);
   }
 
   private Response buildJsonResponse(final Object value) {
