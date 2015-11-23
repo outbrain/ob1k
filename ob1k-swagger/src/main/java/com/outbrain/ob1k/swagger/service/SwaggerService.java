@@ -45,7 +45,7 @@ public class SwaggerService implements Service {
     return ComposableFutures.fromValue(buildJsonResponse(buildSwagger(request)));
   }
 
-  public List<Class<? extends Service>> getIgnoredServices() {
+  List<Class<? extends Service>> getIgnoredServices() {
     return unmodifiableList(ignoredServices);
   }
 
