@@ -36,7 +36,7 @@ public class ConsulServiceRegistrator implements Server.Listener {
   }
 
   private void registerService(final ServiceRegistration registration) {
-    logger.info("Registrating {}", registration.getID());
+    logger.info("Registering {}", registration.getID());
     ConsulAPI.getServiceRegistry().register(registration).consume(new Consumer<String>() {
       @Override
       public void consume(final Try<String> responseFuture) {
