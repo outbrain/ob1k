@@ -4,8 +4,15 @@ import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.outbrain.swinfra.metrics.api.Histogram;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Gauge;
+import com.outbrain.swinfra.metrics.api.Counter;
+import com.outbrain.swinfra.metrics.api.Histogram;
+
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClientIF;
@@ -31,15 +38,38 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  */
 public class MemcacheClient<K, V> implements TypedCache<K, V> {
   private static final long MAX_EXPIRATION_SEC = 60 * 60 * 24 * 30;
+  private static final String COMPONENT = "MemcacheClient";
 
   private final MemcachedClientIF spyClient;
   private final CacheKeyTranslator<K> keyTranslator;
   private final int expirationSpyUnits;
 
-  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator, final long expiration, final TimeUnit timeUnit) {
+  private MetricFactory metricFactory = null;
+  private Counter reqSuccess = null;
+  private Counter reqError = null;
+  private Counter reqTotal = null;
+  private Histogram reqLatency = null;
+
+  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator,
+                        final long expiration, final TimeUnit timeUnit) {
     this.spyClient = spyClient;
     this.keyTranslator = keyTranslator;
     this.expirationSpyUnits = expirationInSpyUnits(expiration, timeUnit);
+  }
+
+  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator,
+                        final long expiration, final TimeUnit timeUnit,
+                        final MetricFactory metricFactory) {
+    this(spyClient, keyTranslator, expiration, timeUnit);
+
+    this.metricFactory = metricFactory;
+
+    if (metricFactory != null) {
+      reqSuccess = metricFactory.createCounter(COMPONENT, "success");
+      reqError = metricFactory.createCounter(COMPONENT, "error");
+      reqTotal = metricFactory.createCounter(COMPONENT, "total");
+      reqLatency = metricFactory.createHistogram(COMPONENT, "latency", true);
+    }
   }
 
   /**
@@ -63,14 +93,33 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<V> getAsync(final K key) {
-    return SpyFutureHelper.fromGet(new SpyFutureHelper.GetFutureProducer<V>() {
+    final ComposableFuture<V> getFutureValue = SpyFutureHelper.fromGet(new SpyFutureHelper.GetFutureProducer<V>() {
       @Override
       public Future<V> createFuture() {
         @SuppressWarnings("unchecked")
         final Transcoder<V> transcoder = (Transcoder<V>) spyClient.getTranscoder();
+
         return spyClient.asyncGet(keyTranslator.translateKey(key), transcoder);
       }
     });
+
+    long start_time = System.currentTimeMillis();
+
+    getFutureValue.consume((result) -> {
+      if (metricFactory != null) {
+        long end_time = System.currentTimeMillis();
+        long difference = end_time - start_time;
+        reqLatency.update(difference);
+
+        if (result.isSuccess())
+          reqSuccess.inc();
+        else
+          reqError.inc();
+        reqTotal.inc();
+      }
+    });
+
+    return getFutureValue;
   }
 
   @Override
