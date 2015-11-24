@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.143-SNAPSHOT</version>
+    <version>0.143</version>
   </parent>
   <artifactId>ob1k-consul</artifactId>
   <name>ob1k-consul</name>
