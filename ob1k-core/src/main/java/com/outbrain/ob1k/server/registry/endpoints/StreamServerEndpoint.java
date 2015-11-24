@@ -4,8 +4,8 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.server.ctx.DefaultStreamServerRequestContext;
 import com.outbrain.ob1k.server.ResponseHandler;
+import com.outbrain.ob1k.server.ctx.DefaultStreamServerRequestContext;
 import com.outbrain.ob1k.server.ctx.StreamServerRequestContext;
 import rx.Observable;
 
@@ -34,7 +34,7 @@ public class StreamServerEndpoint extends AbstractServerEndpoint {
     } else {
       try {
         @SuppressWarnings("unchecked")
-        final Observable<T> result = (Observable<T>) method.invoke(service, ctx.getParams());
+        final Observable<T> result = (Observable<T>) invokeMethodOnService(ctx.getParams());
         return result;
       } catch (final IllegalAccessException | InvocationTargetException e) {
         return Observable.error(e);

@@ -3,7 +3,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.135-SNAPSHOT</version>
+  <version>0.144-SNAPSHOT</version>
   <artifactId>ob1k</artifactId>
   <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
@@ -62,6 +62,7 @@
     <module>ob1k-security</module>
     <module>ob1k-consul</module>
     <module>ob1k-http</module>
+    <module>ob1k-swagger</module>
   </modules>
 
   <properties>
@@ -205,6 +206,12 @@
       </dependency>
 
       <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ob1k-swagger</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.msgpack</groupId>
         <artifactId>msgpack</artifactId>
         <version>0.6.7</version>
@@ -283,6 +290,24 @@
         <artifactId>slf4j-log4j12</artifactId>
         <version>1.7.5</version>
         <scope>provided</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-core</artifactId>
+        <version>1.5.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-models</artifactId>
+        <version>1.5.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.springfox</groupId>
+        <artifactId>springfox-swagger-ui</artifactId>
+        <version>2.1.1</version>
       </dependency>
 
       <dependency>

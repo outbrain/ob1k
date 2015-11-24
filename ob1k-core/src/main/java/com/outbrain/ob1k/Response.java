@@ -7,4 +7,7 @@ package com.outbrain.ob1k;
  */
 public interface Response {
 
+  int getStatus();
+
+  String getRawContent();
 }

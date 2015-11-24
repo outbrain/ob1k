@@ -6,7 +6,7 @@
   <parent>
     <artifactId>ob1k</artifactId>
     <groupId>com.outbrain.swinfra</groupId>
-    <version>0.135-SNAPSHOT</version>
+    <version>0.144-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-example</artifactId>
@@ -43,6 +43,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-swagger</artifactId>
     </dependency>
 
     <!-- overriding the scope from the parent pom so this server have spring ldap in its classpath -->

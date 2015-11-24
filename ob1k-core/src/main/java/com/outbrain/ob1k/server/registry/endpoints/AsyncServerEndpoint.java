@@ -2,14 +2,14 @@ package com.outbrain.ob1k.server.registry.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
+import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.Service;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
+import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
 import com.outbrain.ob1k.server.ctx.DefaultAsyncServerRequestContext;
-import com.outbrain.ob1k.server.ResponseHandler;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -34,7 +34,7 @@ public class AsyncServerEndpoint extends AbstractServerEndpoint {
     } else {
       try {
         @SuppressWarnings("unchecked")
-        final ComposableFuture<T> result = ComposableFutureHelper.cast(method.invoke(service, ctx.getParams()));
+        final ComposableFuture<T> result = ComposableFutureHelper.cast(invokeMethodOnService(ctx.getParams()));
         return result;
       } catch (final IllegalAccessException | InvocationTargetException e) {
         return ComposableFutures.fromError(e);
