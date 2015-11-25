@@ -170,7 +170,7 @@ public class HealthyTargetsList {
             log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
             setTargets(newTargets);
             nextIndex = extractIndex(aTry);
-          } catch (final IOException e) {
+          } catch (final IOException | RuntimeException e) {
             handleTargetsFetchFailure(e, true);
             return;
           }
