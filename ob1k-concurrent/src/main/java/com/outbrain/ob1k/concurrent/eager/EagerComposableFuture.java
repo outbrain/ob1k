@@ -473,6 +473,4 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     }
   }
 
-
-
 }
