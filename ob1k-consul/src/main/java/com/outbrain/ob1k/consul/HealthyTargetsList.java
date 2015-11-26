@@ -144,8 +144,12 @@ public class HealthyTargetsList {
       @Override
       public void consume(final Try<List<HealthInfoInstance>> initialTargetsTry) {
         if (initialTargetsTry.isSuccess()) {
-          log.debug("{} initial healthy targets fetched", initialTargetsTry.getValue().size());
-          setTargets(initialTargetsTry.getValue());
+          final List<HealthInfoInstance> initialTargets = initialTargetsTry.getValue() != null ?
+            initialTargetsTry.getValue() :
+            Collections.<HealthInfoInstance>emptyList();
+
+          log.debug("{} initial healthy targets fetched", initialTargets.size());
+          setTargets(initialTargets);
           initializationFuture.set(null);
         } else {
           handleTargetsFetchFailure(initialTargetsTry.getError(), false);
@@ -166,7 +170,9 @@ public class HealthyTargetsList {
         long nextIndex = 0;
         if (aTry.isSuccess()) {
           try {
-            final List<HealthInfoInstance> newTargets = aTry.getValue().getTypedBody();
+            final List<HealthInfoInstance> newTargets = aTry.getValue().getTypedBody() != null ?
+              aTry.getValue().getTypedBody() :
+              Collections.<HealthInfoInstance>emptyList();
             log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
             setTargets(newTargets);
             nextIndex = extractIndex(aTry);
