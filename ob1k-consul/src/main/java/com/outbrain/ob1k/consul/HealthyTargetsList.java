@@ -144,9 +144,7 @@ public class HealthyTargetsList {
       @Override
       public void consume(final Try<List<HealthInfoInstance>> initialTargetsTry) {
         if (initialTargetsTry.isSuccess()) {
-          final List<HealthInfoInstance> initialTargets = initialTargetsTry.getValue() != null ?
-            initialTargetsTry.getValue() :
-            Collections.<HealthInfoInstance>emptyList();
+          final List<HealthInfoInstance> initialTargets = nullSafeList(initialTargetsTry.getValue());
 
           log.debug("{} initial healthy targets fetched", initialTargets.size());
           setTargets(initialTargets);
@@ -159,6 +157,9 @@ public class HealthyTargetsList {
     });
   }
 
+  private List<HealthInfoInstance> nullSafeList(final List<HealthInfoInstance> initialTargets) {
+    return initialTargets == null ? Collections.<HealthInfoInstance>emptyList() : initialTargets;
+  }
 
   private void pollForTargetsUpdates(final long fromIndex) {
     final Timer.Context fetchTime = targetFetchTime.time();
@@ -170,9 +171,7 @@ public class HealthyTargetsList {
         long nextIndex = 0;
         if (aTry.isSuccess()) {
           try {
-            final List<HealthInfoInstance> newTargets = aTry.getValue().getTypedBody() != null ?
-              aTry.getValue().getTypedBody() :
-              Collections.<HealthInfoInstance>emptyList();
+            final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
             log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
             setTargets(newTargets);
             nextIndex = extractIndex(aTry);
