@@ -23,7 +23,7 @@ import io.swagger.models.parameters.QueryParameter;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.lang.reflect.Parameter;
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Map;
 
@@ -106,12 +106,13 @@ public class SwaggerService implements Service {
   private Operation buildOperation(final ServerEndpointView endpoint, final Tag tag, final HttpRequestMethodType methodType) {
     final Operation operation = new Operation().summary(endpoint.getTargetAsString()).tag(tag.getName()).
             operationId(endpoint.getTargetAsString() + "Using" + methodType.name());
-    int i = 0;
     final String[] endpointParamNames = endpoint.getParamNames();
-    for (final Parameter parameter : endpoint.getMethod().getParameters()) {
-      final ApiParam annotation = parameter.getAnnotation(ApiParam.class);
-      final String type = getSwaggerDataType(parameter);
-      final String paramName = (annotation != null) ? annotation.name() : endpointParamNames[i++];
+    final Annotation[][] parameterAnnotations = endpoint.getMethod().getParameterAnnotations();
+    final Class<?>[] parameterTypes = endpoint.getMethod().getParameterTypes();
+    for (int i = 0; i < endpointParamNames.length; i++) {
+      final ApiParam annotation = findApiParamAnnotation(parameterAnnotations[i]);
+      final String type = getSwaggerDataType(parameterTypes[i]);
+      final String paramName = (annotation != null) ? annotation.name() : endpointParamNames[i];
       final QueryParameter param = new QueryParameter().type(type).name(paramName);
       if (annotation != null) {
         param.description(annotation.value());
@@ -121,7 +122,16 @@ public class SwaggerService implements Service {
     return operation;
   }
 
-  private String getSwaggerDataType(final Parameter parameter) {
+  private ApiParam findApiParamAnnotation(Annotation[] annotations) {
+    for (Annotation annotation : annotations) {
+      if (ApiParam.class.equals(annotation.annotationType())) {
+        return (ApiParam) annotation;
+      }
+    }
+    return null;
+  }
+
+  private String getSwaggerDataType(final Class<?> parameterType) {
     // TODO something better
     return "undefined";
   }
