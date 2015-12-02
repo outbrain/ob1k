@@ -148,7 +148,7 @@ public class SwaggerServiceTest {
         for (final Parameter parameter : method.getParameters()) {
           final String name = (additional.length > i) ? additional[i++] : parameter.getName();
           final QueryParameter param = new QueryParameter().name(name).
-                  type("undefined");
+                  type(getTypeForTestData(parameter));
           if (additional.length > i) {
             param.description(additional[i++]);
           }
@@ -164,6 +164,10 @@ public class SwaggerServiceTest {
                       methodType,
                       parameterNames));
     }
+  }
+
+  private String getTypeForTestData(Parameter parameter) {
+    return (parameter.getType().equals(Long.class)) ? "integer" : parameter.getType().getSimpleName().toLowerCase();
   }
 
 }

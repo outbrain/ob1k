@@ -132,8 +132,8 @@ public class SwaggerService implements Service {
   }
 
   private String getSwaggerDataType(final Class<?> parameterType) {
-    // TODO something better
-    return "undefined";
+    // TODO suppport format and complex types
+    return SwaggerDataType.forClass(parameterType);
   }
 
   private boolean ignoreEndpoint(final ServerEndpointView endpoint) {
