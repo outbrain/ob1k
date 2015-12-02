@@ -4,8 +4,12 @@ import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Timer;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClientIF;
@@ -31,15 +35,27 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  */
 public class MemcacheClient<K, V> implements TypedCache<K, V> {
   private static final long MAX_EXPIRATION_SEC = 60 * 60 * 24 * 30;
+  private static final String COMPONENT = MemcacheClient.class.getSimpleName();
 
   private final MemcachedClientIF spyClient;
   private final CacheKeyTranslator<K> keyTranslator;
   private final int expirationSpyUnits;
 
-  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator, final long expiration, final TimeUnit timeUnit) {
+  private final MetricHolder metricHolder;
+
+  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator,
+                        final long expiration, final TimeUnit timeUnit) {
+    this(spyClient, keyTranslator, expiration, timeUnit, null);
+  }
+
+  public MemcacheClient(final MemcachedClientIF spyClient, final CacheKeyTranslator<K> keyTranslator,
+                        final long expiration, final TimeUnit timeUnit,
+                        final MetricFactory metricFactory) {
     this.spyClient = spyClient;
     this.keyTranslator = keyTranslator;
     this.expirationSpyUnits = expirationInSpyUnits(expiration, timeUnit);
+    metricHolder = new MetricHolder(COMPONENT, metricFactory);
+
   }
 
   /**
@@ -63,7 +79,8 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<V> getAsync(final K key) {
-    return SpyFutureHelper.fromGet(new SpyFutureHelper.GetFutureProducer<V>() {
+    final Timer.Context timer = metricHolder.getCache().start();
+    final ComposableFuture<V> getFutureValue = SpyFutureHelper.fromGet(new SpyFutureHelper.GetFutureProducer<V>() {
       @Override
       public Future<V> createFuture() {
         @SuppressWarnings("unchecked")
@@ -71,6 +88,15 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
         return spyClient.asyncGet(keyTranslator.translateKey(key), transcoder);
       }
     });
+
+    getFutureValue.consume(new Consumer<V>() {
+      @Override
+      public void consume(Try<V> res) {
+        metricHolder.getCache().finished(res, timer);
+      }
+    });
+
+    return getFutureValue;
   }
 
   @Override
@@ -100,12 +126,22 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
-    return SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
+    final Timer.Context timer = metricHolder.getLoad().start();
+    ComposableFuture<Boolean> getFutureValue = SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
       @Override
       public Future<Boolean> createFuture() {
         return spyClient.set(keyTranslator.translateKey(key), expirationSpyUnits, value);
       }
     });
+
+    getFutureValue.consume(new Consumer<Boolean>() {
+      @Override
+      public void consume(Try<Boolean> result) {
+        metricHolder.getLoad().finished(result, timer);
+      }
+    });
+
+    return getFutureValue;
   }
 
   @Override
@@ -196,6 +232,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
     return SpyFutureHelper.fromOperation(new SpyFutureHelper.OperationFutureProducer() {
       @Override
       public Future<Boolean> createFuture() {
+        metricHolder.getDelete().inc();
         return spyClient.delete(keyTranslator.translateKey(key));
       }
     });
