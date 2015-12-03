@@ -11,6 +11,7 @@ public interface Server {
   InetSocketAddress start();
   void stop();
   String getContextPath();
+  int getPort();
 
   void addListener(Listener listener);
   void removeListener(Listener listener);

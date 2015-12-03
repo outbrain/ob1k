@@ -136,6 +136,11 @@ public class NettyServer implements Server {
   }
 
   @Override
+  public int getPort() {
+    return port;
+  }
+
+  @Override
   public void stop() {
     logger.info("################## Stopping OB1K server for module '{}' ##################", applicationName);
     queueObserver.setServerChannel(null);

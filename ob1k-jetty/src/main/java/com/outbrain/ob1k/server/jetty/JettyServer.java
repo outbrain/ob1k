@@ -347,6 +347,11 @@ public class JettyServer implements Server {
   }
 
   @Override
+  public int getPort() {
+    return httpConnector.getPort();
+  }
+
+  @Override
   public void addListener(final Listener listener) {
     listeners.add(listener);
   }
