@@ -47,6 +47,11 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-consul</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-swagger</artifactId>
     </dependency>
 
