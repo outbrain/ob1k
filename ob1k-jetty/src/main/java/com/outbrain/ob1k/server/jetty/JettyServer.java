@@ -352,6 +352,11 @@ public class JettyServer implements Server {
   }
 
   @Override
+  public String getApplicationName() {
+    return applicationName;
+  }
+
+  @Override
   public void addListener(final Listener listener) {
     listeners.add(listener);
   }

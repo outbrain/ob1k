@@ -12,6 +12,7 @@ public interface Server {
   void stop();
   String getContextPath();
   int getPort();
+  String getApplicationName();
 
   void addListener(Listener listener);
   void removeListener(Listener listener);
