@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.example.hello.server;
 
+import com.google.common.collect.Sets;
 import com.outbrain.ob1k.consul.ConsulServiceRegistrator;
 import com.outbrain.ob1k.example.consul.ExampleServiceRegistrationDataProvider;
 import com.outbrain.ob1k.example.hello.server.services.HelloServiceImpl;
@@ -60,7 +61,7 @@ public class HelloServerWithConsulRegistration {
       withServices(builder -> builder.addService(new HelloServiceImpl(instance), SERVICE_PATH)).
       configureExtraParams(builder -> {
         builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
-        final Set<String> tags = Collections.singleton("instance" + instance);
+        final Set<String> tags = Sets.newHashSet("instance" + instance, "production");
         builder.addListener(new ConsulServiceRegistrator(new ExampleServiceRegistrationDataProvider(SERVICE_PATH + "/instance", tags, instance)));
       }).
       build();

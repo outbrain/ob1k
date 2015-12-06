@@ -137,7 +137,7 @@ public class NettyServer implements Server {
 
   @Override
   public int getPort() {
-    return ((InetSocketAddress)channel.localAddress()).getPort();
+    return ((InetSocketAddress) channel.localAddress()).getPort();
   }
 
   @Override

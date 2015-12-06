@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.example.consul;
 
+import com.google.common.collect.Sets;
 import com.outbrain.ob1k.consul.ServiceRegistration;
 import com.outbrain.ob1k.consul.ServiceRegistrationDataProvider;
 import com.outbrain.ob1k.server.Server;
@@ -28,6 +29,12 @@ public class ExampleServiceRegistrationDataProvider implements ServiceRegistrati
     final String checkUrl = String.format("http://%s:%d%s%s", "127.0.0.1", server.getPort(), server.getContextPath(), checkPath);
     final ServiceRegistration.Check check = new ServiceRegistration.Check(checkUrl, 1);
 
-    return new ServiceRegistration(server.getApplicationName(), server.getPort(), tags, check, instance);
+    return new ServiceRegistration(server.getApplicationName(), server.getPort(), extendedTags(tags, server), check, instance);
+  }
+
+  private Set<String> extendedTags(final Set<String> tags, final Server server) {
+    final String portTag = "httpPort-" + server.getPort();
+    final String contextPathTag = "contextPath-" + server.getContextPath();
+    return Sets.union(tags, Sets.newHashSet(contextPathTag, portTag));
   }
 }
