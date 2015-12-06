@@ -57,11 +57,11 @@ public class HelloServerWithConsulRegistration {
     return ServerBuilder.newBuilder().
       configurePorts(builder -> builder.setPort(port)).
       setContextPath(CTX_PATH, "Hello").
-      withServices(builder -> builder.addService(new HelloServiceImpl(), SERVICE_PATH)).
+      withServices(builder -> builder.addService(new HelloServiceImpl(instance), SERVICE_PATH)).
       configureExtraParams(builder -> {
         builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
         final Set<String> tags = Collections.singleton("instance" + instance);
-        builder.addListener(new ConsulServiceRegistrator(new ExampleServiceRegistrationDataProvider(SERVICE_PATH + "/helloWorld", tags, instance)));
+        builder.addListener(new ConsulServiceRegistrator(new ExampleServiceRegistrationDataProvider(SERVICE_PATH + "/instance", tags, instance)));
       }).
       build();
   }

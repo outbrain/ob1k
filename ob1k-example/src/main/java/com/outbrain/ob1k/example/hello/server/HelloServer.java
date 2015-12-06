@@ -50,7 +50,7 @@ public class HelloServer {
     return ServerBuilder.newBuilder().
       configurePorts(builder -> builder.setPort(port)).
       setContextPath(CTX_PATH).
-      withServices(builder -> builder.addService(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
+      withServices(builder -> builder.addService(new HelloServiceImpl(0), HELLO_SERVICE_PATH)).
       configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
       build();
   }

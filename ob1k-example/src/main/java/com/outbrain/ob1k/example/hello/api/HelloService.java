@@ -9,6 +9,8 @@ import rx.Observable;
  */
 public interface HelloService extends Service {
 
+  ComposableFuture<Integer> instance();
+
   ComposableFuture<String> helloWorld();
 
   ComposableFuture<String> helloUser(String name);

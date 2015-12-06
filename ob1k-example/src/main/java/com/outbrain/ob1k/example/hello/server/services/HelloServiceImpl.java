@@ -17,6 +17,17 @@ import static rx.Observable.interval;
  */
 public class HelloServiceImpl implements HelloService {
 
+  private final int instance;
+
+  public HelloServiceImpl(final int instance) {
+    this.instance = instance;
+  }
+
+  @Override
+  public ComposableFuture<Integer> instance() {
+    return fromValue(instance);
+  }
+
   /**
    * Creates new future with our response message
    *
