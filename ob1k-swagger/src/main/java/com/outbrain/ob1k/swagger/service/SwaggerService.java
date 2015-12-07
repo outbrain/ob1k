@@ -36,6 +36,7 @@ public class SwaggerService implements Service {
   private final ServiceRegistryView serviceRegistry;
   private final List<Class<? extends Service>> ignoredServices;
 
+  @SafeVarargs
   public SwaggerService(final ServiceRegistryView serviceRegistry, final Class<? extends Service>... ignoredServices) {
     this.serviceRegistry = serviceRegistry;
     this.ignoredServices = asList(SwaggerService.class, ignoredServices);

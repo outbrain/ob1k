@@ -4,6 +4,7 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 public interface ServerBuilderState {
@@ -40,4 +41,6 @@ public interface ServerBuilderState {
   void setBindPrefixToLastDescriptor(boolean bindPrefix);
 
   void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters);
+
+  ServiceRegistryView getRegistry();
 }

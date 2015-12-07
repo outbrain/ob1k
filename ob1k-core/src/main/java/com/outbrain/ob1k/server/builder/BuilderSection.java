@@ -17,4 +17,8 @@ public abstract class BuilderSection<E extends ExtendableServerBuilder<E>> {
   public Server build() {
     return builder.build();
   }
+
+  protected E backToServerBuilder() {
+    return builder;
+  }
 }

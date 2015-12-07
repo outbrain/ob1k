@@ -2,21 +2,19 @@ package com.outbrain.ob1k.server.spring;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.BindBuilderSection;
+import com.outbrain.ob1k.server.builder.DefaultServiceBindBuilder;
 import com.outbrain.ob1k.server.builder.ExtendableServerBuilder;
 import com.outbrain.ob1k.server.builder.ServerBuilderState;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SpringServiceBindingBuilder<E extends ExtendableServerBuilder<E>>  extends BindBuilderSection<E, SpringServiceRegisterBuilder<E>> {
+public class SpringServiceBindingBuilder<E extends ExtendableServerBuilder<E>>  extends DefaultServiceBindBuilder<E, SpringServiceRegisterBuilder<E>> {
 
-  private final ServerBuilderState state;
   private final SpringBeanContext ctx;
 
   public SpringServiceBindingBuilder(final E builder, final SpringServiceRegisterBuilder<E> serviceBuilder, final ServerBuilderState state, final SpringBeanContext ctx) {
-    super(builder, serviceBuilder);
-    this.state = state;
+    super(builder, serviceBuilder, state);
     this.ctx = ctx;
   }
 
@@ -35,7 +33,7 @@ public class SpringServiceBindingBuilder<E extends ExtendableServerBuilder<E>>  
       filters.add(filter);
     }
 
-    state.setEndpointBinding(requestMethodType, methodName, path, filters.toArray(new ServiceFilter[filters.size()]));
+    endpoint(requestMethodType, methodName, path, filters.toArray(new ServiceFilter[filters.size()]));
     return this;
   }
 }

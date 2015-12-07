@@ -11,6 +11,7 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
+import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.ob1k.server.util.ObservableBlockingQueue;
 import com.outbrain.ob1k.server.util.SyncRequestQueueObserver;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -153,6 +154,7 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
 
     @Override
     public void addStaticResource(final String mapping, final String location) {
+      addStaticFolder(location);
       staticResources.put(mapping, location);
     }
 
@@ -206,6 +208,11 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
       }
 
       endpointDescriptors.put(methodType, new ServiceRegistry.EndpointDescriptor(method, Arrays.asList(filters), methodType));
+    }
+
+    @Override
+    public ServiceRegistryView getRegistry() {
+      return registry;
     }
   }
 
