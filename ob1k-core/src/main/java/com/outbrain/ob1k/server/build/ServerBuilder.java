@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.build;
 
+import com.google.common.collect.Sets;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
@@ -400,7 +401,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     }
 
     registerServices(serviceDescriptors, registry, executorService);
-    final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
+    final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, Sets.newHashSet(staticFolders), staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
             appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
