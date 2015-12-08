@@ -2,18 +2,19 @@ package com.outbrain.ob1k.server.spring;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.DefaultServiceBindBuilder;
-import com.outbrain.ob1k.server.builder.ServerBuilderState;
+import com.outbrain.ob1k.server.build.ServerBuilderState;
+import com.outbrain.ob1k.server.build.ServiceBindBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SpringServiceBindingBuilder extends DefaultServiceBindBuilder {
+public class SpringServiceBindingBuilder {
 
   private final SpringBeanContext ctx;
+  private final ServiceBindBuilder bindBuilder;
 
   public SpringServiceBindingBuilder(final ServerBuilderState state, final SpringBeanContext ctx) {
-    super(state);
+    bindBuilder = new ServiceBindBuilder(state);
     this.ctx = ctx;
   }
 
@@ -32,7 +33,19 @@ public class SpringServiceBindingBuilder extends DefaultServiceBindBuilder {
       filters.add(filter);
     }
 
-    endpoint(requestMethodType, methodName, path, filters.toArray(new ServiceFilter[filters.size()]));
+    bindBuilder.endpoint(requestMethodType, methodName, path, filters.toArray(new ServiceFilter[filters.size()]));
     return this;
+  }
+
+  public ServiceBindBuilder bindPrefix(final boolean bindPrefix) {
+    return bindBuilder.bindPrefix(bindPrefix);
+  }
+
+  public ServiceBindBuilder endpoint(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter... filters) {
+    return bindBuilder.endpoint(methodType, methodName, path, filters);
+  }
+
+  public ServiceBindBuilder endpoint(final String methodName, final String path, final ServiceFilter... filters) {
+    return bindBuilder.endpoint(methodName, path, filters);
   }
 }

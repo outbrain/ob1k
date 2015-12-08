@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.builder;
+package com.outbrain.ob1k.server.build;
 
 public class NoOpBuilderProvider<T> implements BuilderProvider<T> {
 

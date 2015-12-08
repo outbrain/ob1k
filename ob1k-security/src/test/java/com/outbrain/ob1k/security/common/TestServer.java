@@ -7,16 +7,14 @@ import com.outbrain.ob1k.security.server.CredentialsAuthenticator;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
 import com.outbrain.ob1k.security.server.UserPasswordToken;
 import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.build.AddRawServicePhase;
-import com.outbrain.ob1k.server.build.ChoosePortPhase;
-import com.outbrain.ob1k.server.build.PortsProvider;
-import com.outbrain.ob1k.server.build.RawServiceProvider;
+import com.outbrain.ob1k.server.build.BuilderProvider;
+import com.outbrain.ob1k.server.build.ConfigureBuilder;
 import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.build.ServiceRegisterBuilder;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
@@ -38,21 +36,20 @@ public class TestServer {
 
   public static Server newServer() {
     return ServerBuilder.newBuilder()
-      .configurePorts(createPortsProvider())
-      .setContextPath(CONTEXT_PATH)
-      .withServices(createServices())
+      .contextPath(CONTEXT_PATH)
+      .configure(createPortsProvider())
+      .service(createServices())
       .build();
   }
 
-  private static RawServiceProvider createServices() {
+  private static BuilderProvider<ServiceRegisterBuilder> createServices() {
     final ServiceFilter securityFilter = createAuthFilter();
 
-    return new RawServiceProvider() {
+    return new BuilderProvider<ServiceRegisterBuilder>() {
       @Override
-      public void addServices(final AddRawServicePhase builder) {
-        builder
-          .addService(new UnsecureServiceImpl(), UnsecureService.class.getSimpleName())
-          .addService(new SecureServiceImpl(), SecureService.class.getSimpleName(), securityFilter);
+      public void provide(final ServiceRegisterBuilder builder) {
+        builder.register(new UnsecureServiceImpl(), UnsecureService.class.getSimpleName())
+                .register(new SecureServiceImpl(), SecureService.class.getSimpleName(), securityFilter);
       }
     };
   }
@@ -76,10 +73,10 @@ public class TestServer {
     }
   }
 
-  private static PortsProvider createPortsProvider() {
-    return new PortsProvider() {
+  private static BuilderProvider<ConfigureBuilder> createPortsProvider() {
+    return new BuilderProvider<ConfigureBuilder>() {
       @Override
-      public void configure(final ChoosePortPhase builder) {
+      public void provide(final ConfigureBuilder builder) {
         builder.useRandomPort();
       }
     };

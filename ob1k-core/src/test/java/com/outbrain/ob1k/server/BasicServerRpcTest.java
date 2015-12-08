@@ -6,9 +6,13 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.server.build.*;
+import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.server.build.BuilderProvider;
+import com.outbrain.ob1k.server.build.ConfigureBuilder;
+import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.build.ServiceBindBuilder;
+import com.outbrain.ob1k.server.build.ServiceRegisterBuilder;
 import com.outbrain.ob1k.server.entities.OtherEntity;
 import com.outbrain.ob1k.server.entities.TestEntity;
 import com.outbrain.ob1k.server.services.RequestsTestService;
@@ -30,36 +34,34 @@ import java.util.concurrent.TimeUnit;
 public class BasicServerRpcTest {
 
   private static Server buildServer(final Listener listener) {
-    return ServerBuilder.newBuilder().configurePorts(new PortsProvider() {
-      @Override
-      public void configure(final ChoosePortPhase builder) {
-        builder.useRandomPort();
-      }
-    }).setContextPath("/test").withServices(new RawServiceProvider() {
-      @Override
-      public void addServices(final AddRawServicePhase builder) {
-        builder.addService(new SimpleTestServiceImpl(), "/simple");
-        builder.defineService(new RequestsTestServiceImpl(), "/users", new ServiceBindingProvider() {
-          @Override
-          public void configureService(final RawServiceBuilderPhase builder) {
-            builder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
-            builder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
-            builder.addEndpoint("printDetails", "/print/{firstName}/{lastName}");
-          }
-        });
-      }
-    }).configureExtraParams(new ExtraParamsProvider() {
-      @Override
-      public void configureExtraParams(final ExtraParamsPhase builder) {
-        builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
-        if (listener != null) {
-          builder.addListener(listener);
-        }
-      }
-    }).build();
+    return ServerBuilder.newBuilder().
+            contextPath("/test").
+            configure(new BuilderProvider<ConfigureBuilder>() {
+              @Override
+              public void provide(final ConfigureBuilder builder) {
+                builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS);
+                if (listener != null) {
+                  builder.addListener(listener);
+                }
+              }
+            }).
+            service(new BuilderProvider<ServiceRegisterBuilder>() {
+              @Override
+              public void provide(final ServiceRegisterBuilder builder) {
+                builder.register(new SimpleTestServiceImpl(), "/simple").
+                register(new RequestsTestServiceImpl(), "/users", new BuilderProvider<ServiceBindBuilder>() {
+                  @Override
+                  public void provide(final ServiceBindBuilder builder) {
+                    builder.endpoint(HttpRequestMethodType.GET, "getAll", "/").
+                    endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
+                    endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
+                    endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
+                    endpoint(HttpRequestMethodType.PUT, "createUser", "/").
+                    endpoint("printDetails", "/print/{firstName}/{lastName}");
+                  }
+                });
+              }
+            }).build();
   }
 
   @Test

@@ -1,52 +1,40 @@
 package com.outbrain.ob1k.swagger.service;
 
-import com.outbrain.ob1k.server.build.AddRawServicePhase;
+import com.outbrain.ob1k.Service;
+import com.outbrain.ob1k.server.build.ServerBuilderState;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentCaptor.forClass;
+import java.util.Collections;
+import java.util.List;
+
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SwaggerServiceProviderTest {
 
-  private SwaggerServiceProvider provider;
-
   @Mock
-  private AddRawServicePhase builder;
-
+  private ServerBuilderState state;
   @Mock
-  private ServiceRegistryView registry;
+  private ServiceRegistryView registryView;
 
   @Test
-  public void shouldAddEndpointMappingServiceToBuilder() {
+  public void shouldAddServiceDescriptorAndMapUiResourcesForSwaggerService() {
     // given
-    provider = new SwaggerServiceProvider();
+    Mockito.when(state.getRegistry()).thenReturn(registryView);
+
     // when
-    provider.addServices(builder, registry, "path");
+    final List<Class<? extends Service>> ignoredServices = Collections.<Class<? extends Service>>singletonList(SwaggerService.class);
+    SwaggerServiceProvider.enableSwagger("path", ignoredServices).provide(state);
 
     // then
-    Mockito.verify(builder).addService(any(SwaggerService.class), eq("path"));
+    Mockito.verify(state).addServiceDescriptor(any(SwaggerService.class), eq("path"));
+    Mockito.verify(state).addStaticMapping("/" + SwaggerServiceProvider.SWAGGER_UI_URI, "/META-INF/resources/swagger-ui.html");
   }
 
-  @Test
-  public void shouldConfigureIgnoredServicesInCreatedSwaggerService() {
-    // given
-    provider = new SwaggerServiceProvider(IgnoredService.class);
-    ArgumentCaptor<SwaggerService> serviceCaptor = forClass(SwaggerService.class);
-    // when
-    provider.addServices(builder, registry, "path");
-
-    // then
-    Mockito.verify(builder).addService(serviceCaptor.capture(), eq("path"));
-
-    assertTrue(serviceCaptor.getValue().getIgnoredServices().contains(IgnoredService.class));
-  }
 }

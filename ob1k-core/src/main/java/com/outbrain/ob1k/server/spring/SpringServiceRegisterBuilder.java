@@ -2,9 +2,9 @@ package com.outbrain.ob1k.server.spring;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.BuilderProvider;
-import com.outbrain.ob1k.server.builder.NoOpBuilderProvider;
-import com.outbrain.ob1k.server.builder.ServerBuilderState;
+import com.outbrain.ob1k.server.build.BuilderProvider;
+import com.outbrain.ob1k.server.build.NoOpBuilderProvider;
+import com.outbrain.ob1k.server.build.ServerBuilderState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,5 +43,4 @@ public class SpringServiceRegisterBuilder {
     bindProvider.provide(bindBuilder);
     return this;
   }
-
 }

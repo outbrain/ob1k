@@ -41,10 +41,8 @@ public class RandomCommitMessageServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-      configurePorts(builder -> builder.setPort(port)).
-      setContextPath(CTX_PATH).
-      withServices(builder -> builder.addService(new RandomCommitMessageServiceImpl(), SERVICE_PATH)).
-      configureExtraParams(builder -> builder.setRequestTimeout(2000, TimeUnit.MILLISECONDS)).
-      build();
+            contextPath(CTX_PATH).configure(builder -> builder.usePort(port).requestTimeout(2000, TimeUnit.MILLISECONDS)).
+            service(builder -> builder.register(new RandomCommitMessageServiceImpl(), SERVICE_PATH)).
+            build();
   }
 }

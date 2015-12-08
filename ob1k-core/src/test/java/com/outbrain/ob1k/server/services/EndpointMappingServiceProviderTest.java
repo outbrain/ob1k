@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.server.services;
 
-import com.outbrain.ob1k.server.build.AddRawServicePhase;
+import com.outbrain.ob1k.server.build.ServerBuilderState;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,20 +14,20 @@ import static org.mockito.Matchers.eq;
 @RunWith(MockitoJUnitRunner.class)
 public class EndpointMappingServiceProviderTest {
 
-  private EndpointMappingServiceProvider provider = new EndpointMappingServiceProvider();
-
   @Mock
-  private AddRawServicePhase builder;
-
+  private ServerBuilderState state;
   @Mock
-  private ServiceRegistryView registry;
+  private ServiceRegistryView registryView;
 
   @Test
-  public void shouldAddEndpointMappingServiceToBuilder() {
+  public void shouldAddServiceDescriptorForEndpointMappingService() {
+    // given
+    Mockito.when(state.getRegistry()).thenReturn(registryView);
+
     // when
-    provider.addServices(builder, registry, "path");
+    EndpointMappingServiceProvider.registerMappingService("path").provide(state);
 
     // then
-    Mockito.verify(builder).addService(any(EndpointMappingService.class), eq("path"));
+    Mockito.verify(state).addServiceDescriptor(any(EndpointMappingService.class), eq("path"));
   }
 }

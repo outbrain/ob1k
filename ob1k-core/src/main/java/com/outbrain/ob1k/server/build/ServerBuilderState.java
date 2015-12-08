@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.builder;
+package com.outbrain.ob1k.server.build;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;

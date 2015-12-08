@@ -1,8 +1,10 @@
 package com.outbrain.ob1k;
 
+import com.outbrain.ob1k.server.build.ServerBuilder;
+
 /**
  * a marker interface for a service that can contain a set of endpoints. <br/>
- * every endpoint is a method that is bound to a URL that is defined when constructing the server(see {@link com.outbrain.ob1k.server.build.ServerBuilder}) <br/>
+ * every endpoint is a method that is bound to a URL that is defined when constructing the server(see {@link ServerBuilder}) <br/>
  *
  * a method can be either synchronous or asynchronous depending on the return type. async method must return a {@link com.outbrain.ob1k.concurrent.ComposableFuture}. <br/>
  * a method will be used for an endpoint provided it is public and non static.

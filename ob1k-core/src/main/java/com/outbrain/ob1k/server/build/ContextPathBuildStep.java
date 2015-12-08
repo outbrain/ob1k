@@ -1,11 +1,11 @@
-package com.outbrain.ob1k.server.builder;
+package com.outbrain.ob1k.server.build;
 
-public class DefaultInitialStepBuilder<E extends ExtendableServerBuilder> extends BuilderStep<E> {
+public class ContextPathBuildStep<E> extends BuilderStep<E> {
 
   private final ServerBuilderState state;
 
-  public DefaultInitialStepBuilder(final E builder, final ServerBuilderState state) {
-    super(builder);
+  public ContextPathBuildStep(final E nextStep, final ServerBuilderState state) {
+    super(nextStep);
     this.state = state;
   }
 
