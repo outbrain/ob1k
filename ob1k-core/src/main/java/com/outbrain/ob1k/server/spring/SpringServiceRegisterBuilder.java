@@ -2,29 +2,35 @@ package com.outbrain.ob1k.server.spring;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.ExtendableServerBuilder;
+import com.outbrain.ob1k.server.builder.BuilderProvider;
+import com.outbrain.ob1k.server.builder.NoOpBuilderProvider;
 import com.outbrain.ob1k.server.builder.ServerBuilderState;
-import com.outbrain.ob1k.server.builder.ServiceBuilderSection;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SpringServiceRegisterBuilder<E extends ExtendableServerBuilder<E>> extends ServiceBuilderSection<E, SpringServiceRegisterBuilder<E>> {
+public class SpringServiceRegisterBuilder {
 
   private final ServerBuilderState state;
-  private final SpringServiceBindingBuilder<E> bindBuilder;
+  private final SpringServiceBindingBuilder bindBuilder;
   private final SpringBeanContext ctx;
 
-  public SpringServiceRegisterBuilder(final E builder, final ServerBuilderState state, final SpringBeanContext ctx) {
-    super(builder);
+  public SpringServiceRegisterBuilder(final ServerBuilderState state, final SpringBeanContext ctx) {
     this.ctx = ctx;
     this.state = state;
-    this.bindBuilder = new SpringServiceBindingBuilder<>(builder, this, state, ctx);
+    this.bindBuilder = new SpringServiceBindingBuilder(state, ctx);
   }
 
   @SafeVarargs
-  public final SpringServiceBindingBuilder<E> register(final String ctxName, final Class<? extends Service> serviceType,
-                                                       final String path, final Class<? extends ServiceFilter>... filterTypes) {
+  public final SpringServiceRegisterBuilder register(final String ctxName, final Class<? extends Service> serviceType,
+                                                     final String path, final Class<? extends ServiceFilter>... filterTypes) {
+    return register(ctxName, serviceType, path, NoOpBuilderProvider.<SpringServiceBindingBuilder>getInstance(), filterTypes);
+  }
+
+  @SafeVarargs
+  public final SpringServiceRegisterBuilder register(final String ctxName, final Class<? extends Service> serviceType,
+                                                     final String path, final BuilderProvider<SpringServiceBindingBuilder> bindProvider,
+                                                     final Class<? extends ServiceFilter>... filterTypes) {
     final List<ServiceFilter> filters = new ArrayList<>();
     if (filterTypes != null) {
       for (final Class<? extends ServiceFilter> filterType : filterTypes) {
@@ -34,11 +40,8 @@ public class SpringServiceRegisterBuilder<E extends ExtendableServerBuilder<E>> 
     }
     final Service service = ctx.getBean(ctxName, serviceType);
     state.addServiceDescriptor(service, path, filters.toArray(new ServiceFilter[filters.size()]));
-    return bindBuilder;
-  }
-
-  @Override
-  protected SpringServiceRegisterBuilder<E> self() {
+    bindProvider.provide(bindBuilder);
     return this;
   }
+
 }

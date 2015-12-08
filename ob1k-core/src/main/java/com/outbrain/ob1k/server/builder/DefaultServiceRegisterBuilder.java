@@ -3,25 +3,24 @@ package com.outbrain.ob1k.server.builder;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 
-public class DefaultServiceRegisterBuilder<E extends ExtendableServerBuilder<E>> extends ServiceBuilderSection<E, DefaultServiceRegisterBuilder<E>> {
+public class DefaultServiceRegisterBuilder {
 
   private final ServerBuilderState state;
-  private final DefaultServiceBindBuilder<E, DefaultServiceRegisterBuilder<E>> bindBuilder;
+  private final DefaultServiceBindBuilder bindBuilder;
 
-  public DefaultServiceRegisterBuilder(final E builder, final ServerBuilderState state) {
-    super(builder);
+  public DefaultServiceRegisterBuilder(final ServerBuilderState state) {
     this.state = state;
-    this.bindBuilder = new DefaultServiceBindBuilder<>(builder, this, state);
+    this.bindBuilder = new DefaultServiceBindBuilder(state);
 
   }
 
-  public DefaultServiceBindBuilder<E, DefaultServiceRegisterBuilder<E>> register(final Service service, final String path, final ServiceFilter... filters) {
+  public DefaultServiceRegisterBuilder register(final Service service, final String path, final ServiceFilter... filters) {
+    return register(service, path, NoOpBuilderProvider.<DefaultServiceBindBuilder>getInstance(), filters);
+  }
+
+  public DefaultServiceRegisterBuilder register(final Service service, final String path, final BuilderProvider<DefaultServiceBindBuilder> bindProvider, final ServiceFilter... filters) {
     state.addServiceDescriptor(service, path, filters);
-    return bindBuilder;
-  }
-
-  @Override
-  protected DefaultServiceRegisterBuilder<E> self() {
+    bindProvider.provide(bindBuilder);
     return this;
   }
 }

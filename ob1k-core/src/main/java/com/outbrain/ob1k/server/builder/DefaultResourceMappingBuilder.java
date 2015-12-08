@@ -1,25 +1,24 @@
 package com.outbrain.ob1k.server.builder;
 
-public class DefaultResourceMappingBuilder<E extends ExtendableServerBuilder<E>> extends BuilderSection<E> {
+public class DefaultResourceMappingBuilder {
 
   private final ServerBuilderState state;
 
-  public DefaultResourceMappingBuilder(final E builder, final ServerBuilderState state) {
-    super(builder);
+  public DefaultResourceMappingBuilder(final ServerBuilderState state) {
     this.state = state;
   }
 
-  public DefaultResourceMappingBuilder<E> staticResource(final String mapping, final String location) {
+  public DefaultResourceMappingBuilder staticResource(final String mapping, final String location) {
     state.addStaticResource(mapping, location);
     return this;
   }
 
-  public DefaultResourceMappingBuilder<E> staticPath(final String path) {
+  public DefaultResourceMappingBuilder staticPath(final String path) {
     state.addStaticFolder(path);
     return this;
   }
 
-  public DefaultResourceMappingBuilder<E> staticMapping(final String virtualPath, final String realPath) {
+  public DefaultResourceMappingBuilder staticMapping(final String virtualPath, final String realPath) {
     state.addStaticMapping(virtualPath, realPath);
     return this;
   }

@@ -2,9 +2,9 @@ package com.outbrain.ob1k.server.builder;
 
 public class DefaultServerBuilder extends ExtendableServerBuilder<DefaultServerBuilder> {
 
-  private final DefaultServiceRegisterBuilder<DefaultServerBuilder> service;
-  private final DefaultResourceMappingBuilder<DefaultServerBuilder> resource;
-  private final DefaultConfigureBuilder<DefaultServerBuilder> configure;
+  private final DefaultServiceRegisterBuilder service;
+  private final DefaultResourceMappingBuilder resource;
+  private final DefaultConfigureBuilder configure;
   private final ServerBuilderState state;
 
   public static DefaultInitialStepBuilder<DefaultServerBuilder> newBuilder() {
@@ -15,27 +15,28 @@ public class DefaultServerBuilder extends ExtendableServerBuilder<DefaultServerB
   private DefaultServerBuilder() {
     super();
     state = innerState();
-    configure = new DefaultConfigureBuilder<>(this, state);
-    service = new DefaultServiceRegisterBuilder<>(this, state);
-    resource = new DefaultResourceMappingBuilder<>(this, state);
+    configure = new DefaultConfigureBuilder(state);
+    service = new DefaultServiceRegisterBuilder(state);
+    resource = new DefaultResourceMappingBuilder(state);
   }
 
-  public DefaultConfigureBuilder<DefaultServerBuilder> configure() {
-    return configure;
+  public DefaultServerBuilder configure(final BuilderProvider<DefaultConfigureBuilder> provider) {
+    provider.provide(configure);
+    return this;
   }
 
-  public DefaultResourceMappingBuilder<DefaultServerBuilder> resource() {
-    return resource;
+  public DefaultServerBuilder service(final BuilderProvider<DefaultServiceRegisterBuilder> provider) {
+    provider.provide(service);
+    return this;
   }
 
-  public DefaultServiceRegisterBuilder<DefaultServerBuilder> service() {
-    return service;
+  public DefaultServerBuilder resource(final BuilderProvider<DefaultResourceMappingBuilder> provider) {
+    provider.provide(resource);
+    return this;
   }
 
   @Override
   protected DefaultServerBuilder self() {
     return this;
   }
-
-
 }

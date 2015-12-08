@@ -1,14 +1,14 @@
 package com.outbrain.ob1k.server.builder;
 
-public abstract class BuilderStep<S> {
+public abstract class BuilderStep<E> {
 
-  private final S builder;
+  private final E builder;
 
-  protected BuilderStep(final S builder) {
+  protected BuilderStep(final E builder) {
     this.builder = builder;
   }
 
-  protected S nextStep() {
+  protected E nextStep() {
     return builder;
   }
 }

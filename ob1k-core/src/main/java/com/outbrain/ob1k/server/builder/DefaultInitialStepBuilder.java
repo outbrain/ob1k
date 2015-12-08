@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.server.builder;
 
-public class DefaultInitialStepBuilder<E extends ExtendableServerBuilder<E>> extends BuilderStep<E> {
+public class DefaultInitialStepBuilder<E extends ExtendableServerBuilder> extends BuilderStep<E> {
 
   private final ServerBuilderState state;
 

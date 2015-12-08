@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.spring;
 
+import com.outbrain.ob1k.server.builder.BuilderProvider;
 import com.outbrain.ob1k.server.builder.DefaultConfigureBuilder;
 import com.outbrain.ob1k.server.builder.DefaultInitialStepBuilder;
 import com.outbrain.ob1k.server.builder.DefaultResourceMappingBuilder;
@@ -8,9 +9,9 @@ import com.outbrain.ob1k.server.builder.ServerBuilderState;
 
 public class SpringContextServerBuilder extends ExtendableServerBuilder<SpringContextServerBuilder> {
 
-  private final SpringServiceRegisterBuilder<SpringContextServerBuilder> service;
-  private final DefaultResourceMappingBuilder<SpringContextServerBuilder> resource;
-  private final DefaultConfigureBuilder<SpringContextServerBuilder> configure;
+  private final SpringServiceRegisterBuilder service;
+  private final DefaultResourceMappingBuilder resource;
+  private final DefaultConfigureBuilder configure;
   private final ServerBuilderState state;
 
   public static DefaultInitialStepBuilder<SpringContextServerBuilder> newBuilder(final SpringBeanContext ctx) {
@@ -21,27 +22,28 @@ public class SpringContextServerBuilder extends ExtendableServerBuilder<SpringCo
   private SpringContextServerBuilder(final SpringBeanContext ctx) {
     super();
     state = innerState();
-    configure = new DefaultConfigureBuilder<>(this, state);
-    service = new SpringServiceRegisterBuilder<>(this, state, ctx);
-    resource = new DefaultResourceMappingBuilder<>(this, state);
+    configure = new DefaultConfigureBuilder(state);
+    service = new SpringServiceRegisterBuilder(state, ctx);
+    resource = new DefaultResourceMappingBuilder(state);
   }
 
-  public DefaultConfigureBuilder<SpringContextServerBuilder> configure() {
-    return configure;
+  public SpringContextServerBuilder configure(final BuilderProvider<DefaultConfigureBuilder> provider) {
+    provider.provide(configure);
+    return this;
   }
 
-  public DefaultResourceMappingBuilder<SpringContextServerBuilder> resource() {
-    return resource;
+  public SpringContextServerBuilder service(final BuilderProvider<SpringServiceRegisterBuilder> provider) {
+    provider.provide(service);
+    return this;
   }
 
-  public SpringServiceRegisterBuilder<SpringContextServerBuilder> service() {
-    return service;
+  public SpringContextServerBuilder resource(final BuilderProvider<DefaultResourceMappingBuilder> provider) {
+    provider.provide(resource);
+    return this;
   }
 
   @Override
   protected SpringContextServerBuilder self() {
     return this;
   }
-
-
 }

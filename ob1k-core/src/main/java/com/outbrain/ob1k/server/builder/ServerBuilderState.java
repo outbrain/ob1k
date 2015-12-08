@@ -8,6 +8,7 @@ import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 public interface ServerBuilderState {
+
   void setPort(final int port);
 
   void setContextPath(final String contextPath);

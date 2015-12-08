@@ -65,9 +65,14 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
     this.registry = new ServiceRegistry(marshallerRegistry);
   }
 
+  public E and(final BuilderProvider<ServerBuilderState> extensionBuilder) {
+    extensionBuilder.provide(innerState());
+    return self();
+  }
+
   protected abstract E self();
 
-  public Server build() {
+  public final Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     final SyncRequestQueueObserver queueObserver = new SyncRequestQueueObserver(activeChannels, metricFactory);
     final Executor executorService = (threadPoolMaxSize > 0 && threadPoolMinSize > 0) ? createExecutorService(queueObserver) : null;

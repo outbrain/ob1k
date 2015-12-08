@@ -1,21 +1,25 @@
 package com.outbrain.ob1k.server.services;
 
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.BuilderSection;
-import com.outbrain.ob1k.server.builder.ExtendableServerBuilder;
+import com.outbrain.ob1k.server.builder.ExtensionBuilder;
 import com.outbrain.ob1k.server.builder.ServerBuilderState;
 
-public class EndpointMappingServiceBuilder<E extends ExtendableServerBuilder<E>> extends BuilderSection<E> {
+public class EndpointMappingServiceBuilder implements ExtensionBuilder {
 
-  private final ServerBuilderState state;
+  private final String path;
+  private final ServiceFilter[] filters;
 
-  public EndpointMappingServiceBuilder(final E builder, final ServerBuilderState state) {
-    super(builder);
-    this.state = state;
+  public static EndpointMappingServiceBuilder registerMappingService(final String path, final ServiceFilter... filters) {
+    return new EndpointMappingServiceBuilder(path, filters);
   }
 
-  public E registerEndpointMappingService(final String path, final ServiceFilter... filters) {
+  private EndpointMappingServiceBuilder(final String path, final ServiceFilter... filters) {
+    this.path = path;
+    this.filters = filters;
+  }
+
+  @Override
+  public void provide(final ServerBuilderState state) {
     state.addServiceDescriptor(new EndpointMappingService(state.getRegistry()), path, filters);
-    return backToServerBuilder();
   }
 }

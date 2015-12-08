@@ -15,17 +15,50 @@ public class DefaultServerBuilderTest {
   @Test
   public void shouldBuildServer() {
 
+// JDK 8 version
+//    Server server = DefaultServerBuilder.newBuilder().contextPath("contextPath").
+//            resource(r -> r.staticMapping("virtualPath", "realPath").staticPath("path")).
+//            service(s -> s.register(new TestService(), "/path",
+//                      b -> b.endpoint("testMethod", "/test").endpoint("anotherMethod", "/another"), new TestServiceFilter()).
+//                    register(new TestService2(), "/path2")).
+//            configure(c -> c.usePort(8080).acceptKeepAlive(true).supportZip(true).requestTimeout(100, TimeUnit.MILLISECONDS)).build();
+
+
+
     Server server = DefaultServerBuilder.newBuilder().contextPath("contextPath").
-            configure().usePort(8080).acceptKeepAlive(true).requestTimeout(100, TimeUnit.MILLISECONDS).and().
-            resource().staticMapping("virtualPath", "realPath").staticPath("path").and().
-            service().register(new TestService(), "/path", new TestServiceFilter()).
-              endpoint("testMethod", "/test").endpoint("anotherMethod", "/another").
-            service().register(new TestService2(), "/path2").build();
+            resource(new BuilderProvider<DefaultResourceMappingBuilder>() {
+              // should be lambda to whoever is inJDK 8
+              @Override
+              public void provide(final DefaultResourceMappingBuilder builder) {
+                builder.staticMapping("virtualPath", "realPath").staticPath("path");
+              }
+            }).
+            service(new BuilderProvider<DefaultServiceRegisterBuilder>() {
+              @Override
+              public void provide(final DefaultServiceRegisterBuilder builder) {
+                // should be lambda to whoever is inJDK 8
+                builder.register(new TestService(), "/path", new BuilderProvider<DefaultServiceBindBuilder>() {
+                  @Override
+                  public void provide(final DefaultServiceBindBuilder builder) {
+                    builder.endpoint("testMethod", "/test").endpoint("anotherMethod", "/another");
+                  }
+                }, new TestServiceFilter()).register(new TestService2(), "/path2");
+              }
+            }).
+            configure(new BuilderProvider<DefaultConfigureBuilder>() {
+              // should be lambda to whoever is inJDK 8
+              @Override
+              public void provide(final DefaultConfigureBuilder builder) {
+                builder.usePort(8080).acceptKeepAlive(true).supportZip(true).requestTimeout(100, TimeUnit.MILLISECONDS);
+              }
+            }).build();
+
+
 
 
     Assert.assertEquals("contextPath", server.getContextPath());
-
   }
+
 
   private class TestService implements Service {
 
