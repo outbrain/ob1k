@@ -1,19 +1,24 @@
 package com.outbrain.ob1k.server.builder;
 
-public class DefaultInitialStepBuilder<E extends ExtendableServerBuilder> extends BuilderStep<E> {
+/**
+ * Required step in every ob1k server builder to define the context path.
+ *
+ * @param <Next> nextStep
+ */
+public class ContextPathBuildStep<Next> extends BuilderStep<Next> {
 
   private final ServerBuilderState state;
 
-  public DefaultInitialStepBuilder(final E builder, final ServerBuilderState state) {
-    super(builder);
+  public ContextPathBuildStep(final Next nextStep, final ServerBuilderState state) {
+    super(nextStep);
     this.state = state;
   }
 
-  public E contextPath(final String contextPath) {
+  public Next contextPath(final String contextPath) {
     return contextPath(contextPath, extractAppName(contextPath));
   }
 
-  public E contextPath(final String contextPath, final String appName) {
+  public Next contextPath(final String contextPath, final String appName) {
     state.setContextPath(contextPath);
     state.setAppName(appName);
     return nextStep();

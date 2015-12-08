@@ -25,7 +25,7 @@ public class EndpointMappingServiceBuilderTest {
     Mockito.when(state.getRegistry()).thenReturn(registryView);
 
     // when
-    EndpointMappingServiceBuilder.registerMappingService("path").provide(state);
+    EndpointMappingServiceBuilder.registerMappingService("path").apply(state);
 
     // then
     Mockito.verify(state).addServiceDescriptor(any(EndpointMappingService.class), eq("path"));

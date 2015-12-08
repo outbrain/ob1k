@@ -30,7 +30,7 @@ public class SwaggerServiceBuilderTest {
 
     // when
     final List<Class<? extends Service>> ignoredServices = Collections.<Class<? extends Service>>singletonList(SwaggerService.class);
-    SwaggerServiceBuilder.enableSwagger("path", ignoredServices).provide(state);
+    SwaggerServiceBuilder.enableSwagger("path", ignoredServices).apply(state);
 
     // then
     Mockito.verify(state).addServiceDescriptor(any(SwaggerService.class), eq("path"));

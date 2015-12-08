@@ -2,7 +2,7 @@ package com.outbrain.ob1k.example.hello.server;
 
 import com.outbrain.ob1k.example.hello.server.services.HelloServiceImpl;
 import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.builder.ServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,10 +48,9 @@ public class HelloServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-      configurePorts(builder -> builder.setPort(port)).
-      setContextPath(CTX_PATH).
-      withServices(builder -> builder.addService(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
-      configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
+            contextPath(CTX_PATH).
+            configure(builder -> builder.usePort(port).requestTimeout(50, TimeUnit.MILLISECONDS)).
+            service(builder -> builder.register(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
       build();
   }
 }

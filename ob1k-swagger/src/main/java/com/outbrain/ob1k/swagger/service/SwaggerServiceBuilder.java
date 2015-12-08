@@ -2,10 +2,10 @@ package com.outbrain.ob1k.swagger.service;
 
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.server.builder.DefaultResourceMappingBuilder;
-import com.outbrain.ob1k.server.builder.DefaultServiceRegisterBuilder;
 import com.outbrain.ob1k.server.builder.ExtensionBuilder;
+import com.outbrain.ob1k.server.builder.ResourceMappingBuilder;
 import com.outbrain.ob1k.server.builder.ServerBuilderState;
+import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
 
 import java.util.List;
 
@@ -30,9 +30,9 @@ public class SwaggerServiceBuilder implements ExtensionBuilder {
 
   @Override
   @SuppressWarnings("unchecked") // small price to pay for Class<Service>[] varargs
-  public void provide(final ServerBuilderState state) {
-    final DefaultServiceRegisterBuilder serviceBuilder = new DefaultServiceRegisterBuilder(state);
-    final DefaultResourceMappingBuilder resourceBuilder = new DefaultResourceMappingBuilder(state);
+  public void apply(final ServerBuilderState state) {
+    final ServiceRegisterBuilder serviceBuilder = new ServiceRegisterBuilder(state);
+    final ResourceMappingBuilder resourceBuilder = new ResourceMappingBuilder(state);
     final Class[] ignoredServicesArray = ignoredServices.toArray(new Class[ignoredServices.size()]);
     serviceBuilder.register(new SwaggerService(state.getRegistry(), ignoredServicesArray), path, filters);
     resourceBuilder.staticPath("/html").

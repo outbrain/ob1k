@@ -10,6 +10,7 @@ import java.util.List;
  *
  * add services to the server defined in the context.
  */
+@Deprecated // use new extendable fluent builder in 'builder' package
 public interface AddServiceFromContextPhase extends AddRawServicePhase {
   AddServiceFromContextPhase addServiceFromContext(final String ctxName, final Class<? extends Service> serviceType,
                                                    final String path);

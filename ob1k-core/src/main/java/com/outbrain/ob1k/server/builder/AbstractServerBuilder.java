@@ -37,7 +37,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<E>> {
+/**
+ * An abstract class for every concrete ob1k server builder
+ *
+ * This class keep the state and implements the build()
+ * method but allows the user to define its own builder with its own API.
+ *
+ * See ServerBuilder for simple example of a concrete implementation.
+ * or com.outbrain.ob1k.server.spring.SpringContextServerBuilder for another example of a concrete builder
+ * implementation that (once moved outside core) will allow us not to have a dependency on spring (not even Provided).
+ *
+ */
+public abstract class AbstractServerBuilder {
 
   public static final int DEFAULT_MAX_CONTENT_LENGTH = 256 * 1024;
 
@@ -60,17 +71,10 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
   private final ServiceRegistry registry;
   private final RequestMarshallerRegistry marshallerRegistry;
 
-  protected ExtendableServerBuilder() {
+  protected AbstractServerBuilder() {
     this.marshallerRegistry = new RequestMarshallerRegistry();
     this.registry = new ServiceRegistry(marshallerRegistry);
   }
-
-  public E and(final BuilderProvider<ServerBuilderState> extensionBuilder) {
-    extensionBuilder.provide(innerState());
-    return self();
-  }
-
-  protected abstract E self();
 
   public final Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
@@ -183,10 +187,13 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
     public void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters) {
       final ServiceDescriptor descriptor = serviceDescriptors.getLast();
       final Service service = descriptor.service;
-      final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding
-              = (descriptor.endpointsBinding == null) ?
-              new HashMap<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>>() :
-              descriptor.endpointsBinding;
+      final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding;
+      if (descriptor.endpointBinding == null) {
+        endpointsBinding = new HashMap<>();
+        descriptor.setEndpointBinding(endpointsBinding);
+      } else {
+        endpointsBinding = descriptor.endpointBinding;
+      }
 
       final Method[] methods = service.getClass().getDeclaredMethods();
       Method method = null;
@@ -229,32 +236,36 @@ public abstract class ExtendableServerBuilder<E extends ExtendableServerBuilder<
     private final List<AsyncFilter> asyncFilters;
     private final List<SyncFilter> syncFilters;
     private final List<StreamFilter> streamFilters;
-    private final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding;
+    private Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointBinding;
     private boolean bindPrefix;
 
     private ServiceDescriptor(final String name, final Service service, final List<AsyncFilter> asyncFilters,
                               final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
-                              final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointsBinding,
+                              final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointBinding,
                               final boolean bindPrefix) {
       this.name = name;
       this.service = service;
       this.asyncFilters = asyncFilters;
       this.syncFilters = syncFilters;
       this.streamFilters = streamFilters;
-      this.endpointsBinding = endpointsBinding;
+      this.endpointBinding = endpointBinding;
       this.bindPrefix = bindPrefix;
     }
 
     public void setBindPrefix(final boolean bindPrefix) {
       this.bindPrefix = bindPrefix;
     }
+
+    public void setEndpointBinding(final Map<String,Map<HttpRequestMethodType,ServiceRegistry.EndpointDescriptor>> endpointBinding) {
+      this.endpointBinding = endpointBinding;
+    }
   }
 
   private static void registerServices(final Deque<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
                                        final Executor executorService) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
-      if (desc.endpointsBinding != null) {
-        registry.register(desc.name, desc.service, desc.endpointsBinding, desc.bindPrefix, executorService);
+      if (desc.endpointBinding != null) {
+        registry.register(desc.name, desc.service, desc.endpointBinding, desc.bindPrefix, executorService);
       } else {
         registry.register(desc.name, desc.service,
             desc.asyncFilters, desc.syncFilters, desc.streamFilters,

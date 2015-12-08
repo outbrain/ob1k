@@ -7,6 +7,11 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
+/**
+ * state of the Server Builder.
+ * This interface is used to expose the inner state of the builder to specific section builders
+ * or extension builders but hide it from users of the Builder.
+ */
 public interface ServerBuilderState {
 
   void setPort(final int port);

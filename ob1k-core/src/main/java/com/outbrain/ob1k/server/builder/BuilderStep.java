@@ -1,14 +1,20 @@
 package com.outbrain.ob1k.server.builder;
 
-public abstract class BuilderStep<E> {
+/**
+ * An abstract class that helps defines a Builder Step.
+ * It holds the next step that must be returned as the return value of the step method.
+ *
+ * @param <NextStep> the next step - to be used as the return value for the step method.
+ */
+public abstract class BuilderStep<NextStep> {
 
-  private final E builder;
+  private final NextStep nextStep;
 
-  protected BuilderStep(final E builder) {
-    this.builder = builder;
+  protected BuilderStep(final NextStep nextStep) {
+    this.nextStep = nextStep;
   }
 
-  protected E nextStep() {
-    return builder;
+  protected NextStep nextStep() {
+    return nextStep;
   }
 }

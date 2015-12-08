@@ -19,7 +19,7 @@ public class EndpointMappingServiceBuilder implements ExtensionBuilder {
   }
 
   @Override
-  public void provide(final ServerBuilderState state) {
+  public void apply(final ServerBuilderState state) {
     state.addServiceDescriptor(new EndpointMappingService(state.getRegistry()), path, filters);
   }
 }

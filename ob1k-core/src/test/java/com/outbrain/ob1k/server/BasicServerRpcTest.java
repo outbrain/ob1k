@@ -6,9 +6,15 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.server.build.*;
+import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.server.builder.ConfigureBuilder;
+import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection;
+import com.outbrain.ob1k.server.builder.ServerBuilder;
+import com.outbrain.ob1k.server.builder.ServiceBindBuilder;
+import com.outbrain.ob1k.server.builder.ServiceBindBuilder.ServiceBindBuilderSection;
+import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
+import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
 import com.outbrain.ob1k.server.entities.OtherEntity;
 import com.outbrain.ob1k.server.entities.TestEntity;
 import com.outbrain.ob1k.server.services.RequestsTestService;
@@ -30,36 +36,34 @@ import java.util.concurrent.TimeUnit;
 public class BasicServerRpcTest {
 
   private static Server buildServer(final Listener listener) {
-    return ServerBuilder.newBuilder().configurePorts(new PortsProvider() {
-      @Override
-      public void configure(final ChoosePortPhase builder) {
-        builder.useRandomPort();
-      }
-    }).setContextPath("/test").withServices(new RawServiceProvider() {
-      @Override
-      public void addServices(final AddRawServicePhase builder) {
-        builder.addService(new SimpleTestServiceImpl(), "/simple");
-        builder.defineService(new RequestsTestServiceImpl(), "/users", new ServiceBindingProvider() {
-          @Override
-          public void configureService(final RawServiceBuilderPhase builder) {
-            builder.addEndpoint(HttpRequestMethodType.GET, "getAll", "/");
-            builder.addEndpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.POST, "updateUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}");
-            builder.addEndpoint(HttpRequestMethodType.PUT, "createUser", "/");
-            builder.addEndpoint("printDetails", "/print/{firstName}/{lastName}");
-          }
-        });
-      }
-    }).configureExtraParams(new ExtraParamsProvider() {
-      @Override
-      public void configureExtraParams(final ExtraParamsPhase builder) {
-        builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
-        if (listener != null) {
-          builder.addListener(listener);
-        }
-      }
-    }).build();
+    return ServerBuilder.newBuilder().
+            contextPath("/test").
+            configure(new ConfigureBuilderSection() {
+              @Override
+              public void apply(final ConfigureBuilder builder) {
+                builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS);
+                if (listener != null) {
+                  builder.addListener(listener);
+                }
+              }
+            }).
+            service(new ServiceRegisterBuilderSection() {
+              @Override
+              public void apply(final ServiceRegisterBuilder builder) {
+                builder.register(new SimpleTestServiceImpl(), "/simple").
+                register(new RequestsTestServiceImpl(), "/users", new ServiceBindBuilderSection() {
+                  @Override
+                  public void apply(final ServiceBindBuilder builder) {
+                    builder.endpoint(HttpRequestMethodType.GET, "getAll", "/").
+                    endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
+                    endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
+                    endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
+                    endpoint(HttpRequestMethodType.PUT, "createUser", "/").
+                    endpoint("printDetails", "/print/{firstName}/{lastName}");
+                  }
+                });
+              }
+            }).build();
   }
 
   @Test

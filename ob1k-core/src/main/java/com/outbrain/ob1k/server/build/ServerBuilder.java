@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
  * Date: 6/23/13
  * Time: 2:16 PM
  */
+@Deprecated // use new extendable fluent builder in 'builder' package
 public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseContextPathPhase, ChooseServiceCreationTypePhase,
                                       AddServiceFromContextPhase, AddRawServicePhase, StaticResourcesPhase, ExtraParamsPhase
 {
