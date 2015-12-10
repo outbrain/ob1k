@@ -159,7 +159,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
       return results.toArray();
     }
 
-    if (request.getRequestBody().isEmpty()) {
+    if (request.getContentLength() == 0) {
       throw new IllegalArgumentException("not enough params passed for the request");
     }
 
