@@ -48,9 +48,9 @@ public class HelloServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-            contextPath(CTX_PATH).
-            configure(builder -> builder.usePort(port).requestTimeout(50, TimeUnit.MILLISECONDS)).
-            service(builder -> builder.register(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
+      contextPath(CTX_PATH).
+      configure(builder -> builder.usePort(port).requestTimeout(50, TimeUnit.MILLISECONDS)).
+      service(builder -> builder.register(new HelloServiceImpl(), HELLO_SERVICE_PATH)).
       build();
   }
 }
