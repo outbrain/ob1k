@@ -30,7 +30,7 @@ public class HelloServerWithConsulRegistration {
   private static final Logger logger = LoggerFactory.getLogger(HelloServerWithConsulRegistration.class);
 
   public static final int PORT_BASE = 8080;
-  public static final String CTX_PATH = "/services";
+  public static final String CTX_PATH = "/api";
   public static final String SERVICE_PATH = "/hello";
 
   private Server server;

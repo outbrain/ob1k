@@ -32,6 +32,9 @@ public class HelloServiceDiscoveryClient {
     final HelloService helloService = new ClientBuilder<>(HelloService.class).
       setProtocol(ContentType.JSON).
       setRequestTimeout(CLIENT_REQUEST_TIMEOUT_MS).
+      setConnectionTimeout(200).
+      setRequestTimeout(100).
+      setRetries(3).
       setTargetProvider(new ConsulBasedTargetProvider(healthyTargetsList, "/hello", null)).
       build();
 
