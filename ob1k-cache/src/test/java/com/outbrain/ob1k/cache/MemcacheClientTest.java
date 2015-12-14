@@ -2,8 +2,10 @@ package com.outbrain.ob1k.cache;
 
 import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
 import com.outbrain.ob1k.cache.memcache.MemcacheClient;
+import com.outbrain.ob1k.cache.metrics.MonitoredTypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
 import junit.framework.Assert;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
@@ -11,6 +13,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,6 +39,9 @@ public class MemcacheClientTest {
         return key;
       }
     }, 1, TimeUnit.MINUTES);
+
+    MetricFactory metricFactory = mock(MetricFactory.class, withSettings().defaultAnswer(RETURNS_MOCKS));
+    client = new MonitoredTypedCache<>(client, "MemcacheClientTest", metricFactory);
   }
 
   @AfterClass
