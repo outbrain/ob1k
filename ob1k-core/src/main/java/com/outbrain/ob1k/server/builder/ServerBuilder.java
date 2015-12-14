@@ -73,7 +73,7 @@ public class ServerBuilder<B extends ServerBuilder<B>> extends AbstractServerBui
     return self();
   }
 
-  public B and(final ExtensionBuilder extensionBuilder) {
+  public B with(final ExtensionBuilder extensionBuilder) {
     extensionBuilder.apply(innerState());
     return self();
   }
