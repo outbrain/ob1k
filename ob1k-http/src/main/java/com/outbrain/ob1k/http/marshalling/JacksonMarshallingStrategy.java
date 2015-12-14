@@ -51,7 +51,7 @@ public class JacksonMarshallingStrategy implements MarshallingStrategy {
       return null;
     }
 
-    return objectMapper.readValue(response.getResponseBody(), getJacksonType(type));
+    return objectMapper.readValue(response.getResponseBodyAsBytes(), getJacksonType(type));
   }
 
   @Override

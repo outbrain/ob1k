@@ -60,6 +60,7 @@ public class JsonRequestMarshallerTest {
     final Response response = mock(Response.class);
     when(response.getStatusCode()).thenReturn(statusCode);
     when(response.getResponseBody()).thenReturn(body);
+    when(response.getResponseBodyAsBytes()).thenReturn(body == null ? null : body.getBytes());
     when(response.hasResponseBody()).thenReturn(true);
     return response;
   }

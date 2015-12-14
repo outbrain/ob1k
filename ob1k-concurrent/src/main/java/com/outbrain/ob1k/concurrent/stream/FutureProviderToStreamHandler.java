@@ -9,7 +9,7 @@ import rx.Subscriber;
 
 /**
  * Created by aronen on 11/9/14.
- * <p/>
+ *
  * creates a stream from a future provider.
  * each time a future provides the value, the next future is generated.
  */

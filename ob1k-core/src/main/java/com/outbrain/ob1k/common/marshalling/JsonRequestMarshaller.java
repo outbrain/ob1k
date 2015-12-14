@@ -8,6 +8,7 @@ import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
@@ -82,12 +83,11 @@ public class JsonRequestMarshaller implements RequestMarshaller {
         return parseURLRequestParams(request, method, paramNames);
       }
     }
-    final String body = request.getRequestBody();
     final Map<String, String> pathParams = request.getPathParams();
-    if (body.isEmpty() && pathParams.isEmpty()) {
+    if (isBodyEmpty(request) && pathParams.isEmpty()) {
       return new Object[paramNames.length];
     }
-    return parseBodyRequestParams(body, paramNames, pathParams, method);
+    return parseBodyRequestParams(request.getRequestInputStream(), paramNames, pathParams, method);
   }
 
   @Override
@@ -205,7 +205,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     return result;
   }
 
-  private Object[] parseBodyRequestParams(final String json,
+  private Object[] parseBodyRequestParams(final InputStream requestBodyJson,
                                           final String[] paramNames,
                                           final Map<String, String> pathParams,
                                           final Method method) throws IOException {
@@ -234,10 +234,10 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     if (numOfBodyParams == 1) {
       // in case of single body param we assume a single object with no wrapping array.
       // we read it completely and finish.
-      final Object param = mapper.readValue(json, getJacksonType(types[index]));
+      final Object param = mapper.readValue(requestBodyJson, getJacksonType(types[index]));
       results.add(param);
     } else if (numOfBodyParams > 1) {
-      final JsonParser jp = factory.createParser(json);
+      final JsonParser jp = factory.createParser(requestBodyJson);
       JsonToken token = jp.nextToken();
       if (token == JsonToken.START_ARRAY) {
         token = jp.nextToken();
@@ -264,5 +264,9 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   private JavaType getJacksonType(final Type type) {
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
     return typeFactory.constructType(type);
+  }
+
+  private boolean isBodyEmpty(final Request request) {
+    return request.getContentLength() == 0;
   }
 }
