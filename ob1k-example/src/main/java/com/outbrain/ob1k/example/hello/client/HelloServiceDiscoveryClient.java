@@ -20,7 +20,7 @@ import com.outbrain.swinfra.metrics.codahale3.CodahaleMetricsFactory;
  */
 public class HelloServiceDiscoveryClient {
 
-  private static final int CLIENT_REQUEST_TIMEOUT_MS = 1000;
+  private static final int CLIENT_REQUEST_TIMEOUT_MS = 200;
 
   public static void main(final String[] args) throws Exception {
 
@@ -33,7 +33,6 @@ public class HelloServiceDiscoveryClient {
       setProtocol(ContentType.JSON).
       setRequestTimeout(CLIENT_REQUEST_TIMEOUT_MS).
       setConnectionTimeout(200).
-      setRequestTimeout(100).
       setRetries(3).
       setTargetProvider(new ConsulBasedTargetProvider(healthyTargetsList, "/hello", null)).
       build();
