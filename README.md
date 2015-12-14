@@ -20,6 +20,8 @@ Ob1k project consists of the following sub libraries:
  - **ob1k-cql**               - A composable futures based asynchronous Cassandra client.
  - **ob1k-security**          - Authentication and authorization for Ob1k.
  - **ob1k-consul**            - Ob1k based [Consul](https://consul.io/) API which simplifies registration and discovery for Ob1k services.
+ - **ob1k-swagger**           - Ob1k swagger plugin that will generate the Swagger APi protocol and also provide the Swagger UI.
+
 
 
 ##Getting started 
@@ -63,11 +65,10 @@ In addition we need to bind our services to a URL under the context. After setti
 
 ```java 
 Server server = ServerBuilder.newBuilder().
-  configurePorts(builder -> builder.setPort(8080)).
-     setContextPath("/services").
-     withServices(builder -> builder.addService(new HelloService(), "/hello")).
-     configureExtraParams(builder -> builder.setRequestTimeout(50, TimeUnit.MILLISECONDS)).
-     build();
+  contextPath("/services").
+  configure(builder -> builder.usePort(8080).requestTimeout(50, TimeUnit.MILLISECONDS)).
+  service(builder -> builder.register(new HelloService(), "/hello")).
+  build();
 ```
 To start the server:
 ```java
