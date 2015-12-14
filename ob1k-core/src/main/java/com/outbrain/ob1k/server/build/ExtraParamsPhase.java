@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by aronen on 7/20/14.
  */
+@Deprecated // use new extendable fluent builder in 'builder' package
 public interface ExtraParamsPhase {
   ExtraParamsPhase acceptKeepAlive(final boolean keepAlive);
   ExtraParamsPhase supportZip(final boolean useZip);

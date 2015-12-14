@@ -6,6 +6,7 @@ import com.outbrain.ob1k.server.Server;
 /**
  * Created by aronen on 7/16/14.
  */
+@Deprecated // use new extendable fluent builder in 'builder' package
 public interface ChooseServiceCreationTypePhase {
   ChooseServiceCreationTypePhase withServicesFrom(final BeanContext ctx, final ContextBasedServiceProvider provider);
   ChooseServiceCreationTypePhase withServices(final RawServiceProvider provider);

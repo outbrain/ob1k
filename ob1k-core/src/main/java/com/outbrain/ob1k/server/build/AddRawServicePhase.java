@@ -1,16 +1,13 @@
 package com.outbrain.ob1k.server.build;
 
 import com.outbrain.ob1k.Service;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.server.Server;
 
 /**
  * adding raw services to the server.
  * @author aronen on 7/16/14.
  */
+@Deprecated // use new extendable fluent builder in 'builder' package
 public interface AddRawServicePhase {
   AddRawServicePhase addService(final Service service, final String path, final ServiceFilter... filters);
   AddRawServicePhase addService(final Service service, final String path, final boolean bindPrefix, final ServiceFilter... filters);

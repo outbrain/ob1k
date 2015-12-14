@@ -1,11 +1,5 @@
-package com.outbrain.ob1k.server.services;
+package com.outbrain.ob1k.server.build;
 
-import com.outbrain.ob1k.server.build.AddRawServicePhase;
-import com.outbrain.ob1k.server.build.InitialPhase;
-import com.outbrain.ob1k.server.build.PortsProvider;
-import com.outbrain.ob1k.server.build.RawServiceProvider;
-import com.outbrain.ob1k.server.build.RegistryServiceProvider;
-import com.outbrain.ob1k.server.build.ServerBuilder;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import org.junit.Test;
 import org.junit.runner.RunWith;

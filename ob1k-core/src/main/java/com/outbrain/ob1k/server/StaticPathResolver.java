@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * User: aronen
@@ -18,7 +19,7 @@ public class StaticPathResolver {
   private final String contextPath;
 
 
-  public StaticPathResolver(String contextPath, List<String> folders, Map<String, String> fileMappings, Map<String, String> staticResources) {
+  public StaticPathResolver(String contextPath, Set<String> folders, Map<String, String> fileMappings, Map<String, String> staticResources) {
     this.fileMappings = new HashMap<>();
     this.staticResources = new HashMap<>();
 

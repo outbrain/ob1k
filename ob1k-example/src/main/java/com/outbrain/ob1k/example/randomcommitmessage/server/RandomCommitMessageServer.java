@@ -1,7 +1,8 @@
 package com.outbrain.ob1k.example.randomcommitmessage.server;
 
+import com.outbrain.ob1k.example.randomcommitmessage.server.services.RandomCommitMessageServiceImpl;
 import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.builder.ServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +42,9 @@ public class RandomCommitMessageServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-      configurePorts(builder -> builder.setPort(port)).
-      setContextPath(CTX_PATH).
-      withServices(builder -> builder.addService(new RandomCommitMessageServiceImpl(), SERVICE_PATH)).
-      configureExtraParams(builder -> builder.setRequestTimeout(2000, TimeUnit.MILLISECONDS)).
+      contextPath(CTX_PATH).
+      configure(builder -> builder.usePort(port).requestTimeout(2000, TimeUnit.MILLISECONDS)).
+      service(builder -> builder.register(new RandomCommitMessageServiceImpl(), SERVICE_PATH)).
       build();
   }
 }

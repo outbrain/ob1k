@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.example.randomcommitmessage.server;
+package com.outbrain.ob1k.example.randomcommitmessage.server.services;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;

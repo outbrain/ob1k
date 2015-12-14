@@ -1,8 +1,40 @@
 package com.outbrain.ob1k.client.http;
 
+import com.outbrain.ob1k.Service;
+import com.outbrain.ob1k.client.ClientBuilder;
+import com.outbrain.ob1k.client.Clients;
+import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
+import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
+import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
+import com.outbrain.ob1k.common.filters.AsyncFilter;
+import com.outbrain.ob1k.common.filters.ServiceFilter;
+import com.outbrain.ob1k.common.filters.SyncFilter;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.ob1k.http.Response;
+import com.outbrain.ob1k.http.TypedResponse;
+import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.builder.ConfigureBuilder;
+import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection;
+import com.outbrain.ob1k.server.builder.ResourceMappingBuilder;
+import com.outbrain.ob1k.server.builder.ResourceMappingBuilder.ResourceMappingBuilderSection;
+import com.outbrain.ob1k.server.builder.ServerBuilder;
+import com.outbrain.ob1k.server.builder.ServiceBindBuilder;
+import com.outbrain.ob1k.server.builder.ServiceBindBuilder.ServiceBindBuilderSection;
+import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
+import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
+import com.outbrain.ob1k.server.filters.CachingFilter;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import rx.Observable;
+import rx.functions.Action1;
+
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,34 +42,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import com.outbrain.ob1k.Service;
-import com.outbrain.ob1k.client.Clients;
-import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
-import com.outbrain.ob1k.client.ctx.SyncClientRequestContext;
-import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.http.Response;
-import com.outbrain.ob1k.http.TypedResponse;
-import com.outbrain.ob1k.server.build.*;
-import com.outbrain.ob1k.server.filters.CachingFilter;
-import org.junit.Assert;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.client.ClientBuilder;
-import com.outbrain.ob1k.http.common.ContentType;
-import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.build.ServerBuilder;
-import rx.Observable;
-import rx.functions.Action1;
 
 /**
  * User: aronen
@@ -64,53 +68,43 @@ public class BasicClientRpcTest {
 
   private interface HelloServiceClient extends Service {
     ComposableFuture<Response> helloWorld();
+
     Observable<Response> getMessages(String name, int iterations, boolean failAtEnd);
   }
 
   private interface HelloServiceTypedClient extends Service {
     ComposableFuture<TypedResponse<String>> helloWorld();
+
     Observable<TypedResponse<String>> getMessages(String name, int iterations, boolean failAtEnd);
   }
 
   @BeforeClass
   public static void setup() {
-    server = ServerBuilder.newBuilder().
-            configurePorts(new PortsProvider() {
+    server = ServerBuilder.newBuilder().contextPath(CTX_PATH).
+            configure(new ConfigureBuilderSection() {
               @Override
-              public void configure(final ChoosePortPhase builder) {
-                builder.useRandomPort();
+              public void apply(final ConfigureBuilder builder) {
+                builder.useRandomPort().configureExecutorService(5, 10);
               }
-            }).
-            setContextPath(CTX_PATH).
-            configureExtraParams(new ExtraParamsProvider() {
+            }).service(new ServiceRegisterBuilderSection() {
               @Override
-              public void configureExtraParams(final ExtraParamsPhase builder) {
-                builder.configureExecutorService(5, 10);
-
+              public void apply(final ServiceRegisterBuilder builder) {
+                builder.register(new HelloService(), HELLO_SERVICE_PATH).
+                        register(new ParamsService(), "/params").
+                        register(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindBuilderSection() {
+                          @Override
+                          public void apply(final ServiceBindBuilder builder) {
+                            builder.endpoint("getNextCode", "/next", createCachingFilter()).
+                                    endpoint("getRandomCode", "/random");
+                          }
+                        });
               }
-            }).
-            withServices(new RawServiceProvider() {
+            }).resource(new ResourceMappingBuilderSection() {
               @Override
-              public void addServices(final AddRawServicePhase builder) {
-                builder.addService(new HelloService(), HELLO_SERVICE_PATH);
-                builder.addService(new ParamsService(), "/params");
-                builder.defineService(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindingProvider() {
-                  @Override
-                  public void configureService(RawServiceBuilderPhase builder) {
-                    builder.addEndpoint("getNextCode", "/next", createCachingFilter());
-                    builder.addEndpoint("getRandomCode", "/random");
-                  }
-                });
+              public void apply(final ResourceMappingBuilder builder) {
+                builder.staticPath("/static");
               }
-            }).
-            configureStaticResources(new StaticResourcesProvider() {
-              @Override
-              public void configureResources(final StaticResourcesPhase builder) {
-                builder.addStaticPath("/static");
-
-              }
-            }).
-            build();
+            }).build();
 
     final InetSocketAddress address = server.start();
     port = address.getPort();
@@ -463,23 +457,23 @@ public class BasicClientRpcTest {
     }
   }
 
-  @Test(expected=ExecutionException.class)
+  @Test(expected = ExecutionException.class)
   public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
     IHelloService service = new ClientBuilder<>(IHelloService.class).build();
-    final ComposableFuture<com.outbrain.ob1k.Response> future =  service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
+    final ComposableFuture<com.outbrain.ob1k.Response> future = service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
     Assert.assertNotNull(future);
     try {
       future.get();
     } catch (ExecutionException e) {
-      Assert.assertEquals(NoSuchElementException.class,e.getCause().getClass());
+      Assert.assertEquals(NoSuchElementException.class, e.getCause().getClass());
       throw e;
     }
   }
 
-  @Test(expected=RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testEmptyTargetStreamBehavior() throws ExecutionException, InterruptedException {
     IHelloService service = new ClientBuilder<>(IHelloService.class).build();
-    final Observable<String> observable =  service.getMessages("name", 1, false);
+    final Observable<String> observable = service.getMessages("name", 1, false);
     Assert.assertNotNull(observable);
     observable.toBlocking().first();
   }
