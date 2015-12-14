@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>ob1k-http</artifactId>
-  <name>ob1k-core</name>
+  <name>ob1k-http</name>
   <packaging>jar</packaging>
 
   <dependencies>
