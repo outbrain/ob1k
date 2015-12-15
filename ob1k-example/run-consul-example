@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mvn exec:java -Dexec.mainClass=com.outbrain.ob1k.example.hello.server.HelloServerWithConsulRegistration -Dexec.arguments=0 &
+mvn exec:java -Dexec.mainClass=com.outbrain.ob1k.example.hello.server.HelloServerWithConsulRegistration -Dexec.arguments=1 &
+mvn exec:java -Dexec.mainClass=com.outbrain.ob1k.example.hello.server.HelloServerWithConsulRegistration -Dexec.arguments=2 &
