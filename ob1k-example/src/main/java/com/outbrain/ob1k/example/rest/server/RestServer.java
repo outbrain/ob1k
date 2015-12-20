@@ -51,8 +51,8 @@ public class RestServer {
           endpoint(PUT, "updateUser", "/{id}").
           endpoint(DELETE, "deleteUser", "/{id}").
           endpoint(ANY, "subscribeChanges", "/subscribe"))).
-            with(registerMappingService("/endpoints")).
-            with(enableSwagger("/api/swagger", singletonList(EndpointMappingService.class))).build();
+            withExtension(registerMappingService("/endpoints")).
+            withExtension(enableSwagger("/api/swagger", singletonList(EndpointMappingService.class))).build();
   }
 
   public InetSocketAddress start(final int port) {

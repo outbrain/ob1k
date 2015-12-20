@@ -5,12 +5,11 @@ import com.outbrain.ob1k.consul.ConsulServiceRegistrator;
 import com.outbrain.ob1k.example.consul.ExampleServiceRegistrationDataProvider;
 import com.outbrain.ob1k.example.hello.server.services.HelloServiceImpl;
 import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.build.ServerBuilder;
+import com.outbrain.ob1k.server.builder.ServerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -55,16 +54,15 @@ public class HelloServerWithConsulRegistration {
   }
 
   private Server buildServer() {
+    final Set<String> tags = Sets.newHashSet("instance" + instance, "production");
+
     return ServerBuilder.newBuilder().
-      configurePorts(builder -> builder.setPort(port)).
-      setContextPath(CTX_PATH, "Hello").
-      withServices(builder -> builder.addService(new HelloServiceImpl(instance), SERVICE_PATH)).
-      configureExtraParams(builder -> {
-        builder.setRequestTimeout(50, TimeUnit.MILLISECONDS);
-        final Set<String> tags = Sets.newHashSet("instance" + instance, "production");
-        builder.addListener(new ConsulServiceRegistrator(new ExampleServiceRegistrationDataProvider(SERVICE_PATH + "/instance", tags, instance)));
-      }).
-      build();
+            contextPath(CTX_PATH, "Hello").
+            configure(builder -> builder.usePort(port).
+                    requestTimeout(50, TimeUnit.MILLISECONDS).
+                    addListener(new ConsulServiceRegistrator(new ExampleServiceRegistrationDataProvider(SERVICE_PATH + "/instance", tags, instance)))).
+            service(builder -> builder.register(new HelloServiceImpl(instance), SERVICE_PATH)).
+            build();
   }
 
   public static void main(final String[] args) {
