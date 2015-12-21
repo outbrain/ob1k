@@ -13,7 +13,7 @@ import java.util.Map;
  * Date: 6/25/13
  * Time: 6:28 PM
  */
-public class SpringContextBuilder {
+public class SpringContextBuilder<T extends SpringContextBuilder<T>> {
   public static final String DEFAULT_CONTEXT_PATH = "";
 
   private final List<CtxParams> subParams;
@@ -48,28 +48,28 @@ public class SpringContextBuilder {
   }
 
 
-  public SpringContextBuilder setMainContext(final String name, final String path) {
+  public T setMainContext(final String name, final String path) {
 
     return setMainContext(name,path, allowBeanOverrideByDefault);
   }
 
-  public SpringContextBuilder setMainContext(final String name, final String path, final boolean allowBeanOverride) {
+  public T setMainContext(final String name, final String path, final boolean allowBeanOverride) {
     mainParams = new CtxParams(name, path, allowBeanOverride);
-    return this;
+    return self();
   }
 
-  public SpringContextBuilder addSubContext(final String name, final String path) {
+  public T addSubContext(final String name, final String path) {
     return addSubContext(name,path, allowBeanOverrideByDefault);
   }
 
-  public SpringContextBuilder addSubContext(final String name, final String path, final boolean allowBeanOverride) {
+  public T addSubContext(final String name, final String path, final boolean allowBeanOverride) {
     subParams.add(new CtxParams(name, path, allowBeanOverride));
-    return this;
+    return self();
   }
   
-  public SpringContextBuilder setActiveProfiles(final String activeProfiles) {
+  public T setActiveProfiles(final String activeProfiles) {
     this.activeProfiles = activeProfiles;
-    return this;
+    return self();
   }
 
   private AbstractApplicationContext createMainContext(final boolean allowBeanOverride) {
@@ -103,5 +103,10 @@ public class SpringContextBuilder {
     }
 
     return new SpringBeanContext(contexts);
+  }
+
+  @SuppressWarnings("unchecked")
+  private T self() {
+    return (T) this;
   }
 }

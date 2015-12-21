@@ -24,4 +24,8 @@ public class SpringBeanContext implements BeanContext {
   public <T> T getBean(final String ctxName, final String id, final Class<T> type) {
     return contexts.get(ctxName).getBean(id, type);
   }
+
+  public boolean contextExists(final String ctxName) {
+    return contexts.containsKey(ctxName);
+  }
 }
