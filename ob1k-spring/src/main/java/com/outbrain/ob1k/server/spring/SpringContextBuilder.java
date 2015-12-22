@@ -13,7 +13,7 @@ import java.util.Map;
  * Date: 6/25/13
  * Time: 6:28 PM
  */
-public class SpringContextBuilder<T extends SpringContextBuilder<T>> {
+public class SpringContextBuilder {
   public static final String DEFAULT_CONTEXT_PATH = "";
 
   private final List<CtxParams> subParams;
@@ -48,28 +48,28 @@ public class SpringContextBuilder<T extends SpringContextBuilder<T>> {
   }
 
 
-  public T setMainContext(final String name, final String path) {
+  public SpringContextBuilder setMainContext(final String name, final String path) {
 
     return setMainContext(name,path, allowBeanOverrideByDefault);
   }
 
-  public T setMainContext(final String name, final String path, final boolean allowBeanOverride) {
+  public SpringContextBuilder setMainContext(final String name, final String path, final boolean allowBeanOverride) {
     mainParams = new CtxParams(name, path, allowBeanOverride);
-    return self();
+    return this;
   }
 
-  public T addSubContext(final String name, final String path) {
+  public SpringContextBuilder addSubContext(final String name, final String path) {
     return addSubContext(name,path, allowBeanOverrideByDefault);
   }
 
-  public T addSubContext(final String name, final String path, final boolean allowBeanOverride) {
+  public SpringContextBuilder addSubContext(final String name, final String path, final boolean allowBeanOverride) {
     subParams.add(new CtxParams(name, path, allowBeanOverride));
-    return self();
+    return this;
   }
   
-  public T setActiveProfiles(final String activeProfiles) {
+  public SpringContextBuilder setActiveProfiles(final String activeProfiles) {
     this.activeProfiles = activeProfiles;
-    return self();
+    return this;
   }
 
   private AbstractApplicationContext createMainContext(final boolean allowBeanOverride) {
@@ -103,10 +103,5 @@ public class SpringContextBuilder<T extends SpringContextBuilder<T>> {
     }
 
     return new SpringBeanContext(contexts);
-  }
-
-  @SuppressWarnings("unchecked")
-  private T self() {
-    return (T) this;
   }
 }
