@@ -47,7 +47,7 @@ public class SpringContextServerBuilderTest {
     Mockito.when(springContext.getBean("ctx", TestService2.class)).thenReturn(new TestService2());
     Mockito.when(springContext.getBean("ctx", HitsCounterFilter.class)).thenReturn(new HitsCounterFilter(metricFactory));
 
-    Server server = SpringContextServerBuilder.newBuilder(springContext).contextPath("contextPath").
+    final Server server = SpringContextServerBuilder.newBuilder(springContext).contextPath("contextPath").
             configure(new ConfigureBuilderSection() {
               // should be lambda to whoever is inJDK 8
               @Override

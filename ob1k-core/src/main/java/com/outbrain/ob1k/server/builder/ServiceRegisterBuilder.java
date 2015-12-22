@@ -43,7 +43,7 @@ public class ServiceRegisterBuilder<B extends ServiceRegisterBuilder<B>> {
   }
 
   @SuppressWarnings("unchecked")
-  private B self() {
+  protected B self() {
     return (B) this;
   }
 

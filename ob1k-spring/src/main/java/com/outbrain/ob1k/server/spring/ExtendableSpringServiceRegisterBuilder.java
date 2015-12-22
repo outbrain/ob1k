@@ -23,13 +23,13 @@ public class ExtendableSpringServiceRegisterBuilder<B extends ExtendableSpringSe
   }
 
   @SafeVarargs
-  public final ExtendableSpringServiceRegisterBuilder register(final String ctxName, final Class<? extends Service> serviceType,
+  public final B register(final String ctxName, final Class<? extends Service> serviceType,
                                                                final String path, final Class<? extends ServiceFilter>... filterTypes) {
     return register(ctxName, serviceType, path, NO_OP, filterTypes);
   }
 
   @SafeVarargs
-  public final ExtendableSpringServiceRegisterBuilder register(final String ctxName, final Class<? extends Service> serviceType,
+  public final B register(final String ctxName, final Class<? extends Service> serviceType,
                                                                final String path, final SpringServiceBindBuilderSection bindSection,
                                                                final Class<? extends ServiceFilter>... filterTypes) {
     final List<ServiceFilter> filters = new ArrayList<>();
@@ -42,7 +42,7 @@ public class ExtendableSpringServiceRegisterBuilder<B extends ExtendableSpringSe
     final Service service = ctx.getBean(ctxName, serviceType);
     register(service, path, filters.toArray(new ServiceFilter[filters.size()]));
     bindSection.apply(bindBuilder);
-    return this;
+    return self();
   }
 
   private static class NoOpBindSection implements SpringServiceBindBuilderSection {
