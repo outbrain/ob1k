@@ -44,9 +44,13 @@ public interface ServerBuilderState {
 
   void addServiceDescriptor(final Service service, final String path, final ServiceFilter... filters);
 
+  void removeFiltersFromLastServiceDescriptor(Class<? extends ServiceFilter> filter);
+
   void setBindPrefixToLastDescriptor(boolean bindPrefix);
 
   void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters);
 
   ServiceRegistryView getRegistry();
+
+  boolean alreadyRegisteredServices();
 }

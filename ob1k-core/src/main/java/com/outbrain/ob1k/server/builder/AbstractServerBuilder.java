@@ -179,6 +179,22 @@ public abstract class AbstractServerBuilder {
     }
 
     @Override
+    public void removeFiltersFromLastServiceDescriptor(final Class<? extends ServiceFilter> filterClass) {
+      final ServiceDescriptor descriptor = serviceDescriptors.getLast();
+      if (SyncFilter.class.isAssignableFrom(filterClass)) {
+        removeFiltersOfClass(filterClass, descriptor.syncFilters);
+      }
+
+      if (AsyncFilter.class.isAssignableFrom(filterClass)) {
+        removeFiltersOfClass(filterClass, descriptor.asyncFilters);
+      }
+
+      if (StreamFilter.class.isAssignableFrom(filterClass)) {
+        removeFiltersOfClass(filterClass, descriptor.streamFilters);
+      }
+    }
+
+    @Override
     public void setBindPrefixToLastDescriptor(final boolean bindPrefix) {
       serviceDescriptors.getLast().setBindPrefix(bindPrefix);
     }
@@ -226,6 +242,24 @@ public abstract class AbstractServerBuilder {
     public ServiceRegistryView getRegistry() {
       return registry;
     }
+
+    @Override
+    public boolean alreadyRegisteredServices() {
+      return !serviceDescriptors.isEmpty();
+    }
+
+    private <T extends ServiceFilter> void removeFiltersOfClass(final Class<? extends ServiceFilter> filterClass, final List<T> filterList) {
+      final List<T> toRemove = new LinkedList<>();
+      for (final T candidate : filterList) {
+        if (candidate.getClass().equals(filterClass)) {
+          toRemove.add(candidate);
+        }
+      }
+      for (final T filter : toRemove) {
+        filterList.remove(filter);
+      }
+    }
+
   }
 
   //////////////////////////////
