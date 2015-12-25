@@ -2,8 +2,10 @@ package com.outbrain.ob1k.cache;
 
 import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
 import com.outbrain.ob1k.cache.memcache.MemcacheClient;
+import com.outbrain.ob1k.cache.metrics.MonitoringCacheDelegate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.swinfra.metrics.api.MetricFactory;
 import junit.framework.Assert;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
@@ -11,6 +13,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,6 +39,9 @@ public class MemcacheClientTest {
         return key;
       }
     }, 1, TimeUnit.MINUTES);
+
+    final MetricFactory metricFactory = mock(MetricFactory.class, withSettings().defaultAnswer(RETURNS_MOCKS));
+    client = new MonitoringCacheDelegate<>(client, "MemcacheClientTest", metricFactory);
   }
 
   @AfterClass
@@ -44,7 +50,7 @@ public class MemcacheClientTest {
   }
 
   @Test
-  public void testGet() throws IOException, ExecutionException, InterruptedException {
+  public void testGetHit() throws IOException, ExecutionException, InterruptedException {
     final ComposableFuture<String> res = client.setAsync("key1", "value1").continueOnSuccess(new FutureSuccessHandler<Boolean, String>() {
       @Override
       public ComposableFuture<String> handle(final Boolean result) {
@@ -57,7 +63,14 @@ public class MemcacheClientTest {
   }
 
   @Test
-  public void testBulkApi() throws ExecutionException, InterruptedException {
+  public void testGetMiss() throws IOException, ExecutionException, InterruptedException {
+    final ComposableFuture<String> res = client.getAsync("keyMiss1");
+    final String result = res.get();
+    Assert.assertNull(result);
+  }
+
+  @Test
+  public void testGetBulkHit() throws ExecutionException, InterruptedException {
     final Map<String, String> entries = new HashMap<>();
     for (int i=0; i< 100; i++) {
       entries.put("bulkKey" + i, "value" + i);
@@ -75,6 +88,17 @@ public class MemcacheClientTest {
     for (int i=0; i< 100; i++) {
       Assert.assertEquals(results.get("bulkKey" + i), "value" + i);
     }
+  }
 
+  @Test
+  public void testGetBulkMiss() throws ExecutionException, InterruptedException {
+    final Map<String, String> entries = new HashMap<>();
+    for (int i=0; i< 100; i++) {
+      entries.put("bulkKeyMiss" + i, "value" + i);
+    }
+
+    final ComposableFuture<Map<String, String>> res = client.getBulkAsync(entries.keySet());
+    final Map<String, String> results = res.get();
+    Assert.assertEquals(results.size(), 0);
   }
 }
