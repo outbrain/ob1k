@@ -13,7 +13,6 @@ import java.lang.reflect.Type;
  * a strategy for marshalling and unmarshalling should be provided.
  *
  * @see JacksonMarshallingStrategy
- * @see MessagePackMarshallingStrategy
  * @author marenzon
  */
 public interface MarshallingStrategy {

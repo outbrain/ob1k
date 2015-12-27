@@ -73,6 +73,8 @@
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
+    <msgpack.version>0.7.1</msgpack.version>
+    <jackson.version>2.6.4</jackson.version>
   </properties>
 
   <profiles>
@@ -226,8 +228,26 @@
 
       <dependency>
         <groupId>org.msgpack</groupId>
-        <artifactId>msgpack</artifactId>
-        <version>0.6.7</version>
+        <artifactId>msgpack-core</artifactId>
+        <version>${msgpack.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.msgpack</groupId>
+        <artifactId>jackson-dataformat-msgpack</artifactId>
+        <version>${msgpack.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
 
       <dependency>

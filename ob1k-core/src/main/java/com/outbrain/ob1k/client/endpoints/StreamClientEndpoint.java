@@ -92,5 +92,4 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
     final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
     return invokeStream(ctx);
   }
-
 }

@@ -211,6 +211,19 @@ public class BasicClientRpcTest {
   }
 
   @Test
+  public void testSingleParamService() throws Exception {
+
+    final IHelloService jsonClient = createClient(ContentType.JSON, port);
+    final IHelloService msgPackClient = createClient(ContentType.MESSAGE_PACK, port);
+
+    final String name = "yossuf";
+    final String expected = "hello " + name;
+
+    Assert.assertEquals("name should be equal", expected, jsonClient.hello(name).get());
+    Assert.assertEquals("name should be equal", expected, msgPackClient.hello(name).get());
+  }
+
+  @Test
   public void testMultipleClientsSharedThreads() throws Exception {
     final List<IHelloService> clients = new ArrayList<>();
     final int numOfThreadsBefore = Thread.activeCount();
@@ -227,8 +240,6 @@ public class BasicClientRpcTest {
     }
 
     Assert.assertTrue((numOfThreads - numOfThreadsBefore) < 100);
-
-    System.out.println("walla...");
   }
 
   private List<TestBean> createBeans() {

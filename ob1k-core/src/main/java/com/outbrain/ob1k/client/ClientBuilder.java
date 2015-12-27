@@ -15,8 +15,6 @@ import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.common.marshalling.TypeHelper;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import rx.Observable;
@@ -176,27 +174,16 @@ public class ClientBuilder<T extends Service> {
     return proxy;
   }
 
-  private static RequestMarshallerRegistry createRegistry(final Class type) {
-    final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
-
-    final Method[] methods = type.getDeclaredMethods();
-    for (final Method method : methods) {
-      registry.registerTypes(TypeHelper.extractTypes(method));
-    }
-
-    return registry;
-  }
-
   private Map<Method, AbstractClientEndpoint> extractEndpointsFromType(final HttpClient httpClient) {
-
     final Map<Method, AbstractClientEndpoint> endpoints = new HashMap<>();
+    final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
     final Method[] methods = type.getDeclaredMethods();
 
     for (final Method method : methods) {
       if (isValidEndpoint(method)) {
         final String methodName = method.getName();
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
-        final RequestMarshallerRegistry registry = createRegistry(type);
+
         final AbstractClientEndpoint.Endpoint endpoint = new AbstractClientEndpoint.Endpoint(method, type, clientType,
                 endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;

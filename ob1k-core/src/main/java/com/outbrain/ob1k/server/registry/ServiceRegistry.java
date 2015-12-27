@@ -10,8 +10,6 @@ import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.server.MethodParamNamesExtractor;
 import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.ServerEndpoint;
@@ -43,14 +41,8 @@ import static java.util.Collections.unmodifiableSortedMap;
 public class ServiceRegistry implements ServiceRegistryView {
   private static final Logger logger = LoggerFactory.getLogger(ServiceRegistry.class);
 
-  private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints;
+  private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints = new PathTrie<>();
   private String contextPath;
-  private final RequestMarshallerRegistry marshallerRegistry;
-
-  public ServiceRegistry(final RequestMarshallerRegistry marshallerRegistry) {
-    this.endpoints = new PathTrie<>();
-    this.marshallerRegistry = marshallerRegistry;
-  }
 
   public void setContextPath(final String contextPath) {
     this.contextPath = contextPath;
@@ -69,11 +61,6 @@ public class ServiceRegistry implements ServiceRegistryView {
       return serviceEndpoints.get(HttpRequestMethodType.ANY);
     }
     return serviceEndpoints.get(requestMethodType);
-  }
-
-  public void register(final String name, final Service service, final boolean bindPrefix,
-                       final Executor executorService) {
-    register(name, service, null, null, null, bindPrefix, executorService);
   }
 
   public static class EndpointDescriptor {
@@ -144,8 +131,6 @@ public class ServiceRegistry implements ServiceRegistryView {
         final Method method = endpointDesc.method;
         final List<String> methodParamNames = methodsParams.get(method);
 
-        marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
-
         validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 
         final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
@@ -161,7 +146,8 @@ public class ServiceRegistry implements ServiceRegistryView {
     }
   }
 
-  private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
+  private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method,
+                                    final List<String> methodParamNames) {
     final Class<?>[] parameterTypes = method.getParameterTypes();
     if (parameterTypes.length == 1 && parameterTypes[0] == Request.class) {
       return;
@@ -303,11 +289,10 @@ public class ServiceRegistry implements ServiceRegistryView {
     return result;
   }
 
-  private boolean isEndpoint(Method method) {
-    int modifiers = method.getModifiers();
+  private boolean isEndpoint(final Method method) {
+    final int modifiers = method.getModifiers();
     return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
   }
-
 
   private Map<HttpRequestMethodType, EndpointDescriptor> singleEndpointDescToMap(final EndpointDescriptor endpointDescriptor) {
     final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptorMap = Maps.newHashMap();
@@ -316,11 +301,11 @@ public class ServiceRegistry implements ServiceRegistryView {
   }
 
   public SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> getRegisteredEndpoints() {
-    SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> copy = new TreeMap<>();
-    for (Map.Entry<String, Map<HttpRequestMethodType, ServerEndpoint>> entry : endpoints.getPathToValueMapping().entrySet()) {
+    final SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> copy = new TreeMap<>();
+    for (final Map.Entry<String, Map<HttpRequestMethodType, ServerEndpoint>> entry : endpoints.getPathToValueMapping().entrySet()) {
       copy.put(entry.getKey(), Maps.transformValues(entry.getValue(), new Function<ServerEndpoint, ServerEndpointView>() {
         @Override
-        public ServerEndpointView apply(ServerEndpoint input) {
+        public ServerEndpointView apply(final ServerEndpoint input) {
           return input;
         }
       }));
@@ -344,5 +329,4 @@ public class ServiceRegistry implements ServiceRegistryView {
   private boolean isStreamingMethod(final Method m) {
     return m.getReturnType() == Observable.class;
   }
-
 }
