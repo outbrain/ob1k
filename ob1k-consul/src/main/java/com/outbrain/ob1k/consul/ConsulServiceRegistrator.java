@@ -7,6 +7,10 @@ import com.outbrain.ob1k.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
+
 /**
  * A server listener that registers the service in the consul.
  *
@@ -53,15 +57,14 @@ public class ConsulServiceRegistrator implements Server.Listener {
       @Override
       public void run() {
         logger.info("Going to deregister service {}", registration.getID());
-        ConsulAPI.getServiceRegistry().deregister(registration.getID()).consume(new Consumer<String>() {
-          @Override
-          public void consume(final Try<String> aTry) {
-            logger.info("{} deregistration success={}", registration.getID(), aTry.isSuccess());
-            if (!aTry.isSuccess()) {
-              logger.error("Failed to deregister service:", aTry.getError());
-            }
-          }
-        });
+        try {
+          final URLConnection urlConnection = new URL("http://localhost:8500/v1/agent/service/deregister/" + registration.getID()).openConnection();
+          urlConnection.setConnectTimeout(1000);
+          urlConnection.getInputStream().close();
+          logger.info("Deregistered service {}", registration.getID());
+        } catch (IOException e) {
+          logger.error("Failed to deregister service {}", registration.getID(), e);
+        }
       }
     });
   }
