@@ -62,7 +62,7 @@ public class ConsulServiceRegistrator implements Server.Listener {
           urlConnection.setConnectTimeout(1000);
           urlConnection.getInputStream().close();
           logger.info("Deregistered service {}", registration.getID());
-        } catch (IOException e) {
+        } catch (final IOException e) {
           logger.error("Failed to deregister service {}", registration.getID(), e);
         }
       }
