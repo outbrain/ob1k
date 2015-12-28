@@ -59,7 +59,8 @@ public class ConsulServiceRegistrator implements Server.Listener {
         logger.info("Going to deregister service {}", registration.getID());
         try {
           final URLConnection urlConnection = new URL("http://localhost:8500/v1/agent/service/deregister/" + registration.getID()).openConnection();
-          urlConnection.setConnectTimeout(1000);
+          urlConnection.setConnectTimeout(500);
+          urlConnection.setReadTimeout(500);
           urlConnection.getInputStream().close();
           logger.info("Deregistered service {}", registration.getID());
         } catch (final IOException e) {
