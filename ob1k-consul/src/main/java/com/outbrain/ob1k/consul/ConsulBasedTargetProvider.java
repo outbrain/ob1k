@@ -55,7 +55,7 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     final int index = currIndex.get();
     currIndex.set(index + 1);
     final List<String> currTargets = targets;
-    String target = currTargets.get(Math.abs(index % currTargets.size()));
+    final String target = currTargets.get(Math.abs(index % currTargets.size()));
     log.debug("target provided: {}", target);
     return target;
   }
