@@ -10,6 +10,7 @@ import com.squareup.okhttp.mockwebserver.RecordedRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import rx.Observable;
 import rx.functions.Action1;
@@ -94,6 +95,7 @@ public class ClientBasicFlowsTest {
   }
 
   @Test
+  @Ignore
   public void testStream() throws Exception {
 
     final String singleResponse = "Hello World";
