@@ -73,7 +73,7 @@ public abstract class AbstractServerBuilder {
 
   protected AbstractServerBuilder() {
     this.marshallerRegistry = new RequestMarshallerRegistry();
-    this.registry = new ServiceRegistry();
+    this.registry = new ServiceRegistry(marshallerRegistry);
   }
 
   public final Server build() {

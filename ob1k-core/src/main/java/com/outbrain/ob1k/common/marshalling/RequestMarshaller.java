@@ -18,6 +18,7 @@ import java.lang.reflect.Type;
  * Time: 3:18 PM
  */
 public interface RequestMarshaller {
+  void registerTypes(Type... types);
   Object[] unmarshallRequestParams(Request request, Method method, String[] paramNames) throws IOException;
   FullHttpResponse marshallResponse(Object res, HttpResponseStatus status) throws IOException;
   HttpResponse marshallResponseHeaders(final boolean rawStream);

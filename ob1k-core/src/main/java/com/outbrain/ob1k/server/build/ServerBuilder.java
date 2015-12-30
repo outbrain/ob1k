@@ -75,7 +75,7 @@ public class ServerBuilder implements InitialPhase, ChoosePortPhase, ChooseConte
     this.staticMappings = new HashMap<>();
     this.staticResources = new HashMap<>();
     this.marshallerRegistry = new RequestMarshallerRegistry();
-    this.registry = new ServiceRegistry();
+    this.registry = new ServiceRegistry(marshallerRegistry);
   }
 
   @Override
