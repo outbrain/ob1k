@@ -40,9 +40,9 @@
           <javacArgs>
             <!-- use ${java.compiler.source}, ${java.compiler.target} ? -->
             <javacArg>-source</javacArg>
-            <javacArgs>1.7</javacArgs>
+            <javacArgs>1.8</javacArgs>
             <javacArg>-target</javacArg>
-            <javacArgs>1.7</javacArgs>
+            <javacArgs>1.8</javacArgs>
           </javacArgs>
         </configuration>
       </plugin>

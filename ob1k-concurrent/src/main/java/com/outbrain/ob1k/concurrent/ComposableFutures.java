@@ -50,14 +50,11 @@ public class ComposableFutures {
     }
 
     public static <T> ComposableFuture<T> recursive(final Supplier<ComposableFuture<T>> creator, final Predicate<T> stopCriteria) {
-        return creator.get().continueOnSuccess(new FutureSuccessHandler<T, T>() {
-            @Override
-            public ComposableFuture<T> handle(final T result) {
-                if (stopCriteria.apply(result)) {
-                    return ComposableFutures.fromValue(result);
-                }
-                return recursive(creator, stopCriteria);
+        return creator.get().continueOnSuccess((FutureSuccessHandler<T, T>) result -> {
+            if (stopCriteria.apply(result)) {
+                return ComposableFutures.fromValue(result);
             }
+            return recursive(creator, stopCriteria);
         });
     }
 

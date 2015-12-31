@@ -44,12 +44,9 @@ public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext>,
         if (result != null) {
           return ComposableFutures.fromValue(result);
         } else {
-          return ctx.<V>invokeAsync().continueOnSuccess(new SuccessHandler<V, V>() {
-            @Override
-            public V handle(V result) throws ExecutionException {
-              cache.setAsync(key, result);
-              return result;
-            }
+          return ctx.<V>invokeAsync().continueOnSuccess((SuccessHandler<V, V>) result1 -> {
+            cache.setAsync(key, result1);
+            return result1;
           });
         }
       }

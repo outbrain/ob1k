@@ -11,6 +11,11 @@
   <name>util-metrics</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <java.compiler.source>1.7</java.compiler.source>
+    <java.compiler.target>1.7</java.compiler.target>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.codahale.metrics</groupId>
