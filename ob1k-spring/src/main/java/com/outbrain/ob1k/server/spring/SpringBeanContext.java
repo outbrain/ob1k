@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.server.spring;
 
-import com.outbrain.ob1k.server.BeanContext;
 import org.springframework.context.support.AbstractApplicationContext;
 
 import java.util.Map;
@@ -10,7 +9,7 @@ import java.util.Map;
  * Date: 6/25/13
  * Time: 6:50 PM
  */
-public class SpringBeanContext implements BeanContext {
+public class SpringBeanContext {
   private final Map<String, AbstractApplicationContext> contexts;
 
   public SpringBeanContext(final Map<String, AbstractApplicationContext> contexts) {
