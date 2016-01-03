@@ -12,7 +12,7 @@ import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,26 +41,23 @@ public class BasicDao {
   }
 
   private <T> ComposableFuture<List<T>> _list(final ComposableFuture<QueryResult> queryRes, final ResultSetMapper<T> mapper) {
-    return queryRes.continueOnSuccess(new SuccessHandler<QueryResult, List<T>>() {
-      @Override
-      public List<T> handle(final QueryResult res) {
-        final Option<ResultSet> rowsOption = res.rows();
+    return queryRes.continueOnSuccess((SuccessHandler<QueryResult, List<T>>) res -> {
+      final Option<ResultSet> rowsOption = res.rows();
 
-        final List<T> response = new ArrayList<>();
-        if (rowsOption.isDefined()) {
-          final ResultSet resultSet = rowsOption.get();
-          final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
+      final List<T> response = new ArrayList<>();
+      if (rowsOption.isDefined()) {
+        final ResultSet resultSet = rowsOption.get();
+        final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
 
-          final Iterator<RowData> rows = resultSet.iterator();
-          while (rows.hasNext()) {
-            final RowData row = rows.next();
-            final T obj = mapper.map(new TypedRowData(row), columnNames);
-            response.add(obj);
-          }
+        final Iterator<RowData> rows = resultSet.iterator();
+        while (rows.hasNext()) {
+          final RowData row = rows.next();
+          final T obj = mapper.map(new TypedRowData(row), columnNames);
+          response.add(obj);
         }
-
-        return response;
       }
+
+      return response;
     });
   }
 
@@ -102,24 +99,21 @@ public class BasicDao {
   }
 
   private <T> ComposableFuture<T> _get(final ComposableFuture<QueryResult> queryRes, final ResultSetMapper<T> mapper) {
-    return queryRes.continueOnSuccess(new SuccessHandler<QueryResult, T>() {
-      @Override
-      public T handle(final QueryResult res) {
-        final Option<ResultSet> rowsOption = res.rows();
+    return queryRes.continueOnSuccess((SuccessHandler<QueryResult, T>) res -> {
+      final Option<ResultSet> rowsOption = res.rows();
 
-        if (rowsOption.isDefined()) {
-          final ResultSet resultSet = rowsOption.get();
-          final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
+      if (rowsOption.isDefined()) {
+        final ResultSet resultSet = rowsOption.get();
+        final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
 
-          final Iterator<RowData> rows = resultSet.iterator();
-          if (rows.hasNext()) {
-            final RowData row = rows.next();
-            return mapper.map(new TypedRowData(row), columnNames);
-          }
+        final Iterator<RowData> rows = resultSet.iterator();
+        if (rows.hasNext()) {
+          final RowData row = rows.next();
+          return mapper.map(new TypedRowData(row), columnNames);
         }
-
-        return null;
       }
+
+      return null;
     });
   }
 
@@ -158,26 +152,13 @@ public class BasicDao {
   }
 
   public ComposableFuture<Long> executeAndGetId(final String command) {
-    return withConnection(new TransactionHandler<Long>() {
-      @Override
-      public ComposableFuture<Long> handle(final MySqlAsyncConnection conn) {
-        return execute(conn, command).continueOnSuccess(new FutureSuccessHandler<Long, Map<String, Object>>() {
-          @Override
-          public ComposableFuture<Map<String, Object>> handle(final Long result) {
-            return get(conn, "select LAST_INSERT_ID()");
-          }
-        }).continueOnSuccess(new SuccessHandler<Map<String, Object>, Long>() {
-          @Override
-          public Long handle(final Map<String, Object> result) {
-            return (Long) result.get("LAST_INSERT_ID()");
-          }
-        });
-      }
-    });
+    return withConnection(conn -> execute(conn, command)
+      .continueOnSuccess((FutureSuccessHandler<Long, Map<String, Object>>) result -> get(conn, "select LAST_INSERT_ID()"))
+      .continueOnSuccess((SuccessHandler<Map<String, Object>, Long>) result -> (Long) result.get("LAST_INSERT_ID()")));
   }
 
   public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper) {
-    final String saveCommand = createSaveCommand(Arrays.asList(entry), tableName, mapper);
+    final String saveCommand = createSaveCommand(Collections.singletonList(entry), tableName, mapper);
     return executeAndGetId(saveCommand);
   }
 
@@ -187,12 +168,7 @@ public class BasicDao {
   }
 
   private ComposableFuture<Long> _execute(final ComposableFuture<QueryResult> queryRes) {
-    return queryRes.continueOnSuccess(new SuccessHandler<QueryResult, Long>() {
-      @Override
-      public Long handle(final QueryResult res) {
-        return res.rowsAffected();
-      }
-    });
+    return queryRes.continueOnSuccess(QueryResult::rowsAffected);
   }
 
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final Object id) {
