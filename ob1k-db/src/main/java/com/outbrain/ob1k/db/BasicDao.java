@@ -13,8 +13,12 @@ import scala.collection.JavaConversions;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Asy Ronen
@@ -25,6 +29,38 @@ public class BasicDao {
 
   public BasicDao(final DbConnectionPool pool) {
     this._pool = pool;
+  }
+
+  /**
+   * @param query SQL query to execute
+   * @param keyMapper a mapper between the the value object to the map key
+   * @param valueMapper a mapper between the resultset row, and the returned value(s)
+   * @param <V> map values type
+   * @param <K> map keys type
+   * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper
+   * @throws IllegalStateException if the result set contains a duplicate key
+   */
+  public <K, V> ComposableFuture<Map<K, V>> map(final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
+    return toMap(list(query, valueMapper), keyMapper);
+  }
+
+  /**
+   * @param conn connection to be used to execute the query
+   * @param query SQL query to execute
+   * @param keyMapper a mapper between the the value object to the map key
+   * @param valueMapper a mapper between the resultset row, and the returned value(s)
+   * @param <V> map values type
+   * @param <K> map keys type
+   * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper
+   * @throws IllegalStateException if the result set contains a duplicate key
+   */
+  public <K, V> ComposableFuture<Map<K, V>> map(final MySqlAsyncConnection conn, final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
+    return toMap(list(conn, query, valueMapper), keyMapper);
+  }
+
+  private <T, K> ComposableFuture<Map<K, T>> toMap(final ComposableFuture<List<T>> list, final Function<T, K> keyMapper) {
+    return list.continueOnSuccess((SuccessHandler<List<T>, Map<K, T>>) result ->
+      result.stream().collect(Collectors.toMap(keyMapper, Function.identity())));
   }
 
   public ComposableFuture<List<Map<String, Object>>> list(final String query) {
