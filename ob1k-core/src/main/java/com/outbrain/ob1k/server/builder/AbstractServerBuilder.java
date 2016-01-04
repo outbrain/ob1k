@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +37,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Collections.unmodifiableList;
 
 /**
  * An abstract class for every concrete ob1k server builder
@@ -79,14 +82,26 @@ public abstract class AbstractServerBuilder {
   public final Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     final SyncRequestQueueObserver queueObserver = new SyncRequestQueueObserver(activeChannels, metricFactory);
-    final Executor executorService = (threadPoolMaxSize > 0 && threadPoolMinSize > 0) ? createExecutorService(queueObserver) : null;
-    registerServices(serviceDescriptors, registry, executorService);
+    registerAllServices(queueObserver);
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
             appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
+  }
+
+  protected void registerAllServices(SyncRequestQueueObserver queueObserver) {
+    final Executor executorService = (threadPoolMaxSize > 0 && threadPoolMinSize > 0) ? createExecutorService(queueObserver) : null;
+    registerServices(serviceDescriptors, registry, executorService);
+  }
+
+  protected ServiceRegistry getServiceRegistry() {
+    return registry;
+  }
+
+  protected RequestMarshallerRegistry getMarshallerRegistry() {
+    return marshallerRegistry;
   }
 
   protected ServerBuilderState innerState() {
@@ -246,6 +261,76 @@ public abstract class AbstractServerBuilder {
     @Override
     public boolean alreadyRegisteredServices() {
       return !serviceDescriptors.isEmpty();
+    }
+
+    @Override
+    public int getPort() {
+      return port;
+    }
+
+    @Override
+    public String getContextPath() {
+      return contextPath;
+    }
+
+    @Override
+    public String getAppName() {
+      return appName;
+    }
+
+    @Override
+    public boolean isAcceptKeepAlive() {
+      return acceptKeepAlive;
+    }
+
+    @Override
+    public boolean isSupportZip() {
+      return supportZip;
+    }
+
+    @Override
+    public int getMaxContentLength() {
+      return maxContentLength;
+    }
+
+    @Override
+    public long getRequestTimeoutMs() {
+      return requestTimeoutMs;
+    }
+
+    @Override
+    public int getThreadPoolMinSize() {
+      return threadPoolMinSize;
+    }
+
+    @Override
+    public int getThreadPoolMaxSize() {
+      return threadPoolMaxSize;
+    }
+
+    @Override
+    public MetricFactory getMetricFactory() {
+      return metricFactory;
+    }
+
+    @Override
+    public List<Server.Listener> getListeners() {
+      return unmodifiableList(listeners);
+    }
+
+    @Override
+    public Set<String> getStaticFolders() {
+      return Collections.unmodifiableSet(staticFolders);
+    }
+
+    @Override
+    public Map<String, String> getStaticResources() {
+      return Collections.unmodifiableMap(staticResources);
+    }
+
+    @Override
+    public Map<String, String> getStaticMappings() {
+      return Collections.unmodifiableMap(staticMappings);
     }
 
     private <T extends ServiceFilter> void removeFiltersOfClass(final Class<? extends ServiceFilter> filterClass, final List<T> filterList) {

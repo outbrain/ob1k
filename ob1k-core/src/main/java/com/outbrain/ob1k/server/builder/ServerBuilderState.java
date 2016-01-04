@@ -7,6 +7,10 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 /**
  * state of the Server Builder.
  * This interface is used to expose the inner state of the builder to specific section builders
@@ -53,4 +57,32 @@ public interface ServerBuilderState {
   ServiceRegistryView getRegistry();
 
   boolean alreadyRegisteredServices();
+
+  int getPort();
+
+  String getContextPath();
+
+  String getAppName();
+
+  boolean isAcceptKeepAlive();
+
+  boolean isSupportZip();
+
+  int getMaxContentLength();
+
+  long getRequestTimeoutMs();
+
+  int getThreadPoolMinSize();
+
+  int getThreadPoolMaxSize();
+
+  MetricFactory getMetricFactory();
+
+  List<Server.Listener> getListeners();
+
+  Set<String> getStaticFolders();
+
+  Map<String, String> getStaticResources();
+
+  Map<String, String> getStaticMappings();
 }
