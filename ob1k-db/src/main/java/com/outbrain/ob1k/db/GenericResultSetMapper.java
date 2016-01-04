@@ -12,10 +12,10 @@ import java.util.Map;
 public class GenericResultSetMapper implements ResultSetMapper<Map<String, Object>> {
 
   @Override
-  public Map<String, Object> map(TypedRowData row, List<String> columnNames) {
-    HashMap<String, Object> rowMap = new HashMap<String, Object>();
-    for (String columnName: columnNames) {
-      Object val = row.getRaw(columnName);
+  public Map<String, Object> map(final TypedRowData row, final List<String> columnNames) {
+    final HashMap<String, Object> rowMap = new HashMap<>();
+    for (final String columnName: columnNames) {
+      final Object val = row.getRaw(columnName);
       rowMap.put(columnName, val);
     }
 
