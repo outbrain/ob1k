@@ -56,9 +56,39 @@ public class BasicDao {
     return toMap(list(conn, query, valueMapper), keyMapper);
   }
 
-  private <T, K> ComposableFuture<Map<K, T>> toMap(final ComposableFuture<List<T>> list, final Function<T, K> keyMapper) {
-    return list.continueOnSuccess((SuccessHandler<List<T>, Map<K, T>>) result ->
+  private <K, V> ComposableFuture<Map<K, V>> toMap(final ComposableFuture<List<V>> list, final Function<V, K> keyMapper) {
+    return list.continueOnSuccess((SuccessHandler<List<V>, Map<K, V>>) result ->
       result.stream().collect(Collectors.toMap(keyMapper, Function.identity())));
+  }
+
+  /**
+   * @param query SQL query to execute
+   * @param keyMapper a mapper between the the value object to the map key
+   * @param valueMapper a mapper between the resultset row, and the returned value(s)
+   * @param <V> map values type
+   * @param <K> map keys type
+   * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper, grouping values by key
+   */
+  public <K, V> ComposableFuture<Map<K, List<V>>> group(final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
+    return toGroupMap(list(query, valueMapper), keyMapper);
+  }
+
+  /**
+   * @param conn connection to be used to execute the query
+   * @param query SQL query to execute
+   * @param keyMapper a mapper between the the value object to the map key
+   * @param valueMapper a mapper between the resultset row, and the returned value(s)
+   * @param <V> map values type
+   * @param <K> map keys type
+   * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper, grouping values by key
+   */
+  public <K, V> ComposableFuture<Map<K, List<V>>> group(final MySqlAsyncConnection conn, final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
+    return toGroupMap(list(conn, query, valueMapper), keyMapper);
+  }
+
+  private <K, V> ComposableFuture<Map<K, List<V>>> toGroupMap(final ComposableFuture<List<V>> list, final Function<V, K> keyMapper) {
+    return list.continueOnSuccess((SuccessHandler<List<V>, Map<K, List<V>>>) result ->
+      result.stream().collect(Collectors.groupingBy(keyMapper)));
   }
 
   public ComposableFuture<List<Map<String, Object>>> list(final String query) {
