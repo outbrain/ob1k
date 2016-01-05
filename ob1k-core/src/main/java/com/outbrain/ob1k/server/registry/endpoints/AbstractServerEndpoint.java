@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.registry.endpoints;
 import com.google.common.base.Joiner;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
+import com.outbrain.ob1k.common.filters.ServiceFilter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,7 +11,7 @@ import java.lang.reflect.Method;
 /**
  * Created by aronen on 4/24/14.
 */
-abstract class AbstractServerEndpoint implements ServerEndpoint {
+abstract class AbstractServerEndpoint<F extends ServiceFilter> implements ServerEndpoint<F> {
 
   private static final String TARGET_FORMAT = "%s.%s(%s)";
 
@@ -18,12 +19,19 @@ abstract class AbstractServerEndpoint implements ServerEndpoint {
   private final Method method;
   private final HttpRequestMethodType requestMethodType;
   private final String[] paramNames;
+  private final F[] filters;
 
-  public AbstractServerEndpoint(final Service service, final Method method, final HttpRequestMethodType requestMethodType, final String[] paramNames) {
+
+  public AbstractServerEndpoint(final Service service,
+                                final Method method,
+                                final HttpRequestMethodType requestMethodType,
+                                final String[] paramNames,
+                                final F[] filters) {
     this.service = service;
     this.method = method;
     this.requestMethodType = requestMethodType;
     this.paramNames = paramNames;
+    this.filters = filters;
   }
 
   @Override
@@ -44,6 +52,11 @@ abstract class AbstractServerEndpoint implements ServerEndpoint {
   @Override
   public String[] getParamNames() {
     return paramNames;
+  }
+
+  @Override
+  public F[] getFilters() {
+    return filters;
   }
 
   protected Object invokeMethodOnService(Object[] params) throws InvocationTargetException, IllegalAccessException {

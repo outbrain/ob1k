@@ -17,15 +17,14 @@ import java.lang.reflect.Method;
 /**
 * Created by aronen on 4/24/14.
 */
-public class AsyncServerEndpoint extends AbstractServerEndpoint {
-  public final AsyncFilter[] filters;
+public class AsyncServerEndpoint extends AbstractServerEndpoint<AsyncFilter> {
 
   public AsyncServerEndpoint(final Service service, final AsyncFilter[] filters, final Method method, final HttpRequestMethodType requestMethodType, final String[] paramNames) {
-    super(service, method, requestMethodType, paramNames);
-    this.filters = filters;
+    super(service, method, requestMethodType, paramNames, filters);
   }
 
   public <T> ComposableFuture<T> invokeAsync(final AsyncServerRequestContext ctx) {
+    final AsyncFilter[] filters = getFilters();
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
       final AsyncFilter filter = filters[ctx.getExecutionIndex()];
       @SuppressWarnings("unchecked")

@@ -393,7 +393,8 @@ public abstract class AbstractServerBuilder {
                                        final Executor executorService) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
       if (desc.endpointBinding != null) {
-        registry.register(desc.name, desc.service, desc.endpointBinding, desc.bindPrefix, executorService);
+        registry.registerEndpoints(desc.endpointBinding, desc.name, desc.service,
+                desc.asyncFilters, desc.syncFilters, desc.streamFilters, desc.bindPrefix, executorService);
       } else {
         registry.register(desc.name, desc.service,
             desc.asyncFilters, desc.syncFilters, desc.streamFilters,
@@ -417,18 +418,27 @@ public abstract class AbstractServerBuilder {
                              final ServiceFilter[] filters) {
     if (filters != null) {
       for (final ServiceFilter filter: filters) {
-        if (filter instanceof SyncFilter) {
+        if (filter instanceof SyncFilter && !contains(filter, syncFilters)) {
           syncFilters.add((SyncFilter) filter);
         }
 
-        if (filter instanceof AsyncFilter) {
+        if (filter instanceof AsyncFilter && !contains(filter, asyncFilters)) {
           asyncFilters.add((AsyncFilter) filter);
         }
 
-        if (filter instanceof StreamFilter) {
+        if (filter instanceof StreamFilter && !contains(filter, streamFilters)) {
           streamFilters.add((StreamFilter) filter);
         }
       }
     }
+  }
+
+  private static boolean contains(final ServiceFilter filter, final List<? extends ServiceFilter> filters) {
+    for (final ServiceFilter inList : filters) {
+      if (filter.getClass().equals(inList.getClass())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

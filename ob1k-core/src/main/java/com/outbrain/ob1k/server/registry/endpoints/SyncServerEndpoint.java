@@ -13,25 +13,23 @@ import com.outbrain.ob1k.server.ctx.SyncServerRequestContext;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 /**
 * Created by aronen on 4/24/14.
 */
-public class SyncServerEndpoint extends AbstractServerEndpoint {
+public class SyncServerEndpoint extends AbstractServerEndpoint<SyncFilter> {
   private final Executor executorService;
-  public final SyncFilter[] filters;
 
   public SyncServerEndpoint(final Service service, final SyncFilter[] filters, final Method method, final HttpRequestMethodType requestMethodType,
                             final String[] paramNames, final Executor executorService) {
-    super(service, method, requestMethodType, paramNames);
+    super(service, method, requestMethodType, paramNames, filters);
     this.executorService = Preconditions.checkNotNull(executorService, "executorService must not be null");
-    this.filters = filters;
   }
 
   public <T> T invokeSync(final SyncServerRequestContext ctx) throws ExecutionException {
+    final SyncFilter[] filters = getFilters();
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
       final SyncFilter filter = filters[ctx.getExecutionIndex()];
       @SuppressWarnings("unchecked") final
@@ -51,11 +49,8 @@ public class SyncServerEndpoint extends AbstractServerEndpoint {
   @Override
   public void invoke(final Request request, final Object[] params, final ResponseHandler handler) {
     final SyncServerRequestContext ctx = new DefaultSyncServerRequestContext(request, this, params);
-    final ComposableFuture<Object> response = ComposableFutures.submit(executorService, new Callable<Object>() {
-      @Override
-      public Object call() throws Exception {
-        return invokeSync(ctx);
-      }
+    final ComposableFuture<Object> response = ComposableFutures.submit(executorService, () -> {
+      return invokeSync(ctx);
     });
 
     handler.handleAsyncResponse(response);

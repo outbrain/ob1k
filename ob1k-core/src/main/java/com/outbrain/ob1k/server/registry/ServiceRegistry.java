@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -88,8 +89,10 @@ public class ServiceRegistry implements ServiceRegistryView {
     }
   }
 
-  public void register(final String name, final Service service, final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
-                       final boolean bindPrefix, final Executor executorService) {
+  public void registerEndpoints(final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
+                                final String name, final Service service,
+                                final List<AsyncFilter> asyncFilters, final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
+                                final boolean bindPrefix, final Executor executorService) {
 
     if (contextPath == null) {
       throw new RuntimeException("Can't add service before context path is set.");
@@ -108,29 +111,7 @@ public class ServiceRegistry implements ServiceRegistryView {
      */
     for (final String methodBind: descriptors.keySet()) {
 
-      final StringBuilder path = new StringBuilder();
-
-      path.append(contextPath);
-
-      if (!contextPath.endsWith("/")) {
-        path.append('/');
-      }
-
-      if (name.startsWith("/")) {
-        path.append(name.substring(1));
-      } else {
-        path.append(name);
-      }
-
-      if (!name.endsWith("/")) {
-        path.append('/');
-      }
-
-      if (methodBind.startsWith("/")) {
-        path.append(methodBind.substring(1));
-      } else {
-        path.append(methodBind);
-      }
+      final String path = buildPath(name, methodBind);
 
       final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptors = descriptors.get(methodBind);
       final Map<HttpRequestMethodType, ServerEndpoint> endpointsMap = new HashMap<>();
@@ -150,15 +131,42 @@ public class ServiceRegistry implements ServiceRegistryView {
 
         final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
         final ServerEndpoint endpoint = isAsyncMethod(method) ?
-                new AsyncServerEndpoint(service, getAsyncFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
+                new AsyncServerEndpoint(service, getFilters(endpointDesc.filters, asyncFilters, methodBind, AsyncFilter.class), method, endpointDesc.requestMethodType, params) :
                 isStreamingMethod(method) ?
-                        new StreamServerEndpoint(service, getStreamFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params) :
-                        new SyncServerEndpoint(service, getSyncFilters(endpointDesc.filters, methodBind), method, endpointDesc.requestMethodType, params, executorService);
+                        new StreamServerEndpoint(service, getFilters(endpointDesc.filters, streamFilters, methodBind, StreamFilter.class), method, endpointDesc.requestMethodType, params) :
+                        new SyncServerEndpoint(service, getFilters(endpointDesc.filters, syncFilters, methodBind, SyncFilter.class), method, endpointDesc.requestMethodType, params, executorService);
         endpointsMap.put(endpointDescriptorEntry.getKey(), endpoint);
       }
 
-      endpoints.insert(path.toString(), endpointsMap, bindPrefix);
+      endpoints.insert(path, endpointsMap, bindPrefix);
     }
+  }
+
+  private String buildPath(final String name, final String methodBind) {
+    final StringBuilder path = new StringBuilder();
+
+    path.append(contextPath);
+
+    if (!contextPath.endsWith("/")) {
+      path.append('/');
+    }
+
+    if (name.startsWith("/")) {
+      path.append(name.substring(1));
+    } else {
+      path.append(name);
+    }
+
+    if (!name.endsWith("/")) {
+      path.append('/');
+    }
+
+    if (methodBind.startsWith("/")) {
+      path.append(methodBind.substring(1));
+    } else {
+      path.append(methodBind);
+    }
+    return path.toString();
   }
 
   private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
@@ -210,57 +218,36 @@ public class ServiceRegistry implements ServiceRegistryView {
     return methods;
   }
 
-  private static AsyncFilter[] getAsyncFilters(final List<? extends ServiceFilter> filters, final String methodName) {
-    if (filters == null)
-      return null;
-
-    final AsyncFilter[] result = new AsyncFilter[filters.size()];
+  @SuppressWarnings("unchecked")
+  private static <T extends ServiceFilter> T[] getFilters(final List<? extends ServiceFilter> filters,
+                                                          final List<T> serviceLevelFilters,
+                                                          final String methodName,
+                                                          final Class<T> filterType) {
+    int size = 0;
+    if (filters != null) {
+      size += filters.size();
+    }
+    if (serviceLevelFilters != null) {
+      size += serviceLevelFilters.size();
+    }
+    final Object result = Array.newInstance(filterType, size);
     int index = 0;
-    for (final ServiceFilter filter : filters) {
-      if (filter instanceof AsyncFilter) {
-        result[index++] = (AsyncFilter) filter;
-      } else {
-        throw new RuntimeException("method " + methodName + " can only receive async filters");
+    if (filters != null) {
+      for (final ServiceFilter filter : filters) {
+        if (filterType.isAssignableFrom(filter.getClass())) {
+          Array.set(result, index++, filter);
+        } else {
+          throw new RuntimeException("method " + methodName + " can only receive async filters");
+        }
       }
     }
-
-    return result;
-  }
-
-  private static SyncFilter[] getSyncFilters(final List<? extends ServiceFilter> filters, final String methodName) {
-    if (filters == null)
-      return null;
-
-    final SyncFilter[] result = new SyncFilter[filters.size()];
-    int index = 0;
-    for (final ServiceFilter filter : filters) {
-      if (filter instanceof SyncFilter) {
-        result[index++] = (SyncFilter) filter;
-      } else {
-        throw new RuntimeException("method " + methodName + " can only receive sync filters");
+    if (serviceLevelFilters != null) {
+      for (final T filter : serviceLevelFilters) {
+        Array.set(result, index++, filter);
       }
     }
-
-    return result;
+    return (T[]) result;
   }
-
-  private static StreamFilter[] getStreamFilters(final List<? extends ServiceFilter> filters, final String methodName) {
-    if (filters == null)
-      return null;
-
-    final StreamFilter[] result = new StreamFilter[filters.size()];
-    int index = 0;
-    for (final ServiceFilter filter : filters) {
-      if (filter instanceof StreamFilter) {
-        result[index++] = (StreamFilter) filter;
-      } else {
-        throw new RuntimeException("method " + methodName + " can only receive stream filters");
-      }
-    }
-
-    return result;
-  }
-
 
   public void register(final String name, final Service service, final List<AsyncFilter> asyncFilters,
                        final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
@@ -268,7 +255,7 @@ public class ServiceRegistry implements ServiceRegistryView {
 
     final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors = getEndpointsDescriptor(service,
             executorService, asyncFilters, syncFilters, streamFilters);
-    register(name, service, descriptors, bindPrefix, executorService);
+    registerEndpoints(descriptors, name, service, null, null, null, bindPrefix, executorService);
   }
 
   private Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> getEndpointsDescriptor(final Service service,

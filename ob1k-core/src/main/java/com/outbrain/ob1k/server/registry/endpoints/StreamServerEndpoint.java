@@ -17,15 +17,14 @@ import java.lang.reflect.Method;
  *
  * a server endpoint that knows how to call a stream based method.
  */
-public class StreamServerEndpoint extends AbstractServerEndpoint {
-  public final StreamFilter[] filters;
+public class StreamServerEndpoint extends AbstractServerEndpoint<StreamFilter> {
 
   public StreamServerEndpoint(final Service service, final StreamFilter[] filters, final Method method, final HttpRequestMethodType requestMethodType, final String[] paramNames) {
-    super(service, method, requestMethodType, paramNames);
-    this.filters = filters;
+    super(service, method, requestMethodType, paramNames, filters);
   }
 
   public <T> Observable<T> invokeStream(final StreamServerRequestContext ctx) {
+    final StreamFilter[] filters = getFilters();
     if (filters != null && ctx.getExecutionIndex() < filters.length) {
       final StreamFilter filter = filters[ctx.getExecutionIndex()];
       @SuppressWarnings("unchecked")
