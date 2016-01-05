@@ -32,13 +32,18 @@ public class ServiceRegisterBuilder<B extends ServiceRegisterBuilder<B>> {
 
   }
 
-  public B register(final Service service, final String path, final ServiceFilter... filters) {
-    return register(service, path, NO_OP, filters);
+  public B register(final Service service, final String path) {
+    return register(service, path, NO_OP);
   }
 
-  public B register(final Service service, final String path, final ServiceBindBuilderSection bindSection, final ServiceFilter... filters) {
-    state.addServiceDescriptor(service, path, filters);
+  public B register(final Service service, final String path, final ServiceBindBuilderSection bindSection) {
+    state.addServiceDescriptor(service, path);
     bindSection.apply(bindBuilder);
+    return self();
+  }
+
+  public B withFilters(final ServiceFilter... filters) {
+    state.setFiltersToLastDescriptor(filters);
     return self();
   }
 

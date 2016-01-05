@@ -52,6 +52,8 @@ public interface ServerBuilderState {
 
   void setBindPrefixToLastDescriptor(boolean bindPrefix);
 
+  void setFiltersToLastDescriptor(ServiceFilter... filters);
+
   void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters);
 
   ServiceRegistryView getRegistry();

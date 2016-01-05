@@ -215,6 +215,11 @@ public abstract class AbstractServerBuilder {
     }
 
     @Override
+    public void setFiltersToLastDescriptor(final ServiceFilter... filters) {
+      serviceDescriptors.getLast().addFilters(filters);
+    }
+
+    @Override
     public void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters) {
       final ServiceDescriptor descriptor = serviceDescriptors.getLast();
       final Service service = descriptor.service;
@@ -378,6 +383,10 @@ public abstract class AbstractServerBuilder {
     public void setEndpointBinding(final Map<String,Map<HttpRequestMethodType,ServiceRegistry.EndpointDescriptor>> endpointBinding) {
       this.endpointBinding = endpointBinding;
     }
+
+    public void addFilters(final ServiceFilter... filters) {
+      sortFiltersTo(asyncFilters, syncFilters, streamFilters, filters);
+    }
   }
 
   private static void registerServices(final Deque<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
@@ -402,7 +411,7 @@ public abstract class AbstractServerBuilder {
             new DefaultThreadFactory("syncReqPool"), new ThreadPoolExecutor.AbortPolicy());
   }
 
-  private void sortFiltersTo(final List<AsyncFilter> asyncFilters,
+  private static void sortFiltersTo(final List<AsyncFilter> asyncFilters,
                              final List<SyncFilter> syncFilters,
                              final List<StreamFilter> streamFilters,
                              final ServiceFilter[] filters) {

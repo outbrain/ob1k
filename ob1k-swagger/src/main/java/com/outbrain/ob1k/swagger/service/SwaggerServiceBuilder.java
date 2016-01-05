@@ -34,7 +34,7 @@ public class SwaggerServiceBuilder implements ExtensionBuilder {
     final ServiceRegisterBuilder serviceBuilder = new ServiceRegisterBuilder(state);
     final ResourceMappingBuilder resourceBuilder = new ResourceMappingBuilder(state);
     final Class[] ignoredServicesArray = ignoredServices.toArray(new Class[ignoredServices.size()]);
-    serviceBuilder.register(new SwaggerService(state.getRegistry(), ignoredServicesArray), path, filters);
+    serviceBuilder.register(new SwaggerService(state.getRegistry(), ignoredServicesArray), path).withFilters(filters);
     resourceBuilder.staticPath("/html").
     staticPath("/css").
     staticResource("/api/webjars", "/META-INF/resources/webjars").

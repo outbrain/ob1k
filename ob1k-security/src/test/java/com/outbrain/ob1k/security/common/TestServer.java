@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.security.common;
 
 import com.google.common.collect.Lists;
-import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor;
 import com.outbrain.ob1k.security.server.CredentialsAuthenticator;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter;
@@ -10,7 +9,6 @@ import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.builder.ConfigureBuilder;
 import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
-import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
 import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
 
 import javax.crypto.KeyGenerator;
@@ -44,15 +42,8 @@ public class TestServer {
   }
 
   private static ServiceRegisterBuilderSection createServices() {
-    final ServiceFilter securityFilter = createAuthFilter();
-
-    return new ServiceRegisterBuilderSection() {
-      @Override
-      public void apply(final ServiceRegisterBuilder builder) {
-        builder.register(new UnsecureServiceImpl(), UnsecureService.class.getSimpleName())
-                .register(new SecureServiceImpl(), SecureService.class.getSimpleName(), securityFilter);
-      }
-    };
+    return builder -> builder.register(new UnsecureServiceImpl(), UnsecureService.class.getSimpleName())
+            .register(new SecureServiceImpl(), SecureService.class.getSimpleName()).withFilters(createAuthFilter());
   }
 
   private static HttpBasicAuthenticationFilter createAuthFilter() {

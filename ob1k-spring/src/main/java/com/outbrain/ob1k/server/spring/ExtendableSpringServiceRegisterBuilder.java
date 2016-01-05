@@ -22,16 +22,21 @@ public class ExtendableSpringServiceRegisterBuilder<B extends ExtendableSpringSe
     this.bindBuilder = new SpringServiceBindBuilder(state, ctx);
   }
 
-  @SafeVarargs
   public final B register(final String ctxName, final Class<? extends Service> serviceType,
-                                                               final String path, final Class<? extends ServiceFilter>... filterTypes) {
-    return register(ctxName, serviceType, path, NO_OP, filterTypes);
+                                                               final String path) {
+    return register(ctxName, serviceType, path, NO_OP);
+  }
+
+  public final B register(final String ctxName, final Class<? extends Service> serviceType,
+                                                               final String path, final SpringServiceBindBuilderSection bindSection) {
+    final Service service = ctx.getBean(ctxName, serviceType);
+    register(service, path);
+    bindSection.apply(bindBuilder);
+    return self();
   }
 
   @SafeVarargs
-  public final B register(final String ctxName, final Class<? extends Service> serviceType,
-                                                               final String path, final SpringServiceBindBuilderSection bindSection,
-                                                               final Class<? extends ServiceFilter>... filterTypes) {
+  public final B withFilters(final String ctxName, final Class<? extends ServiceFilter>... filterTypes) {
     final List<ServiceFilter> filters = new ArrayList<>();
     if (filterTypes != null) {
       for (final Class<? extends ServiceFilter> filterType : filterTypes) {
@@ -39,10 +44,7 @@ public class ExtendableSpringServiceRegisterBuilder<B extends ExtendableSpringSe
         filters.add(filter);
       }
     }
-    final Service service = ctx.getBean(ctxName, serviceType);
-    register(service, path, filters.toArray(new ServiceFilter[filters.size()]));
-    bindSection.apply(bindBuilder);
-    return self();
+    return withFilters(filters.toArray(new ServiceFilter[filters.size()]));
   }
 
   private static class NoOpBindSection implements SpringServiceBindBuilderSection {
