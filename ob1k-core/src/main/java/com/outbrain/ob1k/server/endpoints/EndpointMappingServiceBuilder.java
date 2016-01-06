@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.services;
+package com.outbrain.ob1k.server.endpoints;
 
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.server.builder.ExtensionBuilder;

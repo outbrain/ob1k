@@ -3,7 +3,7 @@ package com.outbrain.ob1k.example.rest.server;
 import com.outbrain.ob1k.example.rest.server.services.UsersServiceImpl;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
-import com.outbrain.ob1k.server.services.EndpointMappingService;
+import com.outbrain.ob1k.server.endpoints.EndpointMappingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +15,7 @@ import static com.outbrain.ob1k.HttpRequestMethodType.DELETE;
 import static com.outbrain.ob1k.HttpRequestMethodType.GET;
 import static com.outbrain.ob1k.HttpRequestMethodType.POST;
 import static com.outbrain.ob1k.HttpRequestMethodType.PUT;
-import static com.outbrain.ob1k.server.services.EndpointMappingServiceBuilder.registerMappingService;
+import static com.outbrain.ob1k.server.endpoints.EndpointMappingServiceBuilder.registerMappingService;
 import static com.outbrain.ob1k.swagger.service.SwaggerServiceBuilder.enableSwagger;
 import static java.util.Collections.singletonList;
 

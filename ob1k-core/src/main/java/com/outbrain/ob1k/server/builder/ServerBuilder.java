@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.builder;
 import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection;
 import com.outbrain.ob1k.server.builder.ResourceMappingBuilder.ResourceMappingBuilderSection;
 import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
+import com.outbrain.ob1k.server.endpoints.EndpointMappingServiceBuilder;
 
 /**
  * Simple server builder that defines an API of
@@ -36,7 +37,7 @@ import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBu
  *  @see ServiceRegisterBuilder
  *  @see ResourceMappingBuilder
  *  @see ExtensionBuilder
- *  @see com.outbrain.ob1k.server.services.EndpointMappingServiceBuilder
+ *  @see EndpointMappingServiceBuilder
  */
 public class ServerBuilder<B extends ServerBuilder<B>> extends AbstractServerBuilder {
 

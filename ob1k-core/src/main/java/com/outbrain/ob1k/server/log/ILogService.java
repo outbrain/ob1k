@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.services;
+package com.outbrain.ob1k.server.log;
 
 import com.outbrain.ob1k.Service;
 import rx.Observable;

@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.services;
+package com.outbrain.ob1k.server.endpoints;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;

@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.services;
+package com.outbrain.ob1k.server.log;
 
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
