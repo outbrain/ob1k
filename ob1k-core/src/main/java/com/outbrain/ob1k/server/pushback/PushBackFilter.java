@@ -31,32 +31,32 @@ public class PushBackFilter<T> implements AsyncFilter<T, AsyncRequestContext>, S
   @Override
   public ComposableFuture<T> handleAsync(final AsyncRequestContext ctx) {
     final ComposableFuture<T> result;
-    final boolean pushBack = pushBackStrategy.allowRequest();
+    final boolean allowRequest = pushBackStrategy.allowRequest();
     try {
-      if (pushBack) {
+      if (allowRequest) {
         result = ctx.invokeAsync();
       } else {
         pushBackCounter.inc();
         result = ComposableFutures.fromError(pushBackStrategy.generateExceptionOnPushBack());
       }
     } finally {
-      pushBackStrategy.done(pushBack);
+      pushBackStrategy.done(allowRequest);
     }
     return result;
   }
 
   @Override
   public T handleSync(final SyncRequestContext ctx) throws ExecutionException {
-    final boolean pushBack = pushBackStrategy.allowRequest();
+    final boolean allowRequest = pushBackStrategy.allowRequest();
     try {
-      if (pushBack) {
+      if (allowRequest) {
         return ctx.invokeSync();
       } else {
         pushBackCounter.inc();
         throw pushBackStrategy.generateExceptionOnPushBack();
       }
     } finally {
-      pushBackStrategy.done(pushBack);
+      pushBackStrategy.done(allowRequest);
     }
   }
 }
