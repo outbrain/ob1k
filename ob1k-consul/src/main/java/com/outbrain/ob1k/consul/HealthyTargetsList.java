@@ -6,13 +6,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.consul.filter.AllTargetsPredicate;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.swinfra.metrics.api.Counter;
-import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
 import org.slf4j.Logger;
@@ -56,12 +54,9 @@ public class HealthyTargetsList {
   private final Timer targetFetchTime;
   private final Counter targetFetchErrors;
 
-  private final Callable<?> retryPoll = new Callable<Object>() {
-    @Override
-    public Object call() throws Exception {
-      pollForTargetsUpdates(0);
-      return null;
-    }
+  private final Callable<?> retryPoll = () -> {
+    pollForTargetsUpdates(0);
+    return null;
   };
 
   private final ComposablePromise<?> initializationFuture = ComposableFutures.newPromise(false);
@@ -77,12 +72,7 @@ public class HealthyTargetsList {
 
     targetFetchTime = metricFactory.createTimer(component, "targetFetchTime");
     targetFetchErrors = metricFactory.createCounter(component, "targetFetchErrors");
-    metricFactory.registerGauge(component, "targetCount", new Gauge<Integer>() {
-      @Override
-      public Integer getValue() {
-        return getHealthyInstancesCount();
-      }
-    });
+    metricFactory.registerGauge(component, "targetCount", this::getHealthyInstancesCount);
 
     initTargetsAsync();
     pollForTargetsUpdates(0);
@@ -129,30 +119,24 @@ public class HealthyTargetsList {
 
   public void addListener(final TargetsChangedListener listener) {
     listeners.add(listener);
-    healthyTargetsFuture.consume(new Consumer<List<HealthInfoInstance>>() {
-      @Override
-      public void consume(final Try<List<HealthInfoInstance>> result) {
-        if (result.isSuccess()) {
-          listener.onTargetsChanged(result.getValue());
-        }
+    healthyTargetsFuture.consume(result -> {
+      if (result.isSuccess()) {
+        listener.onTargetsChanged(result.getValue());
       }
     });
   }
 
   private void initTargetsAsync() {
-    health.filterDcLocalHealthyInstances(module, envTag).consume(new Consumer<List<HealthInfoInstance>>() {
-      @Override
-      public void consume(final Try<List<HealthInfoInstance>> initialTargetsTry) {
-        if (initialTargetsTry.isSuccess()) {
-          final List<HealthInfoInstance> initialTargets = nullSafeList(initialTargetsTry.getValue());
+    health.filterDcLocalHealthyInstances(module, envTag).consume(initialTargetsTry -> {
+      if (initialTargetsTry.isSuccess()) {
+        final List<HealthInfoInstance> initialTargets = nullSafeList(initialTargetsTry.getValue());
 
-          log.debug("{} initial healthy targets fetched", initialTargets.size());
-          setTargets(initialTargets);
-          initializationFuture.set(null);
-        } else {
-          handleTargetsFetchFailure(initialTargetsTry.getError(), false);
-          initializationFuture.setException(initialTargetsTry.getError());
-        }
+        log.debug("{} initial healthy targets fetched", initialTargets.size());
+        setTargets(initialTargets);
+        initializationFuture.set(null);
+      } else {
+        handleTargetsFetchFailure(initialTargetsTry.getError(), false);
+        initializationFuture.setException(initialTargetsTry.getError());
       }
     });
   }
@@ -164,28 +148,25 @@ public class HealthyTargetsList {
   private void pollForTargetsUpdates(final long fromIndex) {
     final Timer.Context fetchTime = targetFetchTime.time();
 
-    health.pollHealthyInstances(module, envTag, fromIndex).consume(new Consumer<TypedResponse<List<HealthInfoInstance>>>() {
-      @Override
-      public void consume(final Try<TypedResponse<List<HealthInfoInstance>>> aTry) {
-        fetchTime.stop();
-        long nextIndex = 0;
-        if (aTry.isSuccess()) {
-          try {
-            final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
-            log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
-            setTargets(newTargets);
-            nextIndex = extractIndex(aTry);
-          } catch (final IOException | RuntimeException e) {
-            handleTargetsFetchFailure(e, true);
-            return;
-          }
-        } else if (!(aTry.getError() instanceof TimeoutException)) {
-          handleTargetsFetchFailure(aTry.getError(), true);
+    health.pollHealthyInstances(module, envTag, fromIndex).consume(aTry -> {
+      fetchTime.stop();
+      long nextIndex = 0;
+      if (aTry.isSuccess()) {
+        try {
+          final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
+          log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
+          setTargets(newTargets);
+          nextIndex = extractIndex(aTry);
+        } catch (final IOException | RuntimeException e) {
+          handleTargetsFetchFailure(e, true);
           return;
         }
-
-        pollForTargetsUpdates(nextIndex);
+      } else if (!(aTry.getError() instanceof TimeoutException)) {
+        handleTargetsFetchFailure(aTry.getError(), true);
+        return;
       }
+
+      pollForTargetsUpdates(nextIndex);
     });
   }
 
