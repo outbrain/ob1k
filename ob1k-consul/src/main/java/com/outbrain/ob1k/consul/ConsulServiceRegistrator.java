@@ -1,8 +1,6 @@
 package com.outbrain.ob1k.consul;
 
 import com.google.common.base.Preconditions;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,13 +39,10 @@ public class ConsulServiceRegistrator implements Server.Listener {
 
   private void registerService(final ServiceRegistration registration) {
     logger.info("Registering {}", registration.getID());
-    ConsulAPI.getServiceRegistry().register(registration).consume(new Consumer<String>() {
-      @Override
-      public void consume(final Try<String> responseFuture) {
-        logger.info("{} registration success={}", registration.getID(), responseFuture.isSuccess());
-        if (!responseFuture.isSuccess()) {
-          logger.warn("Failed to register service: {}", responseFuture.getError().toString());
-        }
+    ConsulAPI.getServiceRegistry().register(registration).consume(responseFuture -> {
+      logger.info("{} registration success={}", registration.getID(), responseFuture.isSuccess());
+      if (!responseFuture.isSuccess()) {
+        logger.warn("Failed to register service: {}", responseFuture.getError().toString());
       }
     });
   }
