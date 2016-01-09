@@ -393,8 +393,8 @@ public class NingRequestBuilder implements RequestBuilder {
   private com.ning.http.client.cookie.Cookie transformToNingCookie(final Cookie cookie) {
 
     return com.ning.http.client.cookie.Cookie.newValidCookie(cookie.getName(), cookie.getValue(), false,
-            cookie.getDomain(), cookie.getPath(), 0, (int) cookie.getMaxAge(),
-            cookie.isSecure(), cookie.isHttpOnly());
+      cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(),
+      cookie.isSecure(), cookie.isHttpOnly());
   }
 
   /**
