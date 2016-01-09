@@ -37,7 +37,7 @@ public class UrlUtils {
    */
   public static String replacePathParam(final String url, final String param, final String value) throws EncoderException {
 
-    final String pathParam = new StringBuilder().append('{').append(param).append('}').toString();
+    final String pathParam = param.startsWith("{") ? param : "{" + param + "}";
     final String encodedValue = encode(value);
     return StringUtils.replace(url, pathParam, encodedValue);
   }
