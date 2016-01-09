@@ -37,15 +37,13 @@ public class HttpClient implements Closeable {
   public static final int MAX_TOTAL_CONNECTIONS = MAX_CONNECTIONS_PER_HOST * 2;
 
   private final AsyncHttpClient asyncHttpClient;
-  private final MetricFactory metricFactory;
   private final MarshallingStrategy marshallingStrategy;
   private final long responseMaxSize;
 
-  private HttpClient(final AsyncHttpClient asyncHttpClient, final MetricFactory metricFactory,
-                     final long responseMaxSize, final MarshallingStrategy marshallingStrategy) {
+  private HttpClient(final AsyncHttpClient asyncHttpClient, final long responseMaxSize,
+                     final MarshallingStrategy marshallingStrategy) {
 
     this.asyncHttpClient = asyncHttpClient;
-    this.metricFactory = metricFactory;
     this.responseMaxSize = responseMaxSize;
     this.marshallingStrategy = marshallingStrategy;
   }
@@ -138,7 +136,7 @@ public class HttpClient implements Closeable {
 
   private NingRequestBuilder createNewRequestBuilder(final String url, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder) {
 
-    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, metricFactory, responseMaxSize, marshallingStrategy);
+    return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, responseMaxSize, marshallingStrategy);
   }
 
   /**
@@ -350,8 +348,7 @@ public class HttpClient implements Closeable {
         configBuilder.setReadTimeout(readTimeout);
       }
 
-      return new HttpClient(new AsyncHttpClient(configBuilder.
-        build()), metricFactory, responseMaxSize, marshallingStrategy);
+      return new HttpClient(new AsyncHttpClient(configBuilder.build()), responseMaxSize, marshallingStrategy);
     }
   }
 
@@ -381,7 +378,8 @@ public class HttpClient implements Closeable {
       return nettyConfig;
     }
 
-    private static void registerShutdownHook(final NioClientSocketChannelFactory channelFactory, final HashedWheelTimer hashedWheelTimer) {
+    private static void registerShutdownHook(final NioClientSocketChannelFactory channelFactory,
+                                             final HashedWheelTimer hashedWheelTimer) {
 
       Runtime.getRuntime().addShutdownHook(new Thread() {
         @Override

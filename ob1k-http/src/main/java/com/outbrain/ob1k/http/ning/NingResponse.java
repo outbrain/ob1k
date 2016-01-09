@@ -1,9 +1,9 @@
 package com.outbrain.ob1k.http.ning;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Lists.transform;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.ning.http.client.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
@@ -30,9 +30,7 @@ public class NingResponse<T> implements TypedResponse<T> {
 
   public NingResponse(final Response ningResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
 
-    checkNotNull(ningResponse, "ningResponse may not be null");
-
-    this.ningResponse = ningResponse;
+    this.ningResponse = checkNotNull(ningResponse, "ningResponse may not be null");
     this.marshallingStrategy = marshallingStrategy;
     this.type = type;
   }
@@ -155,15 +153,11 @@ public class NingResponse<T> implements TypedResponse<T> {
 
   private List<Cookie> transformNingResponseCookies(final List<com.ning.http.client.cookie.Cookie> cookies) {
 
-    final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = new Function<com.ning.http.client.cookie.Cookie, Cookie>() {
-      @Override
-      public Cookie apply(final com.ning.http.client.cookie.Cookie ningCookie) {
-        return new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(),
-                ningCookie.getPath(), ningCookie.getMaxAge(),
-                ningCookie.isSecure(), ningCookie.isHttpOnly());
-      }
-    };
+    final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = ningCookie ->
+      new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(),
+        ningCookie.getPath(), ningCookie.getMaxAge(),
+        ningCookie.isSecure(), ningCookie.isHttpOnly());
 
-    return Lists.transform(cookies, transformer);
+    return transform(cookies, transformer);
   }
 }

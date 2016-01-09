@@ -1,6 +1,8 @@
 package com.outbrain.ob1k.http.ning;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.http.utils.ComposableFutureAdapter.fromListenableFuture;
 
 import com.ning.http.client.AsyncCompletionHandler;
@@ -10,7 +12,6 @@ import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
@@ -22,10 +23,8 @@ import com.outbrain.ob1k.http.common.Param;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.utils.ComposableFutureAdapter.Provider;
 import com.outbrain.ob1k.http.utils.UrlUtils;
-import com.outbrain.swinfra.metrics.api.MetricFactory;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
-import rx.functions.Func1;
 import rx.subjects.PublishSubject;
 
 import java.io.IOException;
@@ -41,7 +40,6 @@ public class NingRequestBuilder implements RequestBuilder {
 
   private final AsyncHttpClient asyncHttpClient;
   private final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder;
-  private final MetricFactory metricFactory;
 
   private MarshallingStrategy marshallingStrategy;
   private String requestUrl;
@@ -52,13 +50,11 @@ public class NingRequestBuilder implements RequestBuilder {
   private Object bodyObject;
 
   public NingRequestBuilder(final AsyncHttpClient asyncHttpClient, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder,
-                            final String requestUrl, final MetricFactory metricFactory, final long responseMaxSize,
-                            final MarshallingStrategy marshallingStrategy) {
+                            final String requestUrl, final long responseMaxSize, final MarshallingStrategy marshallingStrategy) {
 
     this.asyncHttpClient = checkNotNull(asyncHttpClient, "asyncHttpClient may not be null");
     this.ningRequestBuilder = checkNotNull(ningRequestBuilder, "ningRequestBuilder may not be null");
     this.requestUrl = checkNotNull(requestUrl, "requestUrl may not be null");
-    this.metricFactory = metricFactory;
     this.responseMaxSize = responseMaxSize;
     this.marshallingStrategy = marshallingStrategy;
   }
@@ -122,10 +118,7 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder addHeaders(final List<Header> headers) {
 
-    for (final Header header : headers) {
-      addHeader(header);
-    }
-
+    headers.forEach(this::addHeader);
     return this;
   }
 
@@ -197,10 +190,7 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder addQueryParams(final List<Param> params) {
 
-    for (final Param param : params) {
-      addQueryParam(param);
-    }
-
+    params.forEach(this::addQueryParam);
     return this;
   }
 
@@ -239,20 +229,17 @@ public class NingRequestBuilder implements RequestBuilder {
     try {
       prepareRequestBody();
     } catch (final IOException e) {
-      return ComposableFutures.fromError(e);
+      return fromError(e);
     }
 
     final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
 
-    return responseFuture.continueOnSuccess(new FutureSuccessHandler<com.ning.http.client.Response, Response>() {
-      @Override
-      public ComposableFuture<Response> handle(final com.ning.http.client.Response ningResponse) {
-        try {
-          final Response response = new NingResponse<>(ningResponse, null, null);
-          return ComposableFutures.fromValue(response);
-        } catch (final IOException e) {
-          return ComposableFutures.fromError(e);
-        }
+    return responseFuture.continueOnSuccess((FutureSuccessHandler<com.ning.http.client.Response, Response>) ningResponse -> {
+      try {
+        final Response response = new NingResponse<>(ningResponse, null, null);
+        return fromValue(response);
+      } catch (final IOException e) {
+        return fromError(e);
       }
     });
   }
@@ -292,15 +279,12 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
 
-    return responseFuture.continueOnSuccess(new FutureSuccessHandler<com.ning.http.client.Response, TypedResponse<T>>() {
-      @Override
-      public ComposableFuture<TypedResponse<T>> handle(final com.ning.http.client.Response ningResponse) {
-        try {
-          final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
-          return ComposableFutures.fromValue(response);
-        } catch (final IOException e) {
-          return ComposableFutures.fromError(e);
-        }
+    return responseFuture.continueOnSuccess((FutureSuccessHandler<com.ning.http.client.Response, TypedResponse<T>>) ningResponse -> {
+      try {
+        final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
+        return fromValue(response);
+      } catch (final IOException e) {
+        return fromError(e);
       }
     });
   }
@@ -335,14 +319,11 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final ComposableFuture<TypedResponse<T>> responseFuture = asTypedResponse(type);
 
-    return responseFuture.continueOnSuccess(new FutureSuccessHandler<TypedResponse<T>, T>() {
-      @Override
-      public ComposableFuture<T> handle(final TypedResponse<T> typedResponse) {
-        try {
-          return ComposableFutures.fromValue(typedResponse.getTypedBody());
-        } catch (final IOException e) {
-          return ComposableFutures.fromError(e);
-        }
+    return responseFuture.continueOnSuccess((FutureSuccessHandler<TypedResponse<T>, T>) typedResponse -> {
+      try {
+        return fromValue(typedResponse.getTypedBody());
+      } catch (final IOException e) {
+        return fromError(e);
       }
     });
   }
@@ -358,14 +339,11 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final Observable<TypedResponse<T>> responseObservable = asTypedStream(type);
 
-    return responseObservable.flatMap(new Func1<TypedResponse<T>, Observable<T>>() {
-      @Override
-      public Observable<T> call(final TypedResponse<T> typedResponse) {
-        try {
-          return Observable.just(typedResponse.getTypedBody());
-        } catch (final IOException e) {
-          return Observable.error(e);
-        }
+    return responseObservable.flatMap(typedResponse -> {
+      try {
+        return Observable.just(typedResponse.getTypedBody());
+      } catch (final IOException e) {
+        return Observable.error(e);
       }
     });
   }
@@ -375,42 +353,41 @@ public class NingRequestBuilder implements RequestBuilder {
     try {
       prepareRequestBody();
     } catch (final IOException e) {
-      return ComposableFutures.fromError(e);
+      return fromError(e);
     }
 
     final Request ningRequest = ningRequestBuilder.build();
+    final Provider<com.ning.http.client.Response> provider = new Provider<com.ning.http.client.Response>() {
+      private boolean aborted = false;
+      private long size;
 
-    return fromListenableFuture(
-            new Provider<com.ning.http.client.Response>() {
-              private boolean aborted = false;
-              private long size;
+      @Override
+      public ListenableFuture<com.ning.http.client.Response> provide() {
+        return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<com.ning.http.client.Response>() {
+          @Override
+          public com.ning.http.client.Response onCompleted(final com.ning.http.client.Response response) throws Exception {
+            if (aborted) {
+              throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
+            }
+            return response;
+          }
 
-              @Override
-              public ListenableFuture<com.ning.http.client.Response> provide() {
-                return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<com.ning.http.client.Response>() {
-                  @Override
-                  public com.ning.http.client.Response onCompleted(final com.ning.http.client.Response response) throws Exception {
-                    if (aborted) {
-                      throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
-                    }
-                    return response;
-                  }
-
-                  @Override
-                  public STATE onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
-                    if (responseMaxSize > 0) {
-                      size += content.length();
-                      if (size > responseMaxSize) {
-                        aborted = true;
-                        return STATE.ABORT;
-                      }
-                    }
-                    return super.onBodyPartReceived(content);
-                  }
-                });
+          @Override
+          public STATE onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
+            if (responseMaxSize > 0) {
+              size += content.length();
+              if (size > responseMaxSize) {
+                aborted = true;
+                return STATE.ABORT;
               }
-            }, metricFactory, ningRequest.getUri().getHost()
-    );
+            }
+            return super.onBodyPartReceived(content);
+          }
+        });
+      }
+    };
+
+    return fromListenableFuture(provider);
   }
 
   private com.ning.http.client.cookie.Cookie transformToNingCookie(final Cookie cookie) {

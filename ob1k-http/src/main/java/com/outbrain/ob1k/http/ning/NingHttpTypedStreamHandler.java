@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.http.ning;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Collections.singletonList;
 
 import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.HttpResponseBodyPart;
@@ -12,7 +13,6 @@ import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import rx.Observer;
 
 import java.lang.reflect.Type;
-import java.util.Collections;
 
 /**
  * @author aronen, marenzon
@@ -48,7 +48,7 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
       }
     }
 
-    final com.ning.http.client.Response ningResponse = new NettyResponse(status, headers, Collections.singletonList(bodyPart));
+    final com.ning.http.client.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
     final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
 
     try {
