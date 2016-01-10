@@ -14,14 +14,14 @@
   <properties>
     <java.compiler.source>1.7</java.compiler.source>
     <java.compiler.target>1.7</java.compiler.target>
+    <metrics.version>3.1.2</metrics.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>com.codahale.metrics</groupId>
+      <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
-      <version>3.0.2</version>
-      <scope>provided</scope>
+      <version>${metrics.version}</version>
     </dependency>
 
     <dependency>
