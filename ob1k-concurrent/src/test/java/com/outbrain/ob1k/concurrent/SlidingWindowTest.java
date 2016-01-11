@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;

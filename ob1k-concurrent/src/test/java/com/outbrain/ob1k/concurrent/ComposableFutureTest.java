@@ -11,7 +11,7 @@ import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.*;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -390,7 +390,7 @@ public class ComposableFutureTest {
             final Person result = person.get();
             Assert.assertEquals(result.age, age);
             Assert.assertEquals(result.name, name);
-            Assert.assertEquals(result.weight, weight);
+            Assert.assertEquals(result.weight, weight, 0);
         } catch (InterruptedException | ExecutionException e) {
             Assert.fail(e.getMessage());
         }

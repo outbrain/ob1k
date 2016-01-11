@@ -4,7 +4,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.outbrain.ob1k.concurrent.handlers.*;
 import com.outbrain.ob1k.concurrent.lazy.LazyComposableFuture;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 import rx.Observable;
 

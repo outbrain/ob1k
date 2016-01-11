@@ -3,7 +3,7 @@ package com.outbrain.ob1k.cache;
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;

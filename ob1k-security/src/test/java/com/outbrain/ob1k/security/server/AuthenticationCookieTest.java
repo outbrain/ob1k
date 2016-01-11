@@ -3,7 +3,7 @@ package com.outbrain.ob1k.security.server;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class AuthenticationCookieTest {
 

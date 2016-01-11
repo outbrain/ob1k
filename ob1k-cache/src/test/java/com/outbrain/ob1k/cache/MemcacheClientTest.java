@@ -6,7 +6,7 @@ import com.outbrain.ob1k.cache.metrics.MonitoringCacheDelegate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
-import junit.framework.Assert;
+import org.junit.Assert;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import org.junit.AfterClass;
