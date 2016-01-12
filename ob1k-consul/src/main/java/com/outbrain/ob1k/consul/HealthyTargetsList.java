@@ -2,8 +2,6 @@ package com.outbrain.ob1k.consul;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
@@ -19,11 +17,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Maintains a list of healthy targets based on consul registration.
@@ -35,7 +36,6 @@ import java.util.concurrent.TimeoutException;
 public class HealthyTargetsList {
 
   private static final Logger log = LoggerFactory.getLogger(HealthyTargetsList.class);
-
   /*
    * NOTE: an assumption is being made here:
    * The targets are always initialized with the last successful value.
@@ -43,19 +43,21 @@ public class HealthyTargetsList {
    * This is to allow making this class lazy, and allow smoother startups where needed.
    */
   private volatile ComposableFuture<List<HealthInfoInstance>> healthyTargetsFuture = ComposableFutures.fromValue(Collections.<HealthInfoInstance>emptyList());
-  private final List<TargetsChangedListener> listeners = new CopyOnWriteArrayList<>();
 
+  private final List<TargetsChangedListener> listeners = new CopyOnWriteArrayList<>();
   private final String module;
+
   private final String envTag;
   private final Predicate<HealthInfoInstance> targetsPredicate;
-
   private final ConsulHealth health;
 
   private final Timer targetFetchTime;
   private final Counter targetFetchErrors;
+  private final Counter targetUpdates;
+  private final Counter targetUpdateSkip;
 
   private final Callable<?> retryPoll = () -> {
-    pollForTargetsUpdates(0);
+    pollForTargetsUpdates(0, Collections.emptyMap());
     return null;
   };
 
@@ -72,10 +74,11 @@ public class HealthyTargetsList {
 
     targetFetchTime = metricFactory.createTimer(component, "targetFetchTime");
     targetFetchErrors = metricFactory.createCounter(component, "targetFetchErrors");
+    targetUpdates = metricFactory.createCounter(component, "targetUpdates");
+    targetUpdateSkip = metricFactory.createCounter(component, "targetUpdateSkip");
     metricFactory.registerGauge(component, "targetCount", this::getHealthyInstancesCount);
 
     initTargetsAsync();
-    pollForTargetsUpdates(0);
   }
 
   /**
@@ -102,12 +105,29 @@ public class HealthyTargetsList {
     }
   }
 
-  private void setTargets(final List<HealthInfoInstance> newTargets){
-    final List<HealthInfoInstance> filteredTargets = ImmutableList.copyOf(Iterables.filter(newTargets, targetsPredicate));
-    this.healthyTargetsFuture = ComposableFutures.fromValue(filteredTargets);
+  private Map<InstanceKey, Long> setTargetsIfChanged(final List<HealthInfoInstance> newTargets, final Map<InstanceKey, Long> lastInstance2modifyIndex){
+    final List<HealthInfoInstance> filteredTargets =
+      Collections.unmodifiableList(newTargets.stream().filter(targetsPredicate::apply).collect(Collectors.toList()));
+    final Map<InstanceKey, Long> currentInstance2modifyIndex = extractModifyIndices(filteredTargets);
 
+    if (lastInstance2modifyIndex.equals(currentInstance2modifyIndex)) {
+      targetUpdateSkip.inc();
+      log.debug("No indices have changed; skipping update");
+      return lastInstance2modifyIndex;
+    }
+
+    targetUpdates.inc();
+    this.healthyTargetsFuture = ComposableFutures.fromValue(filteredTargets);
     log.debug("{} target(s) were filtered out", newTargets.size() - filteredTargets.size());
     notifyListeners(filteredTargets);
+
+    return currentInstance2modifyIndex;
+  }
+
+  private Map<InstanceKey,Long> extractModifyIndices(final List<HealthInfoInstance> targets) {
+    return targets.stream().collect(Collectors.toMap(
+      InstanceKey::fromHealthInfoInstance,
+      t -> t.Service.ModifyIndex));
   }
 
   /**
@@ -128,16 +148,21 @@ public class HealthyTargetsList {
 
   private void initTargetsAsync() {
     health.filterDcLocalHealthyInstances(module, envTag).consume(initialTargetsTry -> {
+
+      Map<InstanceKey, Long> modifyIndices = Collections.emptyMap();
+
       if (initialTargetsTry.isSuccess()) {
         final List<HealthInfoInstance> initialTargets = nullSafeList(initialTargetsTry.getValue());
 
         log.debug("{} initial healthy targets fetched", initialTargets.size());
-        setTargets(initialTargets);
+        modifyIndices = setTargetsIfChanged(initialTargets, Collections.emptyMap());
         initializationFuture.set(null);
       } else {
         handleTargetsFetchFailure(initialTargetsTry.getError(), false);
         initializationFuture.setException(initialTargetsTry.getError());
       }
+
+      pollForTargetsUpdates(0, modifyIndices);
     });
   }
 
@@ -145,17 +170,18 @@ public class HealthyTargetsList {
     return initialTargets == null ? Collections.<HealthInfoInstance>emptyList() : initialTargets;
   }
 
-  private void pollForTargetsUpdates(final long fromIndex) {
+  private void pollForTargetsUpdates(final long fromIndex, final Map<InstanceKey, Long> lastInstance2modifyIndex) {
     final Timer.Context fetchTime = targetFetchTime.time();
 
     health.pollHealthyInstances(module, envTag, fromIndex).consume(aTry -> {
       fetchTime.stop();
-      long nextIndex = 0;
+      long nextIndex = fromIndex;
+      Map<InstanceKey, Long> modifyIndices = Collections.emptyMap();
       if (aTry.isSuccess()) {
         try {
           final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
           log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
-          setTargets(newTargets);
+          modifyIndices = setTargetsIfChanged(newTargets, lastInstance2modifyIndex);
           nextIndex = extractIndex(aTry);
         } catch (final IOException | RuntimeException e) {
           handleTargetsFetchFailure(e, true);
@@ -166,7 +192,7 @@ public class HealthyTargetsList {
         return;
       }
 
-      pollForTargetsUpdates(nextIndex);
+      pollForTargetsUpdates(nextIndex, modifyIndices);
     });
   }
 
@@ -193,5 +219,38 @@ public class HealthyTargetsList {
 
   public interface TargetsChangedListener {
     void onTargetsChanged(List<HealthInfoInstance> healthTargets);
+  }
+
+
+  private static class InstanceKey {
+    private final String node;
+    private final String id;
+
+    private InstanceKey(final String node, final String id) {
+      this.node = node;
+      this.id = id;
+    }
+
+    public static InstanceKey fromHealthInfoInstance(final HealthInfoInstance instance) {
+      return new InstanceKey(instance.Node.Node, instance.Service.ID);
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof InstanceKey)) {
+        return false;
+      }
+
+      final InstanceKey other = (InstanceKey) o;
+      return Objects.equals(id, other.id) && Objects.equals(node, other.node);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(id, node);
+    }
   }
 }

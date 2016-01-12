@@ -49,6 +49,7 @@ public class HealthInfoInstance {
     public Set<String> Tags;
     public String Address;
     public long Port;
+    public long ModifyIndex;
 
     public Integer port(final String portType) {
       return TagsUtil.extractPort(Tags, portType);
@@ -75,7 +76,7 @@ public class HealthInfoInstance {
 
       final Service other = (Service)o;
 
-      return Objects.equals(ID, other.ID) && Objects.equals(Address, other.Address) && Objects.equals(Port, other.Port);
+      return Objects.equals(ID, other.ID) && Objects.equals(ModifyIndex, other.ModifyIndex) && Objects.equals(Address, other.Address) && Objects.equals(Port, other.Port);
     }
 
     @Override
@@ -87,6 +88,7 @@ public class HealthInfoInstance {
   public static class Node {
     public String Node;
     public String Address;
+    public long ModifyIndex;
 
     @Override
     public String toString() {
@@ -123,6 +125,7 @@ public class HealthInfoInstance {
     public String Output;
     public String ServiceID;
     public String ServiceName;
+    public long ModifyIndex;
 
     @Override
     public String toString() {
