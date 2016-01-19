@@ -3,6 +3,7 @@ package com.outbrain.ob1k.cache;
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by aronen on 4/22/14.
@@ -241,4 +243,46 @@ public class LocalAsyncCacheTest {
     Assert.assertEquals(finalRes, successfulUpdates);
   }
 
+
+
+
+
+  ////////////////////////////////////
+  private static class MyLoader implements CacheLoader<String, Long> {
+    private AtomicBoolean firstRequest = new AtomicBoolean(true);
+
+    @Override
+    public ComposableFuture<Long> load(String cacheName, String key) {
+      if (firstRequest.getAndSet(false)) {
+        return ComposableFutures.fromError(new Exception("Load failed"));
+      }
+      return ComposableFutures.fromValue(1l);
+    }
+
+    @Override
+    public ComposableFuture<Map<String, Long>> load(String cacheName, Iterable<? extends String> keys) {
+      return null;
+    }
+  }
+
+  public static void main(String[] args) {
+    final LocalAsyncCache<String, Long> myCache = new LocalAsyncCache<>(10, 10, TimeUnit.MINUTES, new MyLoader(), null, "MyCache");
+    printFromCache(myCache, "a");
+    printFromCache(myCache, "a");
+  }
+
+  private static void printFromCache(final LocalAsyncCache<String, Long> myCache, final String key) {
+    try {
+      final ComposableFuture<Long> async = myCache.getAsync(key).continueOnError(new FutureErrorHandler<Long>() {
+        @Override
+        public ComposableFuture<Long> handle(Throwable error) {
+//          myCache.deleteAsync(key);
+          return ComposableFutures.fromError(error);
+        }
+      });
+      System.out.println("QQQQQQQ " + key + async.get().toString());
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
 }
