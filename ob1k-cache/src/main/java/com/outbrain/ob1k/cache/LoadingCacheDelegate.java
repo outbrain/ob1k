@@ -1,10 +1,12 @@
 package com.outbrain.ob1k.cache;
 
 import com.google.common.collect.Lists;
-import com.outbrain.ob1k.concurrent.*;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Consumer;
+import com.outbrain.ob1k.concurrent.Producer;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.swinfra.metrics.api.Counter;
-import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.ArrayList;
@@ -62,12 +64,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         this.timeUnit = timeUnit;
 
         if (metricFactory != null) {
-            metricFactory.registerGauge("LoadingCacheDelegate." + cacheName, "mapSize", new Gauge<Integer>() {
-                @Override
-                public Integer getValue() {
-                    return futureValues.size();
-                }
-            });
+            metricFactory.registerGauge("LoadingCacheDelegate." + cacheName, "mapSize", futureValues::size);
 
             cacheHits = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "hits");
             cacheMiss = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "miss");
@@ -99,35 +96,32 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                 }
 
                 final ComposableFuture<V> cachedResult = cache.getAsync(key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from cache named: " + cacheName);
-                cachedResult.consume(new Consumer<V>() {
-                    @Override
-                    public void consume(final Try<V> res) {
-                        if (res.isSuccess()) {
-                            final V result = res.getValue();
-                            if (result == null) {
-                                if (cacheMiss != null) {
-                                    cacheMiss.inc();
-                                }
+                cachedResult.consume(res -> {
+                    if (res.isSuccess()) {
+                        final V result = res.getValue();
+                        if (result == null) {
+                            if (cacheMiss != null) {
+                                cacheMiss.inc();
+                            }
 
-                                fetchFromLoader(key, promise);
-                            } else {
-                                if (cacheHits != null) {
-                                    cacheHits.inc();
-                                }
-                                promise.set(result);
-                                futureValues.remove(key);
-                            }
+                            fetchFromLoader(key, promise);
                         } else {
-                            final Throwable error = res.getError();
-                            if (cacheErrors != null) {
-                                cacheErrors.inc();
-                                if(error instanceof TimeoutException) {
-                                    cacheTimeouts.inc();
-                                }
+                            if (cacheHits != null) {
+                                cacheHits.inc();
                             }
-                            promise.setException(error);
+                            promise.set(result);
                             futureValues.remove(key);
                         }
+                    } else {
+                        final Throwable error = res.getError();
+                        if (cacheErrors != null) {
+                            cacheErrors.inc();
+                            if(error instanceof TimeoutException) {
+                                cacheTimeouts.inc();
+                            }
+                        }
+                        promise.setException(error);
+                        futureValues.remove(key);
                     }
                 });
 
@@ -140,28 +134,20 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         try {
             final ComposableFuture<V> loadedResult = loader.load(cacheName, key).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch from loader; cache name:" + cacheName);
 
-            loadedResult.consume(new Consumer<V>() {
-                @Override
-                public void consume(final Try<V> loadedRes) {
-                    if (loadedRes.isSuccess()) {
-                        promise.set(loadedRes.getValue());
-                        cache.setAsync(key, loadedRes.getValue()).consume(new Consumer<Boolean>() {
-                            @Override
-                            public void consume(final Try<Boolean> result) {
-                                futureValues.remove(key);
-                            }
-                        });
-                    } else {
-                        final Throwable error = loadedRes.getError();
-                        if (loaderErrors != null) {
-                            loaderErrors.inc();
-                            if(error instanceof TimeoutException) {
-                                loaderTimeouts.inc();
-                            }
+            loadedResult.consume(loadedRes -> {
+                if (loadedRes.isSuccess()) {
+                    promise.set(loadedRes.getValue());
+                    cache.setAsync(key, loadedRes.getValue()).consume(result -> futureValues.remove(key));
+                } else {
+                    final Throwable error = loadedRes.getError();
+                    if (loaderErrors != null) {
+                        loaderErrors.inc();
+                        if(error instanceof TimeoutException) {
+                            loaderTimeouts.inc();
                         }
-                        promise.setException(error);
-                        futureValues.remove(key);
                     }
+                    promise.setException(error);
+                    futureValues.remove(key);
                 }
             });
         } catch (final Exception e) {
@@ -172,12 +158,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     }
 
     private static <T> void consumeFrom(final ComposableFuture<T> source, final Consumer<T> consumer) {
-        source.consume(new Consumer<T>() {
-            @Override
-            public void consume(final Try<T> result) {
-                consumer.consume(result);
-            }
-        });
+        source.consume(consumer::consume);
     }
 
     @Override
@@ -201,42 +182,39 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                 }
 
                 final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache named: " + cacheName);
-                cachedResults.consume(new Consumer<Map<K, V>>() {
-                    @Override
-                    public void consume(final Try<Map<K, V>> res) {
-                        if (res.isSuccess()) {
-                            final Map<K, V> result = res.getValue();
-                            final List<K> missingFromCacheKeys = new ArrayList<>();
-                            for (final K key : processedKeys) {
-                                if (result.containsKey(key)) {
-                                    final ComposablePromise<V> promise = futureValues.get(key);
-                                    promise.set(result.get(key));
-                                    futureValues.remove(key);
+                cachedResults.consume(tryGet -> {
+                    if (tryGet.isSuccess()) {
+                        final Map<K, V> result = tryGet.getValue();
+                        final List<K> missingFromCacheKeys = new ArrayList<>();
+                        for (final K key : processedKeys) {
+                            if (result.containsKey(key)) {
+                                final ComposablePromise<V> promise = futureValues.get(key);
+                                promise.set(result.get(key));
+                                futureValues.remove(key);
 
-                                    if (cacheHits != null) {
-                                        cacheHits.inc();
-                                    }
-                                } else {
-                                    missingFromCacheKeys.add(key);
-                                    if (cacheMiss != null) {
-                                        cacheMiss.inc();
-                                    }
+                                if (cacheHits != null) {
+                                    cacheHits.inc();
+                                }
+                            } else {
+                                missingFromCacheKeys.add(key);
+                                if (cacheMiss != null) {
+                                    cacheMiss.inc();
                                 }
                             }
+                        }
 
-                            if (!missingFromCacheKeys.isEmpty()) {
-                                fetchFromLoader(missingFromCacheKeys);
-                            }
-                        } else {
-                            for (final K key : processedKeys) {
-                                final ComposablePromise<V> promise = futureValues.get(key);
-                                promise.setException(res.getError());
-                                futureValues.remove(key);
-                            }
+                        if (!missingFromCacheKeys.isEmpty()) {
+                            fetchFromLoader(missingFromCacheKeys);
+                        }
+                    } else {
+                        for (final K key : processedKeys) {
+                            final ComposablePromise<V> promise = futureValues.get(key);
+                            promise.setException(tryGet.getError());
+                            futureValues.remove(key);
+                        }
 
-                            if (cacheErrors != null) {
-                                cacheErrors.inc();
-                            }
+                        if (cacheErrors != null) {
+                            cacheErrors.inc();
                         }
                     }
                 });
@@ -249,34 +227,28 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     private void fetchFromLoader(final List<K> missingFromCacheKeys) {
         try {
             final ComposableFuture<Map<K, V>> loadedResults = loader.load(cacheName, missingFromCacheKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from loader for cache named: " + cacheName);
-            loadedResults.consume(new Consumer<Map<K, V>>() {
-                @Override
-                public void consume(final Try<Map<K, V>> loadedRes) {
-                    if (loadedRes.isSuccess()) {
-                        final Map<K, V> elements = loadedRes.getValue();
-                        for (final K key : missingFromCacheKeys) {
-                            futureValues.get(key).set(elements.get(key));
-                        }
+            loadedResults.consume(loadedRes -> {
+                if (loadedRes.isSuccess()) {
+                    final Map<K, V> elements = loadedRes.getValue();
+                    for (final K key : missingFromCacheKeys) {
+                        futureValues.get(key).set(elements.get(key));
+                    }
 
-                        cache.setBulkAsync(elements).consume(new Consumer<Map<K, Boolean>>() {
-                            @Override
-                            public void consume(final Try<Map<K, Boolean>> setResults) {
-                                for (final K key : missingFromCacheKeys) {
-                                    futureValues.remove(key);
-                                }
-                            }
-                        });
-
-                    } else {
+                    cache.setBulkAsync(elements).consume(setResults -> {
                         for (final K key : missingFromCacheKeys) {
-                            final ComposablePromise<V> promise = futureValues.get(key);
-                            promise.setException(loadedRes.getError());
                             futureValues.remove(key);
                         }
+                    });
 
-                        if (loaderErrors != null) {
-                            loaderErrors.inc();
-                        }
+                } else {
+                    for (final K key : missingFromCacheKeys) {
+                        final ComposablePromise<V> promise = futureValues.get(key);
+                        promise.setException(loadedRes.getError());
+                        futureValues.remove(key);
+                    }
+
+                    if (loaderErrors != null) {
+                        loaderErrors.inc();
                     }
                 }
             });
