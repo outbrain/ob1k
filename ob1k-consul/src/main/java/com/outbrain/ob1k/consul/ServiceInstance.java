@@ -19,14 +19,6 @@ public class ServiceInstance {
   public String ServiceName;
   public Set<String> ServiceTags;
 
-  public Integer port(final String portType) {
-    return TagsUtil.extractPort(ServiceTags, portType);
-  }
-
-  public String context() {
-    return TagsUtil.extractContextPath(ServiceTags);
-  }
-
   @Override
   public String toString() {
     final ToStringBuilder toStringBuilder = new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE);
