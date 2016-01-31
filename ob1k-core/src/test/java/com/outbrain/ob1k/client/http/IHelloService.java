@@ -15,17 +15,10 @@ import java.util.List;
 public interface IHelloService extends Service {
   ComposableFuture<String> hello(String name);
   ComposableFuture<String> helloWorld();
-
   ComposableFuture<Integer> getRandomNumber();
-
   ComposableFuture<String> helloFilter(String name);
-  String helloNow(String name);
-
   ComposableFuture<Response> emptyString();
-
   ComposableFuture<List<TestBean>> increaseAge(List<TestBean> beans, String newHabit);
-
   ComposableFuture<Boolean> sleep(int milliseconds);
-
   Observable<String> getMessages(String name, int iterations, boolean failAtEnd);
 }
