@@ -11,16 +11,15 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by aronen on 10/27/14.
- *
  * emulate a loader that takes a while and test to se that values are loaded only once.
+ *
+ * @author aronen on 10/27/14.
  */
 public class TestLoadingCacheDelegate {
 
@@ -48,12 +47,7 @@ public class TestLoadingCacheDelegate {
   };
 
   private static ComposableFuture<String> slowResponse(final int responseDuration) {
-    return ComposableFutures.schedule(new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "res";
-      }
-    }, responseDuration, TimeUnit.MILLISECONDS);
+    return ComposableFutures.schedule(() -> "res", responseDuration, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -90,12 +84,7 @@ public class TestLoadingCacheDelegate {
       public ComposableFuture<String> load(final String cacheName, final String key) {
         System.out.println("loading(single): " + key);
         loaderCounter.incrementAndGet();
-        return ComposableFutures.schedule(new Callable<String>() {
-          @Override
-          public String call() throws Exception {
-            return "res-" + key;
-          }
-        }, random.nextLong(1, 19), TimeUnit.MILLISECONDS);
+        return ComposableFutures.schedule(() -> "res-" + key, random.nextLong(1, 19), TimeUnit.MILLISECONDS);
       }
 
       @Override
@@ -104,12 +93,7 @@ public class TestLoadingCacheDelegate {
         for (final String key: keys) {
           System.out.println("loading(multiple): " + key);
           loaderCounter.incrementAndGet();
-          res.put(key, ComposableFutures.schedule(new Callable<String>() {
-            @Override
-            public String call() throws Exception {
-              return "res-" + key;
-            }
-          }, random.nextLong(1, 19), TimeUnit.MILLISECONDS));
+          res.put(key, ComposableFutures.schedule(() -> "res-" + key, random.nextLong(1, 19), TimeUnit.MILLISECONDS));
         }
 
         System.out.println("returning keys: " + res.keySet());
