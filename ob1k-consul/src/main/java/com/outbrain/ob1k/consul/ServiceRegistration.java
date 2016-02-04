@@ -26,7 +26,7 @@ public class ServiceRegistration {
     this.tags = Preconditions.checkNotNull(tags, "tags must not be null");
     this.check = Preconditions.checkNotNull(check, "check must not be null");
     this.port = port;
-    this.id = (instance == null ? name : name + instance);
+    this.id = (instance == null ? name : name + "_" + instance);
   }
 
   public String getID() {
