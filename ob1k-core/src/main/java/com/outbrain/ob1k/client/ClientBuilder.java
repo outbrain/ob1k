@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.client;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
@@ -9,15 +10,14 @@ import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
-import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
-import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.HttpClient;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import rx.Observable;
 
@@ -166,6 +166,9 @@ public class ClientBuilder<T extends Service> {
   }
 
   public T build() {
+    if (!type.isInterface()) {
+      throw new IllegalArgumentException("Type " + type.getCanonicalName() + " must be an interface as client uses JDK proxy");
+    }
     final ClassLoader loader = ClientBuilder.class.getClassLoader();
     final HttpClient httpClient = httpClientBuilder.build();
     final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(httpClient);
