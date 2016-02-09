@@ -111,7 +111,7 @@ public class BasicDao {
       final List<T> response = new ArrayList<>();
       if (rowsOption.isDefined()) {
         final ResultSet resultSet = rowsOption.get();
-        final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
+        final List<String> columnNames = JavaConversions.seqAsJavaList(resultSet.columnNames());
 
         final Iterator<RowData> rows = resultSet.iterator();
         while (rows.hasNext()) {
@@ -168,7 +168,7 @@ public class BasicDao {
 
       if (rowsOption.isDefined()) {
         final ResultSet resultSet = rowsOption.get();
-        final List<String> columnNames = JavaConversions.asJavaList(resultSet.columnNames());
+        final List<String> columnNames = JavaConversions.seqAsJavaList(resultSet.columnNames());
 
         final Iterator<RowData> rows = resultSet.iterator();
         if (rows.hasNext()) {
