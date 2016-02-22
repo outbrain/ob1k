@@ -15,7 +15,6 @@ import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
