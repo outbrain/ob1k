@@ -49,11 +49,6 @@ public class HelloService implements IHelloService {
   }
 
   @Override
-  public String helloNow(final String name) {
-    return "hello " + name;
-  }
-
-  @Override
   public ComposableFuture<Response> emptyString() {
     return fromValue(ResponseBuilder.ok().build());
   }

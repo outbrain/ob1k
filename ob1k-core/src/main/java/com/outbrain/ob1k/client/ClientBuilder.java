@@ -5,7 +5,6 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
-import com.outbrain.ob1k.client.endpoints.SyncClientEndpoint;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
@@ -200,7 +199,7 @@ public class ClientBuilder<T extends Service> {
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
         final RequestMarshallerRegistry registry = createRegistry(type);
         final AbstractClientEndpoint.Endpoint endpoint = new AbstractClientEndpoint.Endpoint(method, type, clientType,
-                endpointDescriptor.path, endpointDescriptor.requestMethodType);
+          endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;
 
         if (isAsync(method)) {
@@ -210,8 +209,7 @@ public class ClientBuilder<T extends Service> {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
           clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
         } else {
-          final List<SyncFilter> filters = mergeFilters(SyncFilter.class, syncFilters, endpointDescriptor.filters);
-          clientEndpoint = new SyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new SyncFilter[filters.size()]));
+          throw new IllegalArgumentException("Endpoint methods return type must be either ComposableFuture or Observable.");
         }
 
         endpoints.put(method, clientEndpoint);
@@ -223,8 +221,8 @@ public class ClientBuilder<T extends Service> {
 
   private EndpointDescriptor getEndpointDescriptor(final String methodName) {
     return endpointDescriptors.containsKey(methodName) ?
-            endpointDescriptors.get(methodName) :
-            new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
+      endpointDescriptors.get(methodName) :
+      new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
   }
 
   private boolean isValidEndpoint(final Method method) {
