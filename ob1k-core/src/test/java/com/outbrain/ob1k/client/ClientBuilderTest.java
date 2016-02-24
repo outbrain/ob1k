@@ -15,4 +15,16 @@ public class ClientBuilderTest {
 
   private static class RealService implements Service {
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldBlowUpIfClientTypeContainsSyncMethods() {
+    ClientBuilder<WithSync> clientBuilder = new ClientBuilder<>(WithSync.class);
+
+    clientBuilder.build();
+  }
+
+  private static interface WithSync extends Service {
+    String syncMethod();
+  }
+
 }

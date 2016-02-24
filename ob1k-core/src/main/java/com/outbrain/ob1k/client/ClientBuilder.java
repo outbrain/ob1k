@@ -5,14 +5,12 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
-import com.outbrain.ob1k.client.endpoints.SyncClientEndpoint;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
@@ -36,7 +34,6 @@ import java.util.Map;
 public class ClientBuilder<T extends Service> {
 
   private final Class<T> type;
-  private final List<SyncFilter> syncFilters;
   private final List<AsyncFilter> asyncFilters;
   private final List<StreamFilter> streamFilters;
   private final Map<String, EndpointDescriptor> endpointDescriptors;
@@ -48,17 +45,12 @@ public class ClientBuilder<T extends Service> {
   public ClientBuilder(final Class<T> type) {
     this.type = type;
     this.httpClientBuilder = new HttpClient.Builder();
-    this.syncFilters = new ArrayList<>();
     this.asyncFilters = new ArrayList<>();
     this.streamFilters = new ArrayList<>();
     this.endpointDescriptors = new HashMap<>();
   }
 
   public ClientBuilder<T> addFilter(final ServiceFilter filter) {
-    if (filter instanceof SyncFilter) {
-      syncFilters.add((SyncFilter) filter);
-    }
-
     if (filter instanceof AsyncFilter) {
       asyncFilters.add((AsyncFilter) filter);
     }
@@ -200,7 +192,7 @@ public class ClientBuilder<T extends Service> {
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
         final RequestMarshallerRegistry registry = createRegistry(type);
         final AbstractClientEndpoint.Endpoint endpoint = new AbstractClientEndpoint.Endpoint(method, type, clientType,
-                endpointDescriptor.path, endpointDescriptor.requestMethodType);
+          endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;
 
         if (isAsync(method)) {
@@ -210,8 +202,8 @@ public class ClientBuilder<T extends Service> {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
           clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
         } else {
-          final List<SyncFilter> filters = mergeFilters(SyncFilter.class, syncFilters, endpointDescriptor.filters);
-          clientEndpoint = new SyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new SyncFilter[filters.size()]));
+          throw new IllegalArgumentException("Interface method " + type.getSimpleName() + "::" + methodName +
+            " has illegal signature. All public methods must return ComposableFuture or Observable.");
         }
 
         endpoints.put(method, clientEndpoint);
@@ -223,8 +215,8 @@ public class ClientBuilder<T extends Service> {
 
   private EndpointDescriptor getEndpointDescriptor(final String methodName) {
     return endpointDescriptors.containsKey(methodName) ?
-            endpointDescriptors.get(methodName) :
-            new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
+      endpointDescriptors.get(methodName) :
+      new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
   }
 
   private boolean isValidEndpoint(final Method method) {
