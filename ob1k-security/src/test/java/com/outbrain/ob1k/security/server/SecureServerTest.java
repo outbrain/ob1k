@@ -38,7 +38,6 @@ public class SecureServerTest {
   }
 
 // todo unignore this once I can create a client that can handle a server returning 401
-// todo add test for returnStringSync
 //  @Test
 //  public void testSecureEndpoint() throws Exception {
 //    Server server = null;

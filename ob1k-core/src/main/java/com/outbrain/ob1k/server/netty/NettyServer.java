@@ -1,14 +1,18 @@
 package com.outbrain.ob1k.server.netty;
 
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.common.metrics.NettyQueuesGaugeBuilder;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
-import com.outbrain.ob1k.server.util.SyncRequestQueueObserver;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -21,7 +25,10 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,7 +44,6 @@ public class NettyServer implements Server {
   private final int port;
   private final String contextPath;
   private final RequestMarshallerRegistry marshallerRegistry;
-  private final SyncRequestQueueObserver queueObserver;
   private final ChannelGroup activeChannels;
   private final long requestTimeoutMs;
   private volatile Channel channel;
@@ -52,14 +58,13 @@ public class NettyServer implements Server {
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
 
   public NettyServer(final int port, final ServiceRegistry registry, final RequestMarshallerRegistry marshallerRegistry,
-                     final StaticPathResolver staticResolver, final SyncRequestQueueObserver queueObserver,
+                     final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final boolean supportZip, final MetricFactory metricFactory,
                      final int maxContentLength, final long requestTimeoutMs) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
     this.staticResolver = staticResolver;
-    this.queueObserver = queueObserver;
     this.activeChannels = activeChannels;
     this.contextPath = contextPath;
     this.applicationName = applicationName;
@@ -91,7 +96,6 @@ public class NettyServer implements Server {
 
       channel = b.bind(port).sync().channel();
       addShutdownhook();
-      queueObserver.setServerChannel(channel);
       // TEMP disable till I get an answer to https://groups.google.com/d/topic/netty/uY4n1Wjmpvs/discussion
 //      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
 
@@ -148,7 +152,6 @@ public class NettyServer implements Server {
   @Override
   public void stop() {
     logger.info("################## Stopping OB1K server for module '{}' ##################", applicationName);
-    queueObserver.setServerChannel(null);
     if (!channel.isOpen()) {
       return;
     }
@@ -218,7 +221,7 @@ public class NettyServer implements Server {
       }
 
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
-          marshallerRegistry, queueObserver, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
+          marshallerRegistry, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
     }
 
   }

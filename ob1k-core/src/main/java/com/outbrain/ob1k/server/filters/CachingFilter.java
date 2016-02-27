@@ -1,11 +1,9 @@
 package com.outbrain.ob1k.server.filters;
 
 import com.outbrain.ob1k.AsyncRequestContext;
-import com.outbrain.ob1k.SyncRequestContext;
 import com.outbrain.ob1k.cache.LocalAsyncCache;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
@@ -20,7 +18,7 @@ import java.util.concurrent.TimeUnit;
  *
  * a client/server filter that caches method call result for a predefined period of time.
  */
-public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext>, SyncFilter<V, SyncRequestContext> {
+public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext> {
   private final TypedCache<K, V> cache;
   private final CacheKeyGenerator<K> generator;
 
@@ -51,28 +49,6 @@ public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext>,
         }
       }
     });
-  }
-
-  @Override
-  public V handleSync(SyncRequestContext ctx) throws ExecutionException {
-    final K key = generator.createKey(ctx.getParams());
-    V cachedResult;
-    try {
-      cachedResult = cache.getAsync(key).get();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      cachedResult = null;
-    } catch (ExecutionException e) {
-      cachedResult = null;
-    }
-
-    if (cachedResult != null) {
-      return cachedResult;
-    } else {
-      final V res = ctx.invokeSync();
-      cache.setAsync(key, res);
-      return res;
-    }
   }
 
   public static interface CacheKeyGenerator<K> {

@@ -7,7 +7,6 @@ import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;

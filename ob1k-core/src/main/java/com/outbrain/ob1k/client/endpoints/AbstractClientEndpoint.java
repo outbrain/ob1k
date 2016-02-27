@@ -20,7 +20,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 /**
- * A common parent for sync and async endpoints used by the client to call the remote target.
+ * A common parent for async and stream based endpoints used by the client to call the remote target.
  *
  * @author aronen
  */
