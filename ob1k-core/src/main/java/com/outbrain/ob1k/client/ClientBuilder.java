@@ -7,7 +7,6 @@ import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
-import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
@@ -15,18 +14,17 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.common.ContentType;
+import com.outbrain.ob1k.common.endpoints.ServiceEndpointContract;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
-import rx.Observable;
-
 import java.io.Closeable;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
 
 /**
  * @author aronen
@@ -187,7 +185,7 @@ public class ClientBuilder<T extends Service> {
     final Method[] methods = type.getDeclaredMethods();
 
     for (final Method method : methods) {
-      if (isValidEndpoint(method)) {
+      if (isEndpoint(method)) {
         final String methodName = method.getName();
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
         final RequestMarshallerRegistry registry = createRegistry(type);
@@ -195,10 +193,10 @@ public class ClientBuilder<T extends Service> {
           endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;
 
-        if (isAsync(method)) {
+        if (isAsyncMethod(method)) {
           final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, endpointDescriptor.filters);
           clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]));
-        } else if (isStreaming(method)) {
+        } else if (isStreamingMethod(method)) {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
           clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
         } else {
@@ -219,11 +217,6 @@ public class ClientBuilder<T extends Service> {
       new EndpointDescriptor(methodName, methodName, null, HttpRequestMethodType.ANY);
   }
 
-  private boolean isValidEndpoint(final Method method) {
-    final int modifiers = method.getModifiers();
-    return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
-  }
-
   private static <T extends ServiceFilter> List<T> mergeFilters(final Class<T> filterType, final List<T> baseFilters,
                                                                 final List<? extends ServiceFilter> specificFilters) {
     final List<T> filters = new ArrayList<>();
@@ -237,14 +230,6 @@ public class ClientBuilder<T extends Service> {
     }
 
     return filters;
-  }
-
-  private static boolean isAsync(final Method method) {
-    return ComposableFutureHelper.isComposableFuture(method.getReturnType());
-  }
-
-  private static boolean isStreaming(final Method method) {
-    return method.getReturnType() == Observable.class;
   }
 
   /**

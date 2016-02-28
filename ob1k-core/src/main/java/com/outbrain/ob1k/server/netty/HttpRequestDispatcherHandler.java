@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import com.outbrain.ob1k.common.marshalling.ChunkHeader;
 import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.server.ResponseHandler;
-import com.outbrain.ob1k.server.util.QueueObserver;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -55,7 +54,6 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private final String contextPath;
   private final RequestMarshallerRegistry marshallerRegistry;
   private final boolean acceptKeepAlive;
-  private final QueueObserver requestQueueObserver;
 
   private final ChannelGroup activeChannels;
 
@@ -70,13 +68,12 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
 
   public HttpRequestDispatcherHandler(final String contextPath, final ServiceDispatcher dispatcher,
                                       final StaticPathResolver staticResolver, final RequestMarshallerRegistry marshallerRegistry,
-                                      final QueueObserver requestQueueObserver, final ChannelGroup activeChannels,
+                                      final ChannelGroup activeChannels,
                                       final boolean acceptKeepAlive, final MetricFactory metricFactory, final long requestTimeoutMs) {
     this.dispatcher = dispatcher;
     this.staticResolver = staticResolver;
     this.contextPath = contextPath;
     this.marshallerRegistry = marshallerRegistry;
-    this.requestQueueObserver = requestQueueObserver;
     this.activeChannels = activeChannels;
     this.acceptKeepAlive = acceptKeepAlive;
     this.requestTimeoutMs = requestTimeoutMs;
@@ -144,9 +141,6 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
             HttpRequestDispatcherHandler.this.handleStreamResponse(ctx, response, rawStream);
           }
         });
-      } catch (final RejectedExecutionException e) {
-        requestQueueObserver.onQueueRejection();
-        handleResponse("The server is overloaded, please try later", HttpResponseStatus.SERVICE_UNAVAILABLE, request, ctx);
       } catch (final IOException error) {
         handleInternalError(error, request, ctx);
       } catch (final Exception error) {

@@ -55,6 +55,31 @@ public class ServerBuilderTest {
     assertEquals(filters, stream(endpoint.getFilters()).map(it -> it.getClass().getSimpleName()).reduce("", (acc, it) -> acc + ":" + it));
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void failOnBindNonExistingMethod() {
+    final RegistryHolder registryHolder = new RegistryHolder();
+
+    final Server server = ServerBuilder.newBuilder().
+      contextPath("contextPath").
+      service(builder ->
+        builder.register(new TestService(), "/path",
+          bind -> bind.endpoint("testMethodNotExist", "/test"))).
+      withExtension(registryHolder). // for grabbing the registry to use later by asserts
+      build();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void failOnBindSyncMethod() {
+    final RegistryHolder registryHolder = new RegistryHolder();
+
+    final Server server = ServerBuilder.newBuilder().
+      contextPath("contextPath").
+      service(builder ->
+        builder.register(new TestService(), "/path",
+          bind -> bind.endpoint("syncMethod", "/sync"))).
+      withExtension(registryHolder). // for grabbing the registry to use later by asserts
+      build();
+  }
 
   private class TestService implements Service {
 
@@ -63,6 +88,8 @@ public class ServerBuilderTest {
     }
 
     public ComposableFuture<String> anotherMethod() { return null; }
+
+    public String syncMethod() { return null; }
   }
 
   private class TestServiceFilter implements AsyncFilter {

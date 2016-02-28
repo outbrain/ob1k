@@ -5,11 +5,9 @@ import com.google.common.collect.Maps;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.Service;
-import com.outbrain.ob1k.common.concurrent.ComposableFutureHelper;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.server.MethodParamNamesExtractor;
@@ -17,14 +15,10 @@ import com.outbrain.ob1k.server.registry.endpoints.AsyncServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.ServerEndpoint;
 import com.outbrain.ob1k.server.registry.endpoints.ServerEndpointView;
 import com.outbrain.ob1k.server.registry.endpoints.StreamServerEndpoint;
-import com.outbrain.ob1k.server.registry.endpoints.SyncServerEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,8 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.Executor;
-
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
 import static java.util.Collections.unmodifiableSortedMap;
 
 /**
@@ -72,9 +65,8 @@ public class ServiceRegistry implements ServiceRegistryView {
     return serviceEndpoints.get(requestMethodType);
   }
 
-  public void register(final String name, final Service service, final boolean bindPrefix,
-                       final Executor executorService) {
-    register(name, service, null, null, null, bindPrefix, executorService);
+  public void register(final String name, final Service service, final boolean bindPrefix) {
+    register(name, service, null, null, bindPrefix);
   }
 
   public static class EndpointDescriptor {
@@ -91,8 +83,8 @@ public class ServiceRegistry implements ServiceRegistryView {
 
   public void registerEndpoints(final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
                                 final String name, final Service service,
-                                final List<AsyncFilter> asyncFilters, final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
-                                final boolean bindPrefix, final Executor executorService) {
+                                final List<AsyncFilter> asyncFilters,  final List<StreamFilter> streamFilters,
+                                final boolean bindPrefix) {
 
     if (contextPath == null) {
       throw new RuntimeException("Can't add service before context path is set.");
@@ -130,12 +122,20 @@ public class ServiceRegistry implements ServiceRegistryView {
         validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 
         final String[] params = methodParamNames.toArray(new String[methodParamNames.size()]);
-        final ServerEndpoint endpoint = isAsyncMethod(method) ?
-                new AsyncServerEndpoint(service, getFilters(endpointDesc.filters, asyncFilters, methodBind, AsyncFilter.class), method, endpointDesc.requestMethodType, params) :
-                isStreamingMethod(method) ?
-                        new StreamServerEndpoint(service, getFilters(endpointDesc.filters, streamFilters, methodBind, StreamFilter.class), method, endpointDesc.requestMethodType, params) :
-                        new SyncServerEndpoint(service, getFilters(endpointDesc.filters, syncFilters, methodBind, SyncFilter.class), method, endpointDesc.requestMethodType, params, executorService);
-        endpointsMap.put(endpointDescriptorEntry.getKey(), endpoint);
+        if (isAsyncMethod(method)) {
+          endpointsMap.put(endpointDescriptorEntry.getKey(),
+            new AsyncServerEndpoint(service, getFilters(endpointDesc.filters, asyncFilters, methodBind,
+              AsyncFilter.class), method, endpointDesc.requestMethodType, params) );
+        } else if (isStreamingMethod(method)) {
+          endpointsMap.put(endpointDescriptorEntry.getKey(),
+            new StreamServerEndpoint(service, getFilters(endpointDesc.filters, streamFilters, methodBind,
+              StreamFilter.class), method, endpointDesc.requestMethodType, params) );
+        } else {
+          logger.warn("Will not register service endpoint {}::{}"+
+            ". Method must return ComposableFuture or Observable!",name,method);
+
+        }
+
       }
 
       endpoints.insert(path, endpointsMap, bindPrefix);
@@ -250,18 +250,16 @@ public class ServiceRegistry implements ServiceRegistryView {
   }
 
   public void register(final String name, final Service service, final List<AsyncFilter> asyncFilters,
-                       final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
-                       final boolean bindPrefix, final Executor executorService) {
+                       final List<StreamFilter> streamFilters,
+                       final boolean bindPrefix) {
 
     final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors = getEndpointsDescriptor(service,
-            executorService, asyncFilters, syncFilters, streamFilters);
-    registerEndpoints(descriptors, name, service, null, null, null, bindPrefix, executorService);
+      asyncFilters, streamFilters);
+    registerEndpoints(descriptors, name, service, null, null, bindPrefix);
   }
 
   private Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> getEndpointsDescriptor(final Service service,
-                                                                final Executor executorService,
                                                                 final List<AsyncFilter> asyncFilters,
-                                                                final List<SyncFilter> syncFilters,
                                                                 final List<StreamFilter> streamFilters) {
 
     final Method[] methods = service.getClass().getDeclaredMethods();
@@ -273,11 +271,9 @@ public class ServiceRegistry implements ServiceRegistryView {
           result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, asyncFilters, HttpRequestMethodType.ANY)));
         } else if (isStreamingMethod(m)) {
           result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, streamFilters, HttpRequestMethodType.ANY)));
-        } else if (executorService != null) {
-          // A sync method with a defined executor service.
-          result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, syncFilters, HttpRequestMethodType.ANY)));
-        } else {
-          logger.info("Method " + m.getName() + " wasn't bounded. Sync method needs a configured executor service");
+        }  else {
+          logger.warn("Will not to register service endpoint {}::{}"+
+            ". Method must return ComposableFuture or Observable!",service.getClass().getSimpleName(),m.getName());
         }
       }
     }
@@ -289,12 +285,6 @@ public class ServiceRegistry implements ServiceRegistryView {
 
     return result;
   }
-
-  private boolean isEndpoint(Method method) {
-    int modifiers = method.getModifiers();
-    return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
-  }
-
 
   private Map<HttpRequestMethodType, EndpointDescriptor> singleEndpointDescToMap(final EndpointDescriptor endpointDescriptor) {
     final Map<HttpRequestMethodType, EndpointDescriptor> endpointDescriptorMap = Maps.newHashMap();
@@ -323,13 +313,4 @@ public class ServiceRegistry implements ServiceRegistryView {
       }
     }
   }
-
-  private boolean isAsyncMethod(final Method m) {
-    return ComposableFutureHelper.isComposableFuture(m.getReturnType());
-  }
-
-  private boolean isStreamingMethod(final Method m) {
-    return m.getReturnType() == Observable.class;
-  }
-
 }

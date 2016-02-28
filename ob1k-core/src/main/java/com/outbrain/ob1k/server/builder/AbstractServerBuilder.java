@@ -5,23 +5,17 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
-import com.outbrain.ob1k.common.filters.SyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
-import com.outbrain.ob1k.server.util.ObservableBlockingQueue;
-import com.outbrain.ob1k.server.util.SyncRequestQueueObserver;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
-
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,12 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
 import static java.util.Collections.unmodifiableList;
 
 /**
@@ -81,19 +70,17 @@ public abstract class AbstractServerBuilder {
 
   public final Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    final SyncRequestQueueObserver queueObserver = new SyncRequestQueueObserver(activeChannels, metricFactory);
-    registerAllServices(queueObserver);
+    registerAllServices();
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver, queueObserver, activeChannels, contextPath,
+    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
             appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
   }
 
-  protected void registerAllServices(SyncRequestQueueObserver queueObserver) {
-    final Executor executorService = (threadPoolMaxSize > 0 && threadPoolMinSize > 0) ? createExecutorService(queueObserver) : null;
-    registerServices(serviceDescriptors, registry, executorService);
+  protected void registerAllServices() {
+    registerServices(serviceDescriptors, registry);
   }
 
   protected ServiceRegistry getServiceRegistry() {
@@ -185,20 +172,16 @@ public abstract class AbstractServerBuilder {
     @Override
     public void addServiceDescriptor(final Service service, final String path, final ServiceFilter... filters) {
       final List<AsyncFilter> asyncBucket = new ArrayList<>();
-      final List<SyncFilter> syncBucket = new ArrayList<>();
       final List<StreamFilter> streamBucket = new ArrayList<>();
 
-      sortFiltersTo(asyncBucket, syncBucket, streamBucket, filters);
+      sortFiltersTo(asyncBucket, streamBucket, filters);
 
-      serviceDescriptors.add(new ServiceDescriptor(path, service, asyncBucket, syncBucket, streamBucket, null, true));
+      serviceDescriptors.add(new ServiceDescriptor(path, service, asyncBucket, streamBucket, null, true));
     }
 
     @Override
     public void removeFiltersFromLastServiceDescriptor(final Class<? extends ServiceFilter> filterClass) {
       final ServiceDescriptor descriptor = serviceDescriptors.getLast();
-      if (SyncFilter.class.isAssignableFrom(filterClass)) {
-        removeFiltersOfClass(filterClass, descriptor.syncFilters);
-      }
 
       if (AsyncFilter.class.isAssignableFrom(filterClass)) {
         removeFiltersOfClass(filterClass, descriptor.asyncFilters);
@@ -234,8 +217,11 @@ public abstract class AbstractServerBuilder {
       final Method[] methods = service.getClass().getDeclaredMethods();
       Method method = null;
       for (final Method m : methods) {
-        if (Modifier.isPublic(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) {
+        if (isEndpoint(m)) {
           if (m.getName().equals(methodName)) {
+            if (! isAsyncMethod(m) && ! isStreamingMethod(m)) {
+              throw new IllegalArgumentException("Method: " + methodName + " does not return ComposableFuture or Observable");
+            }
             method = m;
             break;
           }
@@ -243,7 +229,7 @@ public abstract class AbstractServerBuilder {
       }
 
       if (method == null) {
-        throw new RuntimeException("Method: " + methodName + " was not found or is not a proper service method");
+        throw new IllegalArgumentException("Method: " + methodName + " was not found or is not a proper service method");
       }
 
       final Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor> endpointDescriptors;
@@ -358,19 +344,17 @@ public abstract class AbstractServerBuilder {
     private final String name;
     private final Service service;
     private final List<AsyncFilter> asyncFilters;
-    private final List<SyncFilter> syncFilters;
     private final List<StreamFilter> streamFilters;
     private Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointBinding;
     private boolean bindPrefix;
 
     private ServiceDescriptor(final String name, final Service service, final List<AsyncFilter> asyncFilters,
-                              final List<SyncFilter> syncFilters, final List<StreamFilter> streamFilters,
+                              final List<StreamFilter> streamFilters,
                               final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointBinding,
                               final boolean bindPrefix) {
       this.name = name;
       this.service = service;
       this.asyncFilters = asyncFilters;
-      this.syncFilters = syncFilters;
       this.streamFilters = streamFilters;
       this.endpointBinding = endpointBinding;
       this.bindPrefix = bindPrefix;
@@ -385,43 +369,28 @@ public abstract class AbstractServerBuilder {
     }
 
     public void addFilters(final ServiceFilter... filters) {
-      sortFiltersTo(asyncFilters, syncFilters, streamFilters, filters);
+      sortFiltersTo(asyncFilters, streamFilters, filters);
     }
   }
 
-  private static void registerServices(final Deque<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry,
-                                       final Executor executorService) {
+  private static void registerServices(final Deque<ServiceDescriptor> serviceDescriptors, final ServiceRegistry registry) {
     for (final ServiceDescriptor desc: serviceDescriptors) {
       if (desc.endpointBinding != null) {
         registry.registerEndpoints(desc.endpointBinding, desc.name, desc.service,
-                desc.asyncFilters, desc.syncFilters, desc.streamFilters, desc.bindPrefix, executorService);
+                desc.asyncFilters, desc.streamFilters, desc.bindPrefix);
       } else {
         registry.register(desc.name, desc.service,
-            desc.asyncFilters, desc.syncFilters, desc.streamFilters,
-            desc.bindPrefix, executorService);
+            desc.asyncFilters, desc.streamFilters,
+            desc.bindPrefix);
       }
     }
   }
 
-  private Executor createExecutorService(final SyncRequestQueueObserver queueObserver) {
-    final int queueCapacity = threadPoolMaxSize * 2; // TODO make this configurable ?
-    final BlockingQueue<Runnable> requestQueue =
-            new ObservableBlockingQueue<>(new LinkedBlockingQueue<Runnable>(queueCapacity), queueObserver);
-
-    return new ThreadPoolExecutor(threadPoolMinSize, threadPoolMaxSize, 30, TimeUnit.SECONDS, requestQueue,
-            new DefaultThreadFactory("syncReqPool"), new ThreadPoolExecutor.AbortPolicy());
-  }
-
   private static void sortFiltersTo(final List<AsyncFilter> asyncFilters,
-                             final List<SyncFilter> syncFilters,
                              final List<StreamFilter> streamFilters,
                              final ServiceFilter[] filters) {
     if (filters != null) {
       for (final ServiceFilter filter: filters) {
-        if (filter instanceof SyncFilter && !contains(filter, syncFilters)) {
-          syncFilters.add((SyncFilter) filter);
-        }
-
         if (filter instanceof AsyncFilter && !contains(filter, asyncFilters)) {
           asyncFilters.add((AsyncFilter) filter);
         }

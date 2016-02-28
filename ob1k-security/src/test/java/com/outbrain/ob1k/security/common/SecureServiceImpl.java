@@ -11,9 +11,4 @@ public class SecureServiceImpl implements SecureService {
   public ComposableFuture<String> returnString(final String val) {
     return ComposableFutures.fromValue(val);
   }
-
-  @Override
-  public String returnStringSync(final String val) {
-    return val;
-  }
 }
