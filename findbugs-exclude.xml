@@ -1,0 +1,3 @@
+<FindBugsFilter>
+  <!-- No false positives ATM -->
+</FindBugsFilter>

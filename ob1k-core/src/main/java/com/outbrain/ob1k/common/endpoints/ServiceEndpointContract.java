@@ -18,8 +18,8 @@ public class ServiceEndpointContract {
     return m.getReturnType() == Observable.class;
   }
 
-  public static boolean isEndpoint(Method method) {
-    int modifiers = method.getModifiers();
+  public static boolean isEndpoint(final Method method) {
+    final int modifiers = method.getModifiers();
     return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers);
   }
 }

@@ -18,7 +18,11 @@ public class ServiceRegistration {
 
   // I need to make some marshalers happy ;)
   ServiceRegistration() {
-    this(null, 0, null, null, null);
+    this.name = null;
+    this.port = null;
+    this.tags = null;
+    this.check = null;
+    this.id = null;
   }
 
   public ServiceRegistration(final String name, final Integer port, final Set<String> tags, final Check check, final Integer instance) {
@@ -56,7 +60,9 @@ public class ServiceRegistration {
 
     // I need to make some marshalers happy ;)
     Check() {
-      this(null, 0);
+      this.http = null;
+      this.interval = null;
+      this.timeout = null;
     }
 
     public Check(final String url, final int intervalSec) {

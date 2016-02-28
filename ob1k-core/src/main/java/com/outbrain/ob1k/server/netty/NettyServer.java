@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,7 +121,7 @@ public class NettyServer implements Server {
 
   private static String getOpeningText() {
     final InputStream inputStream = NettyServer.class.getResourceAsStream("/litany-against-fear.txt");
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, CharsetUtil.UTF_8))) {
       String line;
       final StringBuilder buffer = new StringBuilder();
       while ((line = reader.readLine()) != null) {

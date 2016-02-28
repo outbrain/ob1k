@@ -158,7 +158,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
     final byte[] body = new byte[remaining];
     byteBufferBody.get(body);
 
-    if (Arrays.equals(ChunkHeader.ELEMENT_HEADER.getBytes(), header)) {
+    if (Arrays.equals(ChunkHeader.ELEMENT_HEADER.getBytes(CharsetUtil.UTF_8), header)) {
 
       if (remaining == 0) {
         // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
@@ -167,12 +167,12 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
       return mapper.readValue(body, getJacksonType(type));
 
-    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(), header)) {
+    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(CharsetUtil.UTF_8), header)) {
 
-      throw new RuntimeException(new String(body));
+      throw new RuntimeException(new String(body,CharsetUtil.UTF_8));
     }
 
-    throw new IOException("invalid chunk header - unsupported " + new String(header));
+    throw new IOException("invalid chunk header - unsupported " + new String(header, CharsetUtil.UTF_8));
   }
 
   private Object[] parseURLRequestParams(final Request request,

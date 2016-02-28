@@ -73,6 +73,8 @@
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
+    <findbugs-maven-plugin.version>3.0.3</findbugs-maven-plugin.version>
+    <findbugs.skip>false</findbugs.skip>
   </properties>
 
   <profiles>
@@ -163,6 +165,30 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <version>${findbugs-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>static-analysis-findbugs</id>
+            <phase>test</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>${findbugs.skip}</skip>
+          <xmlOutput>true</xmlOutput>
+          <effort>max</effort>
+          <threshold>high</threshold>
+          <excludeFilterFile>${project.parent.basedir}/findbugs-exclude.xml</excludeFilterFile>
+          <onlyAnalyze>com.outbrain.-</onlyAnalyze>
+          <findbugsXmlOutputDirectory>${project.build.directory}/reports/findbugs</findbugsXmlOutputDirectory>
+        </configuration>
       </plugin>
 
     </plugins>

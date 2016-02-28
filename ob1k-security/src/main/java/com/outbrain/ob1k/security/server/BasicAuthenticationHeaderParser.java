@@ -2,6 +2,7 @@ package com.outbrain.ob1k.security.server;
 
 import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
+import io.netty.util.CharsetUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,7 @@ class BasicAuthenticationHeaderParser {
 
   private String decode(final String encodedCredentials) {
     try {
-      return new String(Base64.decode(encodedCredentials));
+      return new String(Base64.decode(encodedCredentials), CharsetUtil.UTF_8);
     } catch (final Exception e) {
       logger.error("Error decoding credentials " + encodedCredentials, e);
       return null;
