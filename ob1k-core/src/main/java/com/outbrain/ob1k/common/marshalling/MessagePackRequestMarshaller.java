@@ -263,14 +263,14 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
       final Template<T> template = (Template<T>) msgPack.lookup(type);
       return template.read(new Converter(msgPack, value), null);
 
-    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(), header)) {
+    } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(CharsetUtil.UTF_8), header)) {
 
       final byte[] body = new byte[remaining];
       byteBufferBody.get(body);
-      throw new RuntimeException(new String(body));
+      throw new RuntimeException(new String(body, CharsetUtil.UTF_8));
     }
 
-    throw new IOException("invalid chunk header - unsupported " + new String(header));
+    throw new IOException("invalid chunk header - unsupported " + new String(header, CharsetUtil.UTF_8));
   }
 
   private void registerBean(final Set<Class> processed, final Class cls) {
