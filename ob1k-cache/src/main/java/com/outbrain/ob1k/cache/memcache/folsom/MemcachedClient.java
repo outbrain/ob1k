@@ -10,15 +10,25 @@ import com.outbrain.ob1k.concurrent.Try;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheStatus;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 /**
- * Created by eran on 2/23/16.
+ * a thin wrapper around Spotify's Folsom memcached client.
+ * it creates a typed "view" over the content of the cache with predefined expiration for all entries in it.
+ * <p/>
+ * all operations are async and return ComposableFuture.
+ *
+ * @author Eran Harel
  */
 public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
@@ -42,7 +52,11 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
-    return null;
+    final Map<String, K> keyMap = StreamSupport.stream(keys.spliterator(), false).collect(Collectors.toMap(this::key, Function.identity()));
+    final List<String> stringKeys = new ArrayList<>(keyMap.keySet());
+    return fromListenableFuture(
+      () -> folsomClient.get(stringKeys),
+      values -> IntStream.range(0, stringKeys.size()).boxed().collect(Collectors.toMap(i -> keyMap.get(stringKeys.get(i)), values::get)));
   }
 
   @Override
@@ -57,7 +71,10 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
-    return null;
+    final Map<K, ComposableFuture<Boolean>> futureResults = entries.entrySet().stream().collect(Collectors.toMap(
+      Map.Entry::getKey,
+      e -> setAsync(e.getKey(), e.getValue())));
+    return ComposableFutures.all(false, futureResults);
   }
 
   @Override
