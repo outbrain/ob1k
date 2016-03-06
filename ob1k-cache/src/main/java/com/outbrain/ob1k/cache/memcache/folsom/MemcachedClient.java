@@ -7,10 +7,13 @@ import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.spotify.folsom.GetResult;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheStatus;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -19,13 +22,15 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+
 /**
+ * <p>
  * a thin wrapper around Spotify's Folsom memcached client.
  * it creates a typed "view" over the content of the cache with predefined expiration for all entries in it.
- * <p/>
+ * </p>
  * all operations are async and return ComposableFuture.
  *
  * @author Eran Harel
@@ -54,9 +59,19 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
     final Map<String, K> keyMap = StreamSupport.stream(keys.spliterator(), false).collect(Collectors.toMap(this::key, Function.identity()));
     final List<String> stringKeys = new ArrayList<>(keyMap.keySet());
+
     return fromListenableFuture(
       () -> folsomClient.get(stringKeys),
-      values -> IntStream.range(0, stringKeys.size()).boxed().collect(Collectors.toMap(i -> keyMap.get(stringKeys.get(i)), values::get)));
+      values -> {
+        final Map<K, V> res = new HashMap<>(values.size());
+        for (int i = 0; i < stringKeys.size(); i++) {
+          final V value = values.get(i);
+          if (value != null) {
+            res.put(keyMap.get(stringKeys.get(i)), value);
+          }
+        }
+        return res;
+      });
   }
 
   @Override
@@ -66,7 +81,37 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    return null;
+    return casUpdate(key, mapper).continueOnSuccess((FutureSuccessHandler<? super MemcacheStatus, Boolean>) result -> {
+      if (result == MemcacheStatus.OK) {
+        return ComposableFutures.fromValue(true);
+      }
+
+      if (maxIterations > 0 && result == MemcacheStatus.KEY_EXISTS) {
+        return setAsync(key, mapper, maxIterations - 1);
+      }
+
+      return ComposableFutures.fromValue(false);
+    });
+  }
+
+  private ComposableFuture<MemcacheStatus> casUpdate(final K key, final EntryMapper<K, V> mapper) {
+    try {
+      final String stringKey = key(key);
+
+      return fromListenableFuture(() -> folsomClient.casGet(stringKey))
+        .continueOnSuccess((FutureSuccessHandler<? super GetResult<V>, MemcacheStatus>) result -> {
+          final V newValue = result == null ? mapper.map(key, null) : mapper.map(key, result.getValue());
+          if (newValue == null) {
+            return fromValue(MemcacheStatus.INVALID_ARGUMENTS);
+          }
+
+          return result == null ?
+            fromListenableFuture(() -> folsomClient.add(stringKey, newValue, expirationSeconds)) :
+            fromListenableFuture(() -> folsomClient.set(stringKey, newValue, expirationSeconds, result.getCas()));
+        });
+    } catch (final Exception e) {
+      return ComposableFutures.fromError(e);
+    }
   }
 
   @Override

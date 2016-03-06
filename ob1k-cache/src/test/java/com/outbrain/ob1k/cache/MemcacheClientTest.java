@@ -1,11 +1,14 @@
 package com.outbrain.ob1k.cache;
 
+import com.google.common.net.HostAndPort;
 import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
 import com.outbrain.ob1k.cache.memcache.MemcacheClient;
 import com.outbrain.ob1k.cache.metrics.MonitoringCacheDelegate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.spotify.folsom.BinaryMemcacheClient;
+import com.spotify.folsom.MemcacheClientBuilder;
 import org.junit.Assert;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
@@ -16,6 +19,7 @@ import org.junit.Test;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,20 +29,19 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by aronen on 2/4/15.
  */
-@Ignore
 public class MemcacheClientTest {
   private static TypedCache<String, String> client;
-  private static MemcachedClientIF spyClient;
+//  private static MemcachedClientIF spyClient;
+  private static com.spotify.folsom.MemcacheClient<String> folsomClient;
 
   @BeforeClass
   public static void initialize() throws IOException {
-    spyClient = new MemcachedClient(new InetSocketAddress("localhost", 11211));
-    client = new MemcacheClient<>(spyClient, new CacheKeyTranslator<String>() {
-      @Override
-      public String translateKey(final String key) {
-        return key;
-      }
-    }, 1, TimeUnit.MINUTES);
+//    spyClient = new MemcachedClient(new InetSocketAddress("localhost", 11211));
+    folsomClient = MemcacheClientBuilder.newStringClient().
+      withAddress(HostAndPort.fromParts("localhost", 11211)).
+      connectBinary();
+
+    client = new com.outbrain.ob1k.cache.memcache.folsom.MemcachedClient<>(folsomClient, key -> key, 1, TimeUnit.MINUTES);
 
     final MetricFactory metricFactory = mock(MetricFactory.class, withSettings().defaultAnswer(RETURNS_MOCKS));
     client = new MonitoringCacheDelegate<>(client, "MemcacheClientTest", metricFactory);
@@ -46,7 +49,7 @@ public class MemcacheClientTest {
 
   @AfterClass
   public static void shutdown() {
-    spyClient.shutdown();
+    folsomClient.shutdown();
   }
 
   @Test
