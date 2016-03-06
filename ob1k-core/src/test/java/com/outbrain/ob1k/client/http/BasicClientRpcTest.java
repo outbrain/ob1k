@@ -225,8 +225,6 @@ public class BasicClientRpcTest {
     }
 
     Assert.assertTrue((numOfThreads - numOfThreadsBefore) < 100);
-
-    System.out.println("walla...");
   }
 
   private List<TestBean> createBeans() {
