@@ -1,27 +1,13 @@
 package com.outbrain.ob1k.cache;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
-import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
-import com.outbrain.ob1k.cache.memcache.MemcacheClient;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.codahale3.CodahaleMetricsFactory;
-import com.spotify.folsom.BinaryMemcacheClient;
-import com.spotify.folsom.MemcacheClientBuilder;
-import net.spy.memcached.ConnectionFactoryBuilder;
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.MemcachedClientIF;
-import net.spy.memcached.OperationTimeoutException;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -141,52 +127,4 @@ public class TestLoadingCacheDelegate {
 
   }
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////////////////////////////
-  private MemcachedClientIF createSpyClient() {
-    try {
-      return new MemcachedClient(new ConnectionFactoryBuilder().setOpTimeout(100).build(), Lists.newArrayList(new InetSocketAddress("localhost", 11211)));
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-
-    private MemcachedClientIF spyClient = createSpyClient();
-  private TypedCache<String, String> cacheClient = new MemcacheClient<>(spyClient, (CacheKeyTranslator<String>) key -> key, 100, TimeUnit.MILLISECONDS);;
-//  private BinaryMemcacheClient<String> folsomClient = MemcacheClientBuilder.newStringClient().withRequestTimeoutMillis(100).withAddress(HostAndPort.fromParts("localhost", 11211)).connectBinary();
-//  private TypedCache<String, String> cacheClient = new com.outbrain.ob1k.cache.memcache.folsom.MemcachedClient<>(folsomClient, (CacheKeyTranslator<String>) key -> key, 100l, TimeUnit.MILLISECONDS);
-
-  private final TypedCache<String, String> LCD = new LoadingCacheDelegate<>(cacheClient, SLOW_CACHE_LOADER, "meh", metricFactory, 1, TimeUnit.SECONDS);
-
-  @Test
-  public void testTimeoutHang() throws Exception {
-    final int NUM_THREADS = 128;
-    for (int i = 0; i < NUM_THREADS; i++) {
-      final Thread thread = new Thread(this::lotsOfGets, "lotsOfGets-" + i);
-      thread.setDaemon(true);
-      thread.start();
-    }
-//    lotsOfGets();
-
-    Thread.sleep(100000);
-  }
-
-  public void lotsOfGets() {
-    for (int i = 0; i < 10000000; i++) {
-      if (i % 10000 == 0) {
-        System.out.println(i);
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      LCD.getAsync("key").consume(result -> {
-        if (!result.isSuccess())
-          System.err.println("QQQQQQQQQQQ" + result.getError());
-      });
-    }
-  }
 }
