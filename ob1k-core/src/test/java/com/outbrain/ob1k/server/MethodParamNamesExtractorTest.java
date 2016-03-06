@@ -18,7 +18,6 @@ public class MethodParamNamesExtractorTest {
     final Map<Method, List<String>> methodMap = MethodParamNamesExtractor.extract(getClass(), methods);
 
     final List<String> paramNames = methodMap.get(testedMethod);
-    System.out.println(paramNames);
     assertEquals("method param count", 4, paramNames.size());
     final List<String> expectedNames = Arrays.asList("p1", "p2", "p3", "p4");
     int index = 0;
@@ -35,7 +34,6 @@ public class MethodParamNamesExtractorTest {
     final Map<Method, List<String>> methodMap = MethodParamNamesExtractor.extract(getClass(), methods);
 
     final List<String> paramNames = methodMap.get(testedMethod);
-    System.out.println(paramNames);
     assertEquals("method param count", 3, paramNames.size());
     final List<String> expectedNames = Arrays.asList("d1", "f1", "o1");
     int index = 0;

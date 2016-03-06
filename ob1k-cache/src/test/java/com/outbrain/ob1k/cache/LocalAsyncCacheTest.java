@@ -42,7 +42,6 @@ public class LocalAsyncCacheTest {
       @Override
       public ComposableFuture<Map<String, String>> load(final String cacheName, final Iterable<? extends String> keys) {
         if (Iterables.contains(keys, TIMEOUT_KEY)) {
-          System.out.println("returning a timeout error");
           return ComposableFutures.fromError(new RuntimeException(TIMEOUT_MESSAGE));
         }
 
@@ -200,9 +199,6 @@ public class LocalAsyncCacheTest {
         }
 
       }
-
-      System.out.println("successes: " + success);
-      System.out.println("failures: " + failure);
       successCounter = success;
     }
 
@@ -238,8 +234,6 @@ public class LocalAsyncCacheTest {
                                   updater3.getSuccessCounter() +
                                   updater4.getSuccessCounter();
 
-    System.out.println("final res: " + finalRes);
-    System.out.println("successful updates: " + successfulUpdates);
     Assert.assertEquals(finalRes, successfulUpdates);
   }
 

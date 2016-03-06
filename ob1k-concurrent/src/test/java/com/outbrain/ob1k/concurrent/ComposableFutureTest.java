@@ -77,12 +77,7 @@ public class ComposableFutureTest {
             public ComposableFuture<Integer> get() {
                 return fromValue(atomicInteger.incrementAndGet());
             }
-        }, new Predicate<Integer>() {
-            @Override
-            public boolean apply(final Integer input) {
-                return input >= 10;
-            }
-        });
+        }, input -> input >= 10);
         Assert.assertEquals(10, (int) future.get());
     }
 
@@ -95,7 +90,6 @@ public class ComposableFutureTest {
                 return schedule(new Callable<String>() {
                     @Override
                     public String call() throws Exception {
-                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
                         return "num:" + result;
                     }
                 }, 1, TimeUnit.SECONDS);
@@ -105,9 +99,6 @@ public class ComposableFutureTest {
         List<String> results = res.get();
         Assert.assertEquals(results.size(), nums.size());
 
-        for (String element : results) {
-            System.out.println(element);
-        }
     }
 
     @Test
@@ -119,7 +110,6 @@ public class ComposableFutureTest {
                 return schedule(new Callable<String>() {
                     @Override
                     public String call() throws Exception {
-                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
                         return "num:" + result;
                     }
                 }, 1, TimeUnit.SECONDS);
@@ -129,9 +119,6 @@ public class ComposableFutureTest {
         List<String> results = res.get();
         Assert.assertEquals(results.size(), nums.size());
 
-        for (String element : results) {
-            System.out.println(element);
-        }
     }
 
     @Test
@@ -143,7 +130,6 @@ public class ComposableFutureTest {
                 return schedule(new Callable<String>() {
                     @Override
                     public String call() throws Exception {
-                        System.out.println("producing " + result + " at: " + System.currentTimeMillis());
                         return "num:" + result;
                     }
                 }, 1, TimeUnit.SECONDS);
@@ -156,10 +142,6 @@ public class ComposableFutureTest {
             int batchSize = batch.size();
             totalElements += batchSize;
             Assert.assertEquals(batchSize, 2);
-            for (String element : batch) {
-                System.out.println(element);
-            }
-            System.out.println(" --- end of batch ---");
         }
         Assert.assertEquals(totalElements, nums.size());
     }
@@ -187,52 +169,6 @@ public class ComposableFutureTest {
         final long t2 = System.currentTimeMillis();
         System.out.println("total time: " + (t2 - t1) + " for sum: " + sum);
     }
-
-    //  private static class ComputeHashTask extends RecursiveTask<Long> {
-    //    private final long seed;
-    //    private final int phase;
-    //
-    //    private ComputeHashTask(long seed, int phase) {
-    //      this.seed = seed;
-    //      this.phase = phase;
-    //    }
-    //
-    //    @Override
-    //    protected Long compute() {
-    //      long value = computeHash(seed);
-    //      if (phase < 3) {
-    //        ComputeHashTask nextPhase = new ComputeHashTask(value, phase + 1);
-    //        value = nextPhase.fork().join();
-    //      }
-    //
-    //      return value;
-    //    }
-    //  }
-
-    //  @Test
-    //  public void testWithForkJoin() {
-    //    long t1 = System.currentTimeMillis();
-    //
-    //    ForkJoinPool pool = new ForkJoinPool();
-    //    List<ForkJoinTask<Long>> tasks = new ArrayList<ForkJoinTask<Long>>();
-    //    for (int i=0; i< ITERATIONS; i++) {
-    //      final long seed = i;
-    //      ForkJoinTask<Long> task = pool.submit(new ComputeHashTask(seed, 1));
-    //      tasks.add(task);
-    //    }
-    //
-    //    long sum = 0;
-    //    for (ForkJoinTask<Long> task : tasks) {
-    //      try {
-    //        sum += task.get();
-    //      } catch (Exception e) {
-    //        e.printStackTrace();
-    //      }
-    //    }
-    //
-    //    long t2 = System.currentTimeMillis();
-    //    System.out.println("total time: " + (t2 - t1) + " for sum: " + sum);
-    //  }
 
     private void testWithRegularThreadPool(final boolean delegate) {
         final List<ComposableFuture<Long>> futures = new ArrayList<>();
@@ -274,7 +210,6 @@ public class ComposableFutureTest {
             for (final long num : res) {
                 sum += num;
             }
-            System.out.println("total time: " + (t2 - t1) + " for sum: " + sum);
         } catch (final Exception e) {
             e.printStackTrace();
         }
@@ -297,59 +232,40 @@ public class ComposableFutureTest {
             schedule(new Callable<String>() {
                 @Override
                 public String call() throws Exception {
-                    System.out.println("in first phase");
                     return "lala";
                 }
             }, 100, TimeUnit.MILLISECONDS).continueWith(new FutureResultHandler<String, String>() {
                 @Override
                 public ComposableFuture<String> handle(final Try<String> result) {
-                    System.out.println("in second phase, throwing exception");
                     return fromError(new RuntimeException("bhaaaaa"));
                 }
             }).continueOnSuccess(new SuccessHandler<String, String>() {
                 @Override
                 public String handle(final String result) {
-                    System.out.println("in third phase, ****** shouldn't be here !!!!!  ******** returning second lala");
                     return "second lala";
                 }
             }).continueOnError(new ErrorHandler<String>() {
                 @Override
                 public String handle(final Throwable error) {
-                    System.out.println("in forth, returning third lala. error type is: " + error.getClass().getName());
                     return "third lala";
                 }
             }).continueOnError(new ErrorHandler<String>() {
                 @Override
                 public String handle(final Throwable error) {
-                    System.out.println("***** shouldn't be here *****");
                     return "baaaaddddd";
                 }
             }).continueOnSuccess(new SuccessHandler<String, String>() {
                 @Override
                 public String handle(final String result) throws ExecutionException {
-                    System.out.println("got: " + result + " throwing exception.");
                     throw new ExecutionException(new RuntimeException("booo"));
                 }
             });
 
-        res.consume(new Consumer<String>() {
-            @Override
-            public void consume(final Try<String> element) {
-                if (element.isSuccess()) {
-                    System.out.println("should be here !!!!");
-                } else {
-                    System.out.println("got exception of type: " + element.getError().getClass().getName());
-                }
-            }
-        });
-
         try {
             final String result = res.get();
-            System.out.println("got final result: " + result);
             Assert.fail("got result instead of an exception");
         } catch (InterruptedException | ExecutionException e) {
             final String exTypeName = e.getCause().getClass().getName();
-            System.out.println("got final exception of type: " + exTypeName);
             Assert.assertEquals(exTypeName, RuntimeException.class.getName());
         }
     }
@@ -625,7 +541,6 @@ public class ComposableFutureTest {
             Assert.fail("should fail");
         } catch (final ExecutionException e) {
             final long t2 = System.currentTimeMillis();
-            System.out.println("time: " + (t2 - t1));
             Assert.assertTrue("should fail fast", (t2 - t1) < 50);
         }
     }

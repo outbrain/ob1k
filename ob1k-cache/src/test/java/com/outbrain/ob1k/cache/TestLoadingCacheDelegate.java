@@ -82,7 +82,6 @@ public class TestLoadingCacheDelegate {
 
       @Override
       public ComposableFuture<String> load(final String cacheName, final String key) {
-        System.out.println("loading(single): " + key);
         loaderCounter.incrementAndGet();
         return ComposableFutures.schedule(() -> "res-" + key, random.nextLong(1, 19), TimeUnit.MILLISECONDS);
       }
@@ -91,12 +90,10 @@ public class TestLoadingCacheDelegate {
       public ComposableFuture<Map<String, String>> load(final String cacheName, final Iterable<? extends String> keys) {
         final Map<String, ComposableFuture<String>> res = new HashMap<>();
         for (final String key: keys) {
-          System.out.println("loading(multiple): " + key);
           loaderCounter.incrementAndGet();
           res.put(key, ComposableFutures.schedule(() -> "res-" + key, random.nextLong(1, 19), TimeUnit.MILLISECONDS));
         }
 
-        System.out.println("returning keys: " + res.keySet());
         return ComposableFutures.all(true, res);
       }
     }, "default");
@@ -121,8 +118,6 @@ public class TestLoadingCacheDelegate {
 
 //      Thread.sleep(200L);
       loaderCounter.set(0);
-
-      System.out.println("---------------------------");
     }
 
   }

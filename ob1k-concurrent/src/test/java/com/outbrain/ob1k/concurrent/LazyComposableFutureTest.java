@@ -23,13 +23,6 @@ public class LazyComposableFutureTest {
   @Test
   public void testFromValue() throws ExecutionException, InterruptedException {
     final ComposableFuture<Integer> res = LazyComposableFuture.fromValue(3);
-    res.consume(new Consumer<Integer>() {
-      @Override
-      public void consume(final Try<Integer> result) {
-        System.out.println("got: " + result);
-      }
-    });
-
     final Integer result = res.get();
     Assert.assertEquals(result, new Integer(3));
   }
@@ -64,7 +57,6 @@ public class LazyComposableFutureTest {
     final ComposableFuture<String> res = LazyComposableFuture.build(new Producer<String>() {
       @Override
       public void produce(final Consumer<String> consumer) {
-        System.out.println("producing...");
         producerCounter.incrementAndGet();
         consumer.consume(Try.fromValue(message));
       }
@@ -112,12 +104,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testContinueOnFailure() throws ExecutionException, InterruptedException {
-    final ComposableFuture<String> res1 = LazyComposableFuture.fromValue("one").continueOnError(new ErrorHandler<String>() {
-      @Override
-      public String handle(final Throwable error) {
-        return "two";
-      }
-    });
+    final ComposableFuture<String> res1 = LazyComposableFuture.fromValue("one").continueOnError((ErrorHandler<String>) error -> "two");
 
     Assert.assertEquals(res1.get(), "one");
 
@@ -156,7 +143,6 @@ public class LazyComposableFutureTest {
       @Override
       public String call() throws Exception {
         prodCounter.incrementAndGet();
-        System.out.println("running first phase in: " + Thread.currentThread().getName());
         return "first";
       }
     }, false).continueOnSuccess(new FutureSuccessHandler<String, String>() {
@@ -166,7 +152,6 @@ public class LazyComposableFutureTest {
           @Override
           public String call() throws Exception {
             prodCounter.incrementAndGet();
-            System.out.println("running second phase in: " + Thread.currentThread().getName());
             return result + ",second";
           }
         }, false);
@@ -192,7 +177,6 @@ public class LazyComposableFutureTest {
     final ComposableFuture<Integer> res1 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
       @Override
       public Integer call() throws Exception {
-        System.out.println("returning 1");
         return 1;
       }
     }, 100, TimeUnit.MILLISECONDS);
@@ -200,7 +184,6 @@ public class LazyComposableFutureTest {
     final ComposableFuture<Integer> res2 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
       @Override
       public Integer call() throws Exception {
-        System.out.println("returning 2");
         return 2;
       }
     }, 300, TimeUnit.MILLISECONDS);
@@ -208,19 +191,11 @@ public class LazyComposableFutureTest {
     final ComposableFuture<Integer> res3 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
       @Override
       public Integer call() throws Exception {
-        System.out.println("returning 3");
         return 3;
       }
     }, 200, TimeUnit.MILLISECONDS);
 
     final ComposableFuture<List<Integer>> res = LazyComposableFuture.collectAll(Arrays.asList(res1, res2, res3));
-
-    res.consume(new Consumer<List<Integer>>() {
-      @Override
-      public void consume(final Try<List<Integer>> result) {
-        System.out.println("got: " + result);
-      }
-    });
 
     final List<Integer> result = res.get();
     Assert.assertEquals(result.size(), 3);
