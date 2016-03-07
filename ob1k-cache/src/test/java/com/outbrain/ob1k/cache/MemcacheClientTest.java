@@ -6,14 +6,16 @@ import com.outbrain.ob1k.cache.metrics.MonitoringCacheDelegate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
-import org.junit.Assert;
+import com.thimbleware.jmemcached.CacheImpl;
+import com.thimbleware.jmemcached.LocalCacheElement;
+import com.thimbleware.jmemcached.MemCacheDaemon;
+import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -22,41 +24,47 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.*;
+
 /**
- * Created by aronen on 2/4/15.
+ * @author aronen
  */
-@Ignore
 public class MemcacheClientTest {
+  public static final int MEMCACHED_PORT = 11311;
   private static TypedCache<String, String> client;
+
   private static MemcachedClientIF spyClient;
+  private static MemCacheDaemon<LocalCacheElement> cacheDaemon;
 
   @BeforeClass
   public static void initialize() throws IOException {
-    spyClient = new MemcachedClient(new InetSocketAddress("localhost", 11211));
-    client = new MemcacheClient<>(spyClient, new CacheKeyTranslator<String>() {
-      @Override
-      public String translateKey(final String key) {
-        return key;
-      }
-    }, 1, TimeUnit.MINUTES);
+    createCacheDaemon();
+
+    spyClient = new MemcachedClient(new InetSocketAddress("localhost", MEMCACHED_PORT));
+    client = new MemcacheClient<>(spyClient, (CacheKeyTranslator<String>) key -> key, 1, TimeUnit.MINUTES);
 
     final MetricFactory metricFactory = mock(MetricFactory.class, withSettings().defaultAnswer(RETURNS_MOCKS));
-    client = new MonitoringCacheDelegate<>(client, "MemcacheClientTest", metricFactory);
+    client = new MonitoringCacheDelegate<>(client, MemcacheClientTest.class.getSimpleName(), metricFactory);
+  }
+
+  private static void createCacheDaemon() {
+    cacheDaemon = new MemCacheDaemon<>();
+    cacheDaemon.setCache(new CacheImpl(ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, 1000, 4194304)));
+    cacheDaemon.setAddr(new InetSocketAddress(MEMCACHED_PORT));
+    cacheDaemon.setVerbose(false);
+    cacheDaemon.start();
   }
 
   @AfterClass
   public static void shutdown() {
     spyClient.shutdown();
+    cacheDaemon.stop();
   }
 
   @Test
   public void testGetHit() throws IOException, ExecutionException, InterruptedException {
-    final ComposableFuture<String> res = client.setAsync("key1", "value1").continueOnSuccess(new FutureSuccessHandler<Boolean, String>() {
-      @Override
-      public ComposableFuture<String> handle(final Boolean result) {
-        return client.getAsync("key1");
-      }
-    });
+    final ComposableFuture<String> res = client.setAsync("key1", "value1")
+      .continueOnSuccess((FutureSuccessHandler<Boolean, String>) result -> client.getAsync("key1"));
 
     final String result = res.get();
     Assert.assertEquals(result, "value1");
@@ -76,12 +84,8 @@ public class MemcacheClientTest {
       entries.put("bulkKey" + i, "value" + i);
     }
 
-    final ComposableFuture<Map<String, String>> res = client.setBulkAsync(entries).continueOnSuccess(new FutureSuccessHandler<Map<String, Boolean>, Map<String, String>>() {
-      @Override
-      public ComposableFuture<Map<String, String>> handle(final Map<String, Boolean> result) {
-        return client.getBulkAsync(entries.keySet());
-      }
-    });
+    final ComposableFuture<Map<String, String>> res = client.setBulkAsync(entries)
+      .continueOnSuccess((FutureSuccessHandler<Map<String, Boolean>, Map<String, String>>) result -> client.getBulkAsync(entries.keySet()));
 
     final Map<String, String> results = res.get();
     Assert.assertEquals(results.size(), 100);
