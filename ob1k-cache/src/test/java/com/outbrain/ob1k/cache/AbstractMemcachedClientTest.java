@@ -6,8 +6,6 @@ import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.MemcachedClientIF;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -27,18 +25,19 @@ import java.util.concurrent.ExecutionException;
 public abstract class AbstractMemcachedClientTest {
 
   public static final int MEMCACHED_PORT = 11311;
-  private static MemcachedClientIF spyClient;
   private static MemCacheDaemon<LocalCacheElement> cacheDaemon;
 
   private TypedCache<String, String> client;
 
   @BeforeClass
-  public static void setupBeforeClass() throws IOException {
+  public static void setupsBeforeClass_super() throws IOException, Exception {
     createCacheDaemon();
-    spyClient = new MemcachedClient(new InetSocketAddress("localhost", MEMCACHED_PORT));
   }
 
   private static void createCacheDaemon() {
+    if (cacheDaemon != null) {
+      return;
+    }
     cacheDaemon = new MemCacheDaemon<>();
     cacheDaemon.setCache(new CacheImpl(ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, 1000, 4194304)));
     cacheDaemon.setAddr(new InetSocketAddress(MEMCACHED_PORT));
@@ -48,7 +47,6 @@ public abstract class AbstractMemcachedClientTest {
 
   @AfterClass
   public static void teardownAfterClass() {
-    spyClient.shutdown();
     cacheDaemon.stop();
   }
 
@@ -58,10 +56,6 @@ public abstract class AbstractMemcachedClientTest {
   }
 
   protected abstract TypedCache<String, String> createCacheClient() throws Exception;
-
-  public static MemcachedClientIF getSpyClient() {
-    return spyClient;
-  }
 
   @Test
   public void testGetHit() throws IOException, ExecutionException, InterruptedException {
