@@ -12,9 +12,6 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -30,8 +27,6 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
  * Time: 6:08 PM
  */
 public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
-  private static final Logger logger = LoggerFactory.getLogger(LocalAsyncCache.class);
-
   private final LoadingCache<K, ComposableFuture<V>> loadingCache;
   private final Cache<K, ComposableFuture<V>> localCache;
   private final CacheLoader<K, V> loader;
@@ -111,35 +106,30 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   }
 
   private ComposableFuture<V> loadElement(final K key) {
-    final ComposableFuture<V> loadedElement = loader.load(cacheName, key).materialize();
-    return loadedElement.continueOnError((FutureErrorHandler<V>) error -> {
-      loadingCache.asMap().remove(key, loadedElement);
-      return fromError(error);
-    });
+    return loader.load(cacheName, key).materialize();
+  }
+
+  private FutureSuccessHandler<Map<K, V>, V> extractLoaderResultEntry(final K key) {
+    return loaderResults -> {
+    final V res = loaderResults.get(key);
+    if (res != null) {
+      return fromValue(res);
+    } else {
+      if (failOnMissingEntries) {
+        return fromError(new RuntimeException("result is missing from loader response."));
+      } else {
+        return fromNull();
+      }
+    }
+  };
   }
 
   private Map<K, ComposableFuture<V>> loadElements(final Iterable<? extends K> keys) {
     final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).materialize();
     final Map<K, ComposableFuture<V>> result = new HashMap<>();
     for (final K key : keys) {
-      result.put(key, loaded.continueOnError((FutureErrorHandler<Map<K, V>>) error -> {
-        loadingCache.asMap().remove(key);
-        return fromError(error);
-      }).continueOnSuccess((FutureSuccessHandler<Map<K, V>, V>) loaderResults -> {
-        final V res = loaderResults.get(key);
-        if (res != null) {
-          return fromValue(res);
-        } else {
-          loadingCache.asMap().remove(key);
-          if (failOnMissingEntries) {
-            return fromError(new RuntimeException("result is missing from loader response."));
-          } else {
-            return fromNull();
-          }
-        }
-      }));
+      result.put(key, loaded.continueOnSuccess(extractLoaderResultEntry(key)));
     }
-
     return result;
   }
 
@@ -147,20 +137,33 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   public ComposableFuture<V> getAsync(final K key) {
     try {
       if (loadingCache != null) {
-        ComposableFuture<V> res = loadingCache.get(key);
+        final ComposableFuture<V> res = loadingCache.get(key);
         if (res == null) {
-          res = fromValue(null);
+          return fromNull();
         }
-        return res;
+        return res.continueOnError((FutureErrorHandler<V>) error -> {
+          loadingCache.asMap().remove(key, res);
+          return fromError(error);
+        });
       } else {
-        ComposableFuture<V> res = localCache.getIfPresent(key);
+        final ComposableFuture<V> res = localCache.getIfPresent(key);
         if (res == null) {
-          res = fromValue(null);
+          return fromNull();
         }
         return res;
       }
     } catch (ExecutionException | UncheckedExecutionException | ExecutionError e) {
       return ComposableFutures.fromError(e.getCause());
+    }
+  }
+
+  private void unloadErrorsFromCache(final ImmutableMap<K, ComposableFuture<V>> innerMap, final Iterable<? extends K> keys) {
+    for (final K key : keys) {
+      innerMap.get(key).consume(result -> {
+        if (!result.isSuccess() || result.getValue() == null) {
+          loadingCache.asMap().remove(key);
+        }
+      });
     }
   }
 
@@ -170,6 +173,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       final ImmutableMap<K, ComposableFuture<V>> innerMap;
       if (loadingCache != null) {
         innerMap = loadingCache.getAll(keys);
+        unloadErrorsFromCache(innerMap,keys);
       } else {
         innerMap = localCache.getAllPresent(keys);
       }
