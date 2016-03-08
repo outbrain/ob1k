@@ -13,6 +13,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +29,7 @@ public abstract class AbstractMemcachedClientTest {
   public static final int MEMCACHED_PORT = 11311;
   private static MemCacheDaemon<LocalCacheElement> cacheDaemon;
 
-  private TypedCache<String, String> client;
+  private TypedCache<String, Serializable> client;
 
   @BeforeClass
   public static void setupsBeforeClass_super() throws Exception {
@@ -42,6 +43,7 @@ public abstract class AbstractMemcachedClientTest {
     cacheDaemon = new MemCacheDaemon<>();
     cacheDaemon.setCache(new CacheImpl(ConcurrentLinkedHashMap.create(ConcurrentLinkedHashMap.EvictionPolicy.FIFO, 1000, 4194304)));
     cacheDaemon.setAddr(new InetSocketAddress(MEMCACHED_PORT));
+    cacheDaemon.setBinary(false); // NOTE: JMemcached seem to have binary protocol bugs...
     cacheDaemon.setVerbose(false);
     cacheDaemon.start();
   }
@@ -56,23 +58,23 @@ public abstract class AbstractMemcachedClientTest {
     client = createCacheClient();
   }
 
-  protected abstract TypedCache<String, String> createCacheClient() throws Exception;
+  protected abstract TypedCache<String, Serializable> createCacheClient() throws Exception;
 
   @Test
   public void testGetHit() throws IOException, ExecutionException, InterruptedException {
     final String key = "key1";
     final String expectedValue = "value1";
-    final ComposableFuture<String> res = client.setAsync(key, expectedValue)
-      .continueOnSuccess((FutureSuccessHandler<Boolean, String>) result -> client.getAsync(key));
+    final ComposableFuture<Serializable> res = client.setAsync(key, expectedValue)
+      .continueOnSuccess((FutureSuccessHandler<Boolean, Serializable>) result -> client.getAsync(key));
 
-    final String result = res.get();
+    final Serializable result = res.get();
     Assert.assertEquals("unexpected result returned from getAsync()", expectedValue, result);
   }
 
   @Test
   public void testGetMiss() throws IOException, ExecutionException, InterruptedException {
-    final ComposableFuture<String> res = client.getAsync("keyMiss1");
-    final String result = res.get();
+    final ComposableFuture<Serializable> res = client.getAsync("keyMiss1");
+    final Serializable result = res.get();
     Assert.assertNull("getAsync for unset key should have returned null", result);
   }
 
@@ -83,10 +85,10 @@ public abstract class AbstractMemcachedClientTest {
       expected.put("bulkKey" + i, "value" + i);
     }
 
-    final ComposableFuture<Map<String, String>> res = client.setBulkAsync(expected)
-      .continueOnSuccess((FutureSuccessHandler<Map<String, Boolean>, Map<String, String>>) result -> client.getBulkAsync(expected.keySet()));
+    final ComposableFuture<Map<String, Serializable>> res = client.setBulkAsync(expected)
+      .continueOnSuccess((FutureSuccessHandler<Map<String, Boolean>, Map<String, Serializable>>) result -> client.getBulkAsync(expected.keySet()));
 
-    final Map<String, String> getResults = res.get();
+    final Map<String, Serializable> getResults = res.get();
     Assert.assertEquals("unexpected result returned from getBulkAsync()", expected, getResults);
   }
 
@@ -97,15 +99,15 @@ public abstract class AbstractMemcachedClientTest {
       entries.put("bulkKeyMiss" + i, "value" + i);
     }
 
-    final ComposableFuture<Map<String, String>> res = client.getBulkAsync(entries.keySet());
-    final Map<String, String> results = res.get();
+    final ComposableFuture<Map<String, Serializable>> res = client.getBulkAsync(entries.keySet());
+    final Map<String, Serializable> results = res.get();
     Assert.assertTrue("getBulkAsync for unset keys should have returned empty map", results.isEmpty());
   }
 
   @Test
   public void testCas() throws ExecutionException, InterruptedException {
     final String counterKey = "counterKey";
-    client.setAsync(counterKey, "0").get();
+    client.setAsync(counterKey, 0).get();
 
     final int iterations = 1000;
     final int threadCount = 2;
@@ -113,7 +115,7 @@ public abstract class AbstractMemcachedClientTest {
 
     final int expectedSetCount = iterations * threadCount;
     Assert.assertEquals("Successful sets", expectedSetCount, successCount);
-    Assert.assertEquals(String.valueOf(expectedSetCount), client.getAsync(counterKey).get());
+    Assert.assertEquals(expectedSetCount, client.getAsync(counterKey).get());
   }
 
   private int runMultiThreadedCas(final String counterKey, final int iterations, final int threadCount) throws InterruptedException {
@@ -123,7 +125,7 @@ public abstract class AbstractMemcachedClientTest {
       threads[i] = new Thread(() -> {
         for (int t = 0; t < iterations; t++) {
           try {
-            final Boolean res = client.setAsync(counterKey, (key, value) -> String.valueOf(Long.parseLong(value) + 1), iterations).get();
+            final Boolean res = client.setAsync(counterKey, (key, value) -> (Integer)value + 1, iterations).get();
             if (res) {
               successCount.incrementAndGet();
             }

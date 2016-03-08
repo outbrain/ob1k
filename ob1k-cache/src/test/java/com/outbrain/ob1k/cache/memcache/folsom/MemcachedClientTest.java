@@ -4,10 +4,12 @@ import com.google.common.net.HostAndPort;
 import com.outbrain.ob1k.cache.AbstractMemcachedClientTest;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.spotify.folsom.ConnectFuture;
+import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheClientBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,11 +17,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class MemcachedClientTest extends AbstractMemcachedClientTest {
 
-  private static com.spotify.folsom.MemcacheClient<String> folsomClient;
+  private static MemcacheClient<Serializable> folsomClient;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    folsomClient = MemcacheClientBuilder.newStringClient().withAddress(HostAndPort.fromParts("localhost", MEMCACHED_PORT)).connectAscii();
+    folsomClient = MemcacheClientBuilder.newSerializableObjectClient()
+      .withAddress(HostAndPort.fromParts("localhost", MEMCACHED_PORT))
+      .withRequestTimeoutMillis(1000)
+      .connectAscii();
     ConnectFuture.connectFuture(folsomClient).get();
   }
 
@@ -29,7 +34,7 @@ public class MemcachedClientTest extends AbstractMemcachedClientTest {
   }
 
   @Override
-  protected TypedCache<String, String> createCacheClient() throws Exception {
+  protected TypedCache<String, Serializable> createCacheClient() throws Exception {
     return new MemcachedClient<>(folsomClient, key -> key, 1, TimeUnit.MINUTES);
   }
 }
