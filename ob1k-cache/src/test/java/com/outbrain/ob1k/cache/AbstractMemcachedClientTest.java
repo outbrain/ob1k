@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base test class for memcached client wrappers
@@ -30,7 +31,7 @@ public abstract class AbstractMemcachedClientTest {
   private TypedCache<String, String> client;
 
   @BeforeClass
-  public static void setupsBeforeClass_super() throws IOException, Exception {
+  public static void setupsBeforeClass_super() throws Exception {
     createCacheDaemon();
   }
 
@@ -99,6 +100,45 @@ public abstract class AbstractMemcachedClientTest {
     final ComposableFuture<Map<String, String>> res = client.getBulkAsync(entries.keySet());
     final Map<String, String> results = res.get();
     Assert.assertTrue("getBulkAsync for unset keys should have returned empty map", results.isEmpty());
+  }
+
+  @Test
+  public void testCas() throws ExecutionException, InterruptedException {
+    final String counterKey = "counterKey";
+    client.setAsync(counterKey, "0").get();
+
+    final int iterations = 1000;
+    final int threadCount = 4;
+    final int successCount = runMultiThreadedCas(counterKey, iterations, threadCount);
+
+    final int expectedSetCount = iterations * threadCount;
+    Assert.assertEquals("Successful sets", expectedSetCount, successCount);
+    Assert.assertEquals(String.valueOf(expectedSetCount), client.getAsync(counterKey).get());
+  }
+
+  private int runMultiThreadedCas(final String counterKey, final int iterations, final int threadCount) throws InterruptedException {
+    final AtomicInteger successCount = new AtomicInteger(0);
+    final Thread[] threads = new Thread[threadCount];
+    for (int i = 0; i < threadCount; i++) {
+      threads[i] = new Thread(() -> {
+        for (int t = 0; t < iterations; t++) {
+          try {
+            final Boolean res = client.setAsync(counterKey, (key, value) -> String.valueOf(Long.parseLong(value) + 1), 500).get();
+            if (res) {
+              successCount.incrementAndGet();
+            }
+          } catch (final Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+      threads[i].start();
+    }
+
+    for (final Thread thread : threads) {
+      thread.join();
+    }
+    return successCount.get();
   }
 
 }
