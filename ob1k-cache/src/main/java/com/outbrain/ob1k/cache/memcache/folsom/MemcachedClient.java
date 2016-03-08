@@ -57,8 +57,13 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
-    final Map<String, K> keyMap = StreamSupport.stream(keys.spliterator(), false).collect(Collectors.toMap(this::key, Function.identity()));
-    final List<String> stringKeys = new ArrayList<>(keyMap.keySet());
+    final Map<String, K> keyMap = new HashMap<>();//StreamSupport.stream(keys.spliterator(), false).collect(Collectors.toMap(this::key, Function.identity()));
+    final List<String> stringKeys = new ArrayList<>();
+    for (final K key : keys) {
+      final String stringKey = key(key);
+      stringKeys.add(stringKey);
+      keyMap.put(stringKey, key);
+    }
 
     return fromListenableFuture(
       () -> folsomClient.get(stringKeys),

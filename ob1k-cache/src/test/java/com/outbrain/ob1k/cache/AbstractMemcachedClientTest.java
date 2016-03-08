@@ -108,7 +108,7 @@ public abstract class AbstractMemcachedClientTest {
     client.setAsync(counterKey, "0").get();
 
     final int iterations = 1000;
-    final int threadCount = 4;
+    final int threadCount = 2;
     final int successCount = runMultiThreadedCas(counterKey, iterations, threadCount);
 
     final int expectedSetCount = iterations * threadCount;
@@ -123,7 +123,7 @@ public abstract class AbstractMemcachedClientTest {
       threads[i] = new Thread(() -> {
         for (int t = 0; t < iterations; t++) {
           try {
-            final Boolean res = client.setAsync(counterKey, (key, value) -> String.valueOf(Long.parseLong(value) + 1), 500).get();
+            final Boolean res = client.setAsync(counterKey, (key, value) -> String.valueOf(Long.parseLong(value) + 1), iterations).get();
             if (res) {
               successCount.incrementAndGet();
             }
