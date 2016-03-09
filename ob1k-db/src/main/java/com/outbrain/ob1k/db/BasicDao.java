@@ -12,11 +12,13 @@ import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.google.common.collect.Lists.transform;
+import static java.util.Collections.singletonList;
 
 /**
  * @author Asy Ronen
@@ -135,13 +137,19 @@ public class BasicDao {
   }
 
   private String createListByIDsQuery(final String tableName, final String idColumnName, final List<?> ids) {
-    final StringBuilder query = new StringBuilder("select * from ");
-    query.append(tableName);
+    return createQueryForIds("select * from", tableName, idColumnName, ids);
+  }
+
+  private String createQueryForIds(final String baseQuery, final String tableName, final String idColumnName,
+                                   final List<?> ids) {
+    final StringBuilder query = new StringBuilder(baseQuery);
+    query.append(' ');
+    query.append(withBackticks(tableName));
     query.append(" where ");
-    query.append(idColumnName);
+    query.append(withBackticks(idColumnName));
     query.append(" in (");
     final Joiner joiner = Joiner.on(',');
-    joiner.appendTo(query, ids);
+    joiner.appendTo(query, transform(ids, id -> withQuote(id.toString()))); // todo: why it's not just List<String> ?
     query.append(");");
 
     return query.toString();
@@ -195,11 +203,11 @@ public class BasicDao {
   }
 
   public <T> ComposableFuture<T> get(final ResultSetMapper<T> mapper, final String tableName, final int limit) {
-    return get("select * from " + tableName + " limit " + limit, mapper);
+    return get("select * from " + withBackticks(tableName) + " limit " + limit, mapper);
   }
 
   public <T> ComposableFuture<T> get(final MySqlAsyncConnection conn, final ResultSetMapper<T> mapper, final String tableName, final int limit) {
-    return get(conn, "select * from " + tableName + " limit " + limit, mapper);
+    return get(conn, "select * from " + withBackticks(tableName) + " limit " + limit, mapper);
   }
 
   public ComposableFuture<Map<String, Object>> get(final String query) {
@@ -222,7 +230,7 @@ public class BasicDao {
   }
 
   public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper) {
-    final String saveCommand = createSaveCommand(Collections.singletonList(entry), tableName, mapper);
+    final String saveCommand = createSaveCommand(singletonList(entry), tableName, mapper);
     return executeAndGetId(saveCommand);
   }
 
@@ -236,29 +244,25 @@ public class BasicDao {
   }
 
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final Object id) {
-    return execute("delete from " + tableName + " where " + idColumnName + " = " + id);
+    return execute(createDeleteCommand(tableName, idColumnName, singletonList(id)));
   }
 
-  public ComposableFuture<Long> delete(final MySqlAsyncConnection conn, final String tableName, final String idColumnName, final Object id) {
-    return execute(conn, "delete from " + tableName + " where " + idColumnName + " = " + id);
+  public ComposableFuture<Long> delete(final MySqlAsyncConnection conn, final String tableName,
+                                       final String idColumnName, final Object id) {
+    return execute(conn, createDeleteCommand(tableName, idColumnName, singletonList(id)));
   }
 
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final List<?> ids) {
     return execute(createDeleteCommand(tableName, idColumnName, ids));
   }
 
-  public ComposableFuture<Long> delete(final MySqlAsyncConnection conn, final String tableName, final String idColumnName, final List<?> ids) {
+  public ComposableFuture<Long> delete(final MySqlAsyncConnection conn, final String tableName,
+                                       final String idColumnName, final List<?> ids) {
     return execute(conn, createDeleteCommand(tableName, idColumnName, ids));
   }
 
   private String createDeleteCommand(final String tableName, final String idColumnName, final List<?> ids) {
-    final StringBuilder builder = new StringBuilder("delete from ");
-    builder.append(tableName).append(" where ").append(idColumnName).append(" in (");
-    final Joiner joiner = Joiner.on(',');
-    joiner.appendTo(builder, ids);
-    builder.append(")");
-
-    return builder.toString();
+    return createQueryForIds("delete from", tableName, idColumnName, ids);
   }
 
   public <T> ComposableFuture<Long> save(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
@@ -272,14 +276,14 @@ public class BasicDao {
       throw new IllegalArgumentException("entries must contain at least on entry");
 
     final StringBuilder command = new StringBuilder("insert into ");
-    command.append(tableName);
+    command.append(withBackticks(tableName));
 
     // setting the columns part (col1, col2, ...)
-    command.append("(");
+    command.append(" (");
     final T first = entries.get(0);
     final List<String> columnNames = new ArrayList<>(mapper.map(first).keySet());
     final Joiner joiner = Joiner.on(',');
-    joiner.appendTo(command, columnNames);
+    joiner.appendTo(command, transform(columnNames, BasicDao::withBackticks));
     command.append(") ");
 
     command.append(" values ");
@@ -295,7 +299,7 @@ public class BasicDao {
       for (final String column : columnNames) {
         final Object value = elements.get(column);
         if (value != null) {
-          final String queryValue = value instanceof String ? ("'" + value + "'") : value.toString();
+          final String queryValue = withQuote(value.toString());
           values.add(queryValue);
         } else {
           values.add("NULL");
@@ -316,5 +320,13 @@ public class BasicDao {
 
   public ComposableFuture<Boolean> shutdown() {
     return _pool.close();
+  }
+
+  private static String withBackticks(final String columnOrTable) {
+    return "`" + columnOrTable + "`";
+  }
+
+  private static String withQuote(final String value) {
+    return "'" + value + "'";
   }
 }
