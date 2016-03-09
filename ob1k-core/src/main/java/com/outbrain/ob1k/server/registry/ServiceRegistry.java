@@ -117,7 +117,13 @@ public class ServiceRegistry implements ServiceRegistryView {
         final Method method = endpointDesc.method;
         final List<String> methodParamNames = methodsParams.get(method);
 
-        marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
+        try {
+          marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
+        } catch (final IllegalArgumentException e) {
+          final String serviceName = service.getClass().getName();
+          throw new RuntimeException("Failed registering method '" + method.getName() +
+            "' of service '" + serviceName + "': " + e.getMessage());
+        }
 
         validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 

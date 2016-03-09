@@ -173,7 +173,12 @@ public class ClientBuilder<T extends Service> {
 
     final Method[] methods = type.getDeclaredMethods();
     for (final Method method : methods) {
-      registry.registerTypes(TypeHelper.extractTypes(method));
+      try {
+        registry.registerTypes(TypeHelper.extractTypes(method));
+      } catch (final IllegalArgumentException e) {
+        throw new RuntimeException("Failed registering method '" + method.getName() +
+          "' of service interface '" + type.getName() + "': " + e.getMessage());
+      }
     }
 
     return registry;

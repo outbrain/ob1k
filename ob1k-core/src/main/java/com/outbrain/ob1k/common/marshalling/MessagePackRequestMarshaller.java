@@ -14,6 +14,7 @@ import org.msgpack.MessagePack;
 import org.msgpack.MessageTypeException;
 import org.msgpack.packer.Packer;
 import org.msgpack.template.Template;
+import org.msgpack.template.builder.BuildContext;
 import org.msgpack.template.builder.TemplateBuildException;
 import org.msgpack.type.Value;
 import org.msgpack.unpacker.Converter;
@@ -37,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
@@ -66,7 +68,7 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
 
   @Override
   public void registerTypes(final Type... types) throws MessageTypeException {
-    registerTypes(new HashSet<Class>(), types);
+    registerTypes(new HashSet<>(), types);
   }
 
   public void registerTypes(final Set<Class> processed, final Type... types) throws MessageTypeException {
@@ -288,11 +290,21 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
     }
 
     try {
-      msgPack.register(cls);
+      registerWithoutJavaLogs(cls);
     } catch (final MessageTypeException | TemplateBuildException e) {
       logger.warn("class " + cls.getName() + " is not MsgPack compatible. class must have empty constructor, all fields must be concrete and have getters and setters");
-      throw e;
+      logger.debug("failed registering type", e);
+      throw new IllegalArgumentException("'" + cls.getName() + "' is not MsgPack compatible");
     }
+  }
+
+  private void registerWithoutJavaLogs(final Class cls) {
+    // msgpack logs java logger to log error while trying to register some bean, but it's not really readable output
+    // so turning it off
+    java.util.logging.Logger.getLogger(BuildContext.class.getName()).setLevel(Level.OFF);
+    msgPack.register(cls);
+    // setting the logger back to its default level
+    java.util.logging.Logger.getLogger(BuildContext.class.getName()).setLevel(Level.INFO);
   }
 
   private boolean isPrimitiveOrString(final Type type) {
