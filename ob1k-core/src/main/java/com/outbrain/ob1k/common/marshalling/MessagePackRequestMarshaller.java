@@ -54,6 +54,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  */
 public class MessagePackRequestMarshaller implements RequestMarshaller {
   private static final Logger logger = LoggerFactory.getLogger(MessagePackRequestMarshaller.class);
+  private static final java.util.logging.Logger msgPackLogger = java.util.logging.Logger.getLogger(BuildContext.class.getName());
   private static final byte[] NEW_LINE = "\n".getBytes(CharsetUtil.UTF_8);
   private static final byte[] HTML_NEW_LINE = "<br/>\n".getBytes(CharsetUtil.UTF_8);
   private static final byte[] HEADER = ChunkHeader.ELEMENT_HEADER.getBytes(CharsetUtil.UTF_8);
@@ -301,10 +302,10 @@ public class MessagePackRequestMarshaller implements RequestMarshaller {
   private void registerWithoutJavaLogs(final Class cls) {
     // msgpack logs java logger to log error while trying to register some bean, but it's not really readable output
     // so turning it off
-    java.util.logging.Logger.getLogger(BuildContext.class.getName()).setLevel(Level.OFF);
+    msgPackLogger.setLevel(Level.OFF);
     msgPack.register(cls);
     // setting the logger back to its default level
-    java.util.logging.Logger.getLogger(BuildContext.class.getName()).setLevel(Level.INFO);
+    msgPackLogger.setLevel(Level.INFO);
   }
 
   private boolean isPrimitiveOrString(final Type type) {
