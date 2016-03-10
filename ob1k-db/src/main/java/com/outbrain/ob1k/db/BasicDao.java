@@ -149,7 +149,7 @@ public class BasicDao {
     query.append(withBackticks(idColumnName));
     query.append(" in (");
     final Joiner joiner = Joiner.on(',');
-    joiner.appendTo(query, transform(ids, id -> withQuote(id.toString()))); // todo: why it's not just List<String> ?
+    joiner.appendTo(query, transform(ids, BasicDao::withQuote)); // todo: why it's not just List<String> ?
     query.append(");");
 
     return query.toString();
@@ -299,7 +299,7 @@ public class BasicDao {
       for (final String column : columnNames) {
         final Object value = elements.get(column);
         if (value != null) {
-          final String queryValue = withQuote(value.toString());
+          final String queryValue = withQuote(value);
           values.add(queryValue);
         } else {
           values.add("NULL");
@@ -326,7 +326,11 @@ public class BasicDao {
     return "`" + columnOrTable + "`";
   }
 
-  private static String withQuote(final String value) {
+  private static String withQuote(final Object value) {
+    if (value instanceof Boolean) {
+      return value.toString();
+    }
+
     return "'" + value + "'";
   }
 }
