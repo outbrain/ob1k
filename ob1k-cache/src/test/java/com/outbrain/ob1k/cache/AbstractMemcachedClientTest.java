@@ -105,6 +105,19 @@ public abstract class AbstractMemcachedClientTest {
   }
 
   @Test
+  public void testDelete() throws IOException, ExecutionException, InterruptedException {
+    final String key = "key1";
+    final String expectedValue = "value1";
+    final ComposableFuture<Boolean> res = client.setAsync(key, expectedValue)
+      .continueOnSuccess((FutureSuccessHandler<Boolean, Boolean>) result -> client.deleteAsync(key));
+
+    final Boolean result = res.get();
+    Assert.assertTrue("unexpected result returned from getAsync()", result);
+    Assert.assertNull("value was not deleted", client.getAsync(key).get());
+  }
+
+
+  @Test
   public void testCas() throws ExecutionException, InterruptedException {
     final String counterKey = "counterKey";
     client.setAsync(counterKey, 0).get();
