@@ -269,6 +269,68 @@ public class BasicDao {
     return execute(createSaveCommand(entries, tableName, mapper));
   }
 
+  public <T> ComposableFuture<Long> save(final MySqlAsyncConnection conn, final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
+    return execute(conn, createSaveCommand(entries, tableName, mapper));
+  }
+
+  /**
+   * Updates entry/entries of table by provided values & conditions
+   *
+   * @param tableName table name to update values of
+   * @param entry entry to update by
+   * @param entryMapper a mapper between the the value object to the map key
+   * @param idMapper a mapper between the condition column to update by to the value (.. where column=value)
+   * @param <T> entry generic
+   * @return number of updated entries
+   */
+  public <T> ComposableFuture<Long> update(final String tableName, final T entry, final EntityMapper<T> entryMapper,
+                                           final EntityMapper<T> idMapper) {
+    return execute(createUpdateCommand(tableName, entry, entryMapper, idMapper));
+  }
+
+  /**
+   * Updates entry/entries of table by provided values & conditions
+   *
+   * @param conn connection to be used to execute the query
+   * @param tableName table name to update values of
+   * @param entry entry to update by
+   * @param entryMapper a mapper between the the value object to the map key
+   * @param idMapper a mapper between the condition column to update by to the value (.. where column=value)
+   * @param <T> entry generic
+   * @return number of updated entries
+   */
+  public <T> ComposableFuture<Long> update(final MySqlAsyncConnection conn, final String tableName, final T entry,
+                                           final EntityMapper<T> entryMapper, final EntityMapper<T> idMapper) {
+    return execute(conn, createUpdateCommand(tableName, entry, entryMapper, idMapper));
+  }
+
+  private <T> String createUpdateCommand(final String tableName, final T entry, final EntityMapper<T> entryMapper,
+                                         final EntityMapper<T> idMapper) {
+    final StringBuilder command = new StringBuilder("update ");
+    command.append(withBackticks(tableName));
+    command.append(" set ");
+
+    final Map<String, Object> updateValues = entryMapper.map(entry);
+    final String entriesToUpdate = toColumnValueString(updateValues, ", ");
+
+    command.append(entriesToUpdate);
+    command.append("where ");
+
+    final Map<String, Object> updateByEntries = idMapper.map(entry);
+    final String updateBy = toColumnValueString(updateByEntries, " and ");
+
+    command.append(updateBy);
+    command.append(";");
+
+    return command.toString();
+  }
+
+  private String toColumnValueString(final Map<String, Object> updateValues, final String seperator) {
+    return updateValues.entrySet().stream().map(entry ->
+      withBackticks(entry.getKey()) + "=" + withQuote(entry.getValue())).
+      collect(Collectors.joining(seperator));
+  }
+
   private <T> String createSaveCommand(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
     // using the following syntax: INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);
 
@@ -312,10 +374,6 @@ public class BasicDao {
 
     command.append(";");
     return command.toString();
-  }
-
-  public <T> ComposableFuture<Long> save(final MySqlAsyncConnection conn, final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
-    return execute(conn, createSaveCommand(entries, tableName, mapper));
   }
 
   public ComposableFuture<Boolean> shutdown() {

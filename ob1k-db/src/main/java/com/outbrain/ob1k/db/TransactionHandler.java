@@ -8,5 +8,5 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
  * Time: 6:41 PM
  */
 public interface TransactionHandler<T> {
-  public ComposableFuture<T> handle(MySqlAsyncConnection conn);
+  ComposableFuture<T> handle(MySqlAsyncConnection conn);
 }
