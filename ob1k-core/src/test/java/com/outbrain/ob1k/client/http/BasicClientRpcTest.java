@@ -6,7 +6,6 @@ import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
-import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
@@ -19,11 +18,8 @@ import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection
 import com.outbrain.ob1k.server.builder.ResourceMappingBuilder;
 import com.outbrain.ob1k.server.builder.ResourceMappingBuilder.ResourceMappingBuilderSection;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
-import com.outbrain.ob1k.server.builder.ServiceBindBuilder;
-import com.outbrain.ob1k.server.builder.ServiceBindBuilder.ServiceBindBuilderSection;
 import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
 import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
-import com.outbrain.ob1k.server.filters.CachingFilter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -38,7 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -54,15 +49,6 @@ public class BasicClientRpcTest {
 
   private static int port;
   private static Server server;
-
-  private static ServiceFilter createCachingFilter() {
-    return new CachingFilter<String, String>(new CachingFilter.CacheKeyGenerator<String>() {
-      @Override
-      public String createKey(Object[] params) {
-        return params[0].toString();
-      }
-    }, 10, 1, TimeUnit.SECONDS);
-  }
 
   private interface HelloServiceClient extends Service {
     ComposableFuture<Response> helloWorld();
@@ -88,14 +74,7 @@ public class BasicClientRpcTest {
       @Override
       public void apply(final ServiceRegisterBuilder builder) {
         builder.register(new HelloService(), HELLO_SERVICE_PATH).
-          register(new ParamsService(), "/params").
-          register(new FilteredService(), FILTERED_SERVICE_PATH, new ServiceBindBuilderSection() {
-            @Override
-            public void apply(final ServiceBindBuilder builder) {
-              builder.endpoint("getNextCode", "/next", createCachingFilter()).
-                endpoint("getRandomCode", "/random");
-            }
-          });
+          register(new ParamsService(), "/params");
       }
     }).resource(new ResourceMappingBuilderSection() {
       @Override
@@ -351,50 +330,11 @@ public class BasicClientRpcTest {
 
   }
 
-  @Test
-  public void testCachingFilters() throws Exception {
-    final IFilteredService client = createFilteredClient(port);
-    try {
-      final String res1 = client.getNextCode("haim").get();
-      final String res2 = client.getNextCode("haim").get();
-
-      Thread.sleep(2000);
-
-      final String res3 = client.getNextCode("haim").get();
-
-      Assert.assertEquals(res1, res2);
-      Assert.assertNotSame(res2, res3);
-
-      final String res4 = client.getRandomCode("moshe").get();
-      final String res5 = client.getRandomCode("moshe").get();
-
-      Thread.sleep(2000);
-
-      final String res6 = client.getRandomCode("moshe").get();
-
-      Assert.assertEquals(res4, res5);
-      Assert.assertNotSame(res5, res6);
-
-    } finally {
-      Clients.close(client);
-    }
-  }
-
-
   private IHelloService createClient(final ContentType protocol, final int port) {
     return new ClientBuilder<>(IHelloService.class).
       setProtocol(protocol).
       setRequestTimeout(120000). // heavily loaded testing environment.
       setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + HELLO_SERVICE_PATH)).
-      build();
-  }
-
-  private IFilteredService createFilteredClient(final int port) {
-    return new ClientBuilder<>(IFilteredService.class).
-      setProtocol(ContentType.JSON).
-      setTargetProvider(new SimpleTargetProvider("http://localhost:" + port + CTX_PATH + FILTERED_SERVICE_PATH)).
-      bindEndpoint("getNextCode", "/next").
-      bindEndpoint("getRandomCode", "/random", createCachingFilter()).
       build();
   }
 

@@ -17,6 +17,7 @@
       <artifactId>ob1k-core</artifactId>
     </dependency>
 
+
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
@@ -28,6 +29,11 @@
       <artifactId>junit</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-core-extras</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
