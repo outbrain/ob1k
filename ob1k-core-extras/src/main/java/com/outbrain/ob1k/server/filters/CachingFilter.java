@@ -10,13 +10,11 @@ import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created by aronen on 10/28/14.
- *
  * a client/server filter that caches method call result for a predefined period of time.
+ * @author aronen 10/28/14.
  */
 public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext> {
   private final TypedCache<K, V> cache;
@@ -30,28 +28,21 @@ public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext> 
   @Override
   public ComposableFuture<V> handleAsync(final AsyncRequestContext ctx) {
     final K key = generator.createKey(ctx.getParams());
-    return cache.getAsync(key).continueOnError(new ErrorHandler<V>() {
-      @Override
-      public V handle(Throwable error) throws ExecutionException {
-        // in case there was an error in the cache we treat it as missing item in the cache.
-        return null;
-      }
-    }).continueOnSuccess(new FutureSuccessHandler<V, V>() {
-      @Override
-      public ComposableFuture<V> handle(V result) {
-        if (result != null) {
-          return ComposableFutures.fromValue(result);
-        } else {
-          return ctx.<V>invokeAsync().continueOnSuccess((SuccessHandler<V, V>) result1 -> {
-            cache.setAsync(key, result1);
-            return result1;
-          });
-        }
+    return cache.getAsync(key).continueOnError((ErrorHandler<V>) error -> null
+      // in case there was an error in the cache we treat it as missing item in the cache.
+      ).continueOnSuccess((FutureSuccessHandler<V, V>) result -> {
+      if (result != null) {
+        return ComposableFutures.fromValue(result);
+      } else {
+        return ctx.<V>invokeAsync().continueOnSuccess((SuccessHandler<V, V>) result1 -> {
+          cache.setAsync(key, result1);
+          return result1;
+        });
       }
     });
   }
 
-  public static interface CacheKeyGenerator<K> {
-    public K createKey(Object[] params);
+  public interface CacheKeyGenerator<K> {
+    K createKey(Object[] params);
   }
 }
