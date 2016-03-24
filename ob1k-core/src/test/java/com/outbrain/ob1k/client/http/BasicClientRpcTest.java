@@ -13,19 +13,12 @@ import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
-import com.outbrain.ob1k.server.builder.ConfigureBuilder;
-import com.outbrain.ob1k.server.builder.ConfigureBuilder.ConfigureBuilderSection;
-import com.outbrain.ob1k.server.builder.ResourceMappingBuilder;
-import com.outbrain.ob1k.server.builder.ResourceMappingBuilder.ResourceMappingBuilderSection;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
-import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder;
-import com.outbrain.ob1k.server.builder.ServiceRegisterBuilder.ServiceRegisterBuilderSection;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import rx.Observable;
-import rx.functions.Action1;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -44,7 +37,6 @@ import java.util.concurrent.TimeoutException;
 public class BasicClientRpcTest {
 
   private static final String HELLO_SERVICE_PATH = "/hello-service";
-  private static final String FILTERED_SERVICE_PATH = "/filtered";
   private static final String CTX_PATH = "/TestApp";
 
   private static int port;
@@ -65,23 +57,10 @@ public class BasicClientRpcTest {
   @BeforeClass
   public static void setup() {
     server = ServerBuilder.newBuilder().contextPath(CTX_PATH).
-      configure(new ConfigureBuilderSection() {
-        @Override
-        public void apply(final ConfigureBuilder builder) {
-          builder.useRandomPort().configureExecutorService(5, 10);
-        }
-      }).service(new ServiceRegisterBuilderSection() {
-      @Override
-      public void apply(final ServiceRegisterBuilder builder) {
-        builder.register(new HelloService(), HELLO_SERVICE_PATH).
-          register(new ParamsService(), "/params");
-      }
-    }).resource(new ResourceMappingBuilderSection() {
-      @Override
-      public void apply(final ResourceMappingBuilder builder) {
-        builder.staticPath("/static");
-      }
-    }).build();
+      configure(builder -> builder.useRandomPort().configureExecutorService(5, 10))
+      .service(builder -> builder
+        .register(new HelloService(), HELLO_SERVICE_PATH)
+        .register(new ParamsService(), "/params")).resource(builder -> builder.staticPath("/static")).build();
 
     final InetSocketAddress address = server.start();
     port = address.getPort();
@@ -111,14 +90,11 @@ public class BasicClientRpcTest {
     final List<String> names = new ArrayList<>(5);
     final Observable<Response> haim = helloServiceClient.getMessages("haim", 5, false);
 
-    haim.toBlocking().forEach(new Action1<Response>() {
-      @Override
-      public void call(final Response response) {
-        try {
-          names.add(response.getResponseBody());
-        } catch (final IOException e) {
-          throw new RuntimeException(e);
-        }
+    haim.toBlocking().forEach(response -> {
+      try {
+        names.add(response.getResponseBody());
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
       }
     });
 
@@ -144,14 +120,11 @@ public class BasicClientRpcTest {
     final List<String> names = new ArrayList<>(5);
     final Observable<TypedResponse<String>> haim = helloServiceClient.getMessages("haim", 5, false);
 
-    haim.toBlocking().forEach(new Action1<TypedResponse<String>>() {
-      @Override
-      public void call(final TypedResponse<String> response) {
-        try {
-          names.add(response.getTypedBody());
-        } catch (final IOException e) {
-          throw new RuntimeException(e);
-        }
+    haim.toBlocking().forEach(response -> {
+      try {
+        names.add(response.getTypedBody());
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
       }
     });
 
@@ -160,7 +133,7 @@ public class BasicClientRpcTest {
 
   @Test
   public void testEmptyJsonResponseBody() throws ExecutionException, InterruptedException {
-    IHelloService service = createClient(ContentType.JSON, port);
+    final IHelloService service = createClient(ContentType.JSON, port);
     service.emptyString().get(); // used to throw "JsonMappingException: No content to map due to end-of-input"
   }
 
@@ -257,12 +230,7 @@ public class BasicClientRpcTest {
     final Observable<String> messages = client.getMessages("moshe", SIZE, false);
 
     final List<String> results = new ArrayList<>();
-    messages.toBlocking().forEach(new Action1<String>() {
-      @Override
-      public void call(final String element) {
-        results.add(element);
-      }
-    });
+    messages.toBlocking().forEach(results::add);
     Assert.assertEquals(results.size(), SIZE);
     Assert.assertEquals(results.get(0), "hello moshe #0");
 
@@ -270,12 +238,7 @@ public class BasicClientRpcTest {
     final List<String> badResults = new ArrayList<>();
 
     try {
-      badMessages.toBlocking().forEach(new Action1<String>() {
-        @Override
-        public void call(final String element) {
-          badResults.add(element);
-        }
-      });
+      badMessages.toBlocking().forEach(badResults::add);
     } catch (final RuntimeException e) {
       Assert.assertTrue("Got an unexpected exception: " + e.getMessage(), e.getMessage().contains("last message is really bad"));
     }
@@ -360,35 +323,27 @@ public class BasicClientRpcTest {
   private final static class QFilter implements AsyncFilter<String, AsyncClientRequestContext> {
     @Override
     public ComposableFuture<String> handleAsync(final AsyncClientRequestContext ctx) {
-      return ctx.<String>invokeAsync().continueOnSuccess(new FutureSuccessHandler<String, String>() {
-        @Override
-        public ComposableFuture<String> handle(final String result) {
-          return ComposableFutures.fromValue(result + " ?");
-        }
-      });
+      return ctx.<String>invokeAsync()
+        .continueOnSuccess((FutureSuccessHandler<String, String>) result -> ComposableFutures.fromValue(result + " ?"));
     }
   }
 
   private final static class BangFilter implements AsyncFilter<String, AsyncClientRequestContext> {
     @Override
     public ComposableFuture<String> handleAsync(final AsyncClientRequestContext ctx) {
-      return ctx.<String>invokeAsync().continueOnSuccess(new FutureSuccessHandler<String, String>() {
-        @Override
-        public ComposableFuture<String> handle(final String result) {
-          return ComposableFutures.fromValue(result + " !!!");
-        }
-      });
+      return ctx.<String>invokeAsync()
+        .continueOnSuccess((FutureSuccessHandler<String, String>) result -> ComposableFutures.fromValue(result + " !!!"));
     }
   }
 
   @Test(expected = ExecutionException.class)
   public void testEmptyTargetBehavior() throws ExecutionException, InterruptedException {
-    IHelloService service = new ClientBuilder<>(IHelloService.class).build();
+    final IHelloService service = new ClientBuilder<>(IHelloService.class).build();
     final ComposableFuture<com.outbrain.ob1k.Response> future = service.emptyString(); // used to throw "JsonMappingException: No content to map due to end-of-input"
     Assert.assertNotNull(future);
     try {
       future.get();
-    } catch (ExecutionException e) {
+    } catch (final ExecutionException e) {
       Assert.assertEquals(NoSuchElementException.class, e.getCause().getClass());
       throw e;
     }
@@ -396,7 +351,7 @@ public class BasicClientRpcTest {
 
   @Test(expected = RuntimeException.class)
   public void testEmptyTargetStreamBehavior() throws ExecutionException, InterruptedException {
-    IHelloService service = new ClientBuilder<>(IHelloService.class).build();
+    final IHelloService service = new ClientBuilder<>(IHelloService.class).build();
     final Observable<String> observable = service.getMessages("name", 1, false);
     Assert.assertNotNull(observable);
     observable.toBlocking().first();
