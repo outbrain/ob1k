@@ -25,6 +25,11 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-consul</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>util-metrics</artifactId>
     </dependency>
 
@@ -49,6 +54,11 @@
       <artifactId>metrics-core</artifactId>
       <version>3.0.2</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
     </dependency>
 
     <dependency>
