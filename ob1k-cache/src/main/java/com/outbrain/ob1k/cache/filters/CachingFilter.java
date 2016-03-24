@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.server.filters;
+package com.outbrain.ob1k.cache.filters;
 
 import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.cache.LocalAsyncCache;
