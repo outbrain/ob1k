@@ -20,6 +20,11 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>ob1k-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>util-metrics</artifactId>
     </dependency>
 
