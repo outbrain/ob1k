@@ -1,9 +1,8 @@
 package com.outbrain.ob1k.cache.memcache.folsom;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.folsom.Transcoder;
 import org.apache.commons.lang.SerializationException;
+import org.msgpack.MessagePack;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -11,20 +10,20 @@ import java.util.Objects;
 /**
  * @author Eran Harel
  */
-public class JsonTranscoder<T> implements Transcoder<T> {
+public class MessagePackTranscoder<T> implements Transcoder<T> {
 
-  private final ObjectMapper objectMapper;
+  private final MessagePack messagePack;
   private final Class<T> valueType;
 
-  public JsonTranscoder(final ObjectMapper objectMapper, final Class<T> valueType) {
-    this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
+  public MessagePackTranscoder(final MessagePack messagePack, final Class<T> valueType) {
+    this.messagePack = Objects.requireNonNull(messagePack, "messagePack must not be null");
     this.valueType = Objects.requireNonNull(valueType, "valueType must not be null");
   }
 
   @Override
   public T decode(final byte[] b) {
     try {
-      return objectMapper.readValue(b, valueType);
+      return messagePack.read(b, valueType);
     } catch (final IOException e) {
       throw new SerializationException("Failed to decode to type " + valueType.getSimpleName(), e);
     }
@@ -33,8 +32,8 @@ public class JsonTranscoder<T> implements Transcoder<T> {
   @Override
   public byte[] encode(final T t) {
     try {
-      return objectMapper.writeValueAsBytes(t);
-    } catch (final JsonProcessingException e) {
+      return messagePack.write(t);
+    } catch (final IOException e) {
       throw new SerializationException("Failed to encode input " + t.getClass().getSimpleName() + " to type " + valueType.getSimpleName(), e);
     }
   }
