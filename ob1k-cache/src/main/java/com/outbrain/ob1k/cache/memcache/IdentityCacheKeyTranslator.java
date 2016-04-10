@@ -5,7 +5,11 @@ package com.outbrain.ob1k.cache.memcache;
  */
 public class IdentityCacheKeyTranslator implements CacheKeyTranslator<String> {
 
-  public static final CacheKeyTranslator<String> INSTANCE = new IdentityCacheKeyTranslator();
+  private static final CacheKeyTranslator<String> INSTANCE = new IdentityCacheKeyTranslator();
+
+  public static CacheKeyTranslator<String> getInstance() {
+    return INSTANCE;
+  }
 
   private IdentityCacheKeyTranslator() {}
 

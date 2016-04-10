@@ -13,7 +13,7 @@ public class IdentityCacheKeyTranslatorTest {
   @Test
   public void testTranslate() {
     final String expectedKey = UUID.randomUUID().toString();
-    final String translatedKey = IdentityCacheKeyTranslator.INSTANCE.translateKey(expectedKey);
+    final String translatedKey = IdentityCacheKeyTranslator.getInstance().translateKey(expectedKey);
     Assert.assertEquals(expectedKey,translatedKey);
   }
 }
