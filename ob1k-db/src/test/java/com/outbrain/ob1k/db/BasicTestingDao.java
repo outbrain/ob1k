@@ -1,19 +1,15 @@
 package com.outbrain.ob1k.db;
 
-import java.util.concurrent.TimeUnit;
-
 import com.github.mauricio.async.db.Configuration;
 import com.github.mauricio.async.db.QueryResult;
 import com.github.mauricio.async.db.exceptions.ConnectionNotConnectedException;
 import com.github.mauricio.async.db.exceptions.ConnectionStillRunningQueryException;
 import com.github.mauricio.async.db.mysql.MySQLConnection;
 import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
@@ -26,10 +22,11 @@ import scala.util.Try;
  * @author aronen 8/25/14.
  */
 public class BasicTestingDao extends BasicDao implements AutoCloseable {
+
   public BasicTestingDao(final String host, final int port, final String database, final String userName, final String password,
-                         final long connectTimeoutMilliSeconds,final long queryTimeoutMilliSeconds) throws Exception {
+                         final long connectTimeoutMilliSeconds, final long queryTimeoutMilliSeconds) throws Exception {
     // using a single connection in the pool so that every command will run on it.
-      super(createTestConnectionPool(host, port, database, userName, password, connectTimeoutMilliSeconds, queryTimeoutMilliSeconds));
+    super(createTestConnectionPool(host, port, database, userName, password, connectTimeoutMilliSeconds, queryTimeoutMilliSeconds));
   }
 
   private static DbConnectionPool createTestConnectionPool(final String host, final int port, final String database, final String userName, final String password,
@@ -48,18 +45,15 @@ public class BasicTestingDao extends BasicDao implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    execute("ROLLBACK;").continueWith(new FutureResultHandler<Long, Boolean>() {
-      @Override
-      public ComposableFuture<Boolean> handle(final com.outbrain.ob1k.concurrent.Try<Long> result) {
-        return shutdown();
-      }
-    }).get();
+    execute("ROLLBACK;").continueWith((FutureResultHandler<Long, Boolean>) result -> shutdown()).get();
   }
 
   private static class NonCommittingSingleConnectionFactory extends MySQLConnectionFactory {
     private int numOfCreations = 0;
+    private final Configuration configuration;
     public NonCommittingSingleConnectionFactory(final Configuration configuration) throws Exception {
       super(configuration);
+      this.configuration = configuration;
     }
 
     @Override
@@ -72,7 +66,7 @@ public class BasicTestingDao extends BasicDao implements AutoCloseable {
       final MySQLConnection conn = super.create();
       final Future<QueryResult> futureRes = conn.sendQuery("SET autocommit=0;");
       try {
-        Await.result(futureRes, Duration.apply(2, TimeUnit.SECONDS));
+        Await.result(futureRes, configuration.connectTimeout());
         return conn;
       } catch (final Exception e) {
         throw new IllegalStateException("can't start transaction on the connection", e);
