@@ -40,7 +40,7 @@ public class MySqlAsyncConnection {
       Option.<Duration>apply(Duration.apply(queryTimeoutMilliSeconds, TimeUnit.MILLISECONDS));
 
     return new Configuration(userName, host, port, password, database, CharsetUtil.UTF_8, MAXIMUM_MESSAGE_SIZE,
-      PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutMilliSeconds, TimeUnit.SECONDS), Duration.apply(4, TimeUnit.SECONDS),
+      PooledByteBufAllocator.DEFAULT, Duration.apply(connectTimeoutMilliSeconds, TimeUnit.MILLISECONDS), Duration.apply(4, TimeUnit.SECONDS),
       queryTimeout);
   }
 
