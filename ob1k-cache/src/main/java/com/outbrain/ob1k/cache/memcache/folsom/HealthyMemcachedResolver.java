@@ -4,8 +4,11 @@ import com.outbrain.ob1k.consul.HealthInfoInstance;
 import com.outbrain.ob1k.consul.HealthyTargetsList;
 import com.spotify.dns.DnsSrvResolver;
 import com.spotify.dns.LookupResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -15,13 +18,18 @@ import java.util.stream.Collectors;
  */
 public class HealthyMemcachedResolver implements DnsSrvResolver, HealthyTargetsList.TargetsChangedListener {
 
+  private static final Logger log = LoggerFactory.getLogger(HealthyMemcachedResolver.class);
+
   private static final int NODE_PRIORITY = 1;
   private static final int NODE_WEIGHT = 1;
   private static final int LOOKUP_TTL_SEC = 15;
 
+  private final HealthyTargetsList healthyTargetsList;
+
   private volatile List<LookupResult> resolvedCluster;
 
   public HealthyMemcachedResolver(final HealthyTargetsList healthyTargetsList) {
+    this.healthyTargetsList = Objects.requireNonNull(healthyTargetsList, "healthyTargetsList must not be null");
     healthyTargetsList.addListener(this);
   }
 
@@ -35,6 +43,7 @@ public class HealthyMemcachedResolver implements DnsSrvResolver, HealthyTargetsL
     resolvedCluster = healthTargets.stream()
       .map(this::toLookupResult)
       .collect(Collectors.toList());
+    log.info("New {} cluster was resolved: {}", healthyTargetsList.getModule(), resolvedCluster);
   }
 
   private LookupResult toLookupResult(final HealthInfoInstance instance) {
