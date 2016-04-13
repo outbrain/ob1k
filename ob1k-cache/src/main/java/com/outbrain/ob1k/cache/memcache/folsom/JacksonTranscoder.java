@@ -11,12 +11,12 @@ import java.util.Objects;
 /**
  * @author Eran Harel
  */
-public class JsonTranscoder<T> implements Transcoder<T> {
+public class JacksonTranscoder<T> implements Transcoder<T> {
 
   private final ObjectMapper objectMapper;
   private final Class<T> valueType;
 
-  public JsonTranscoder(final ObjectMapper objectMapper, final Class<T> valueType) {
+  public JacksonTranscoder(final ObjectMapper objectMapper, final Class<T> valueType) {
     this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
     this.valueType = Objects.requireNonNull(valueType, "valueType must not be null");
   }

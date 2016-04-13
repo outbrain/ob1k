@@ -37,14 +37,8 @@ import static java.util.Collections.unmodifiableSortedMap;
 public class ServiceRegistry implements ServiceRegistryView {
   private static final Logger logger = LoggerFactory.getLogger(ServiceRegistry.class);
 
-  private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints;
+  private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints = new PathTrie<>();
   private String contextPath;
-  private final RequestMarshallerRegistry marshallerRegistry;
-
-  public ServiceRegistry(final RequestMarshallerRegistry marshallerRegistry) {
-    this.endpoints = new PathTrie<>();
-    this.marshallerRegistry = marshallerRegistry;
-  }
 
   public void setContextPath(final String contextPath) {
     this.contextPath = contextPath;
@@ -63,10 +57,6 @@ public class ServiceRegistry implements ServiceRegistryView {
       return serviceEndpoints.get(HttpRequestMethodType.ANY);
     }
     return serviceEndpoints.get(requestMethodType);
-  }
-
-  public void register(final String name, final Service service, final boolean bindPrefix) {
-    register(name, service, null, null, bindPrefix);
   }
 
   public static class EndpointDescriptor {
@@ -116,14 +106,6 @@ public class ServiceRegistry implements ServiceRegistryView {
         final EndpointDescriptor endpointDesc = endpointDescriptorEntry.getValue();
         final Method method = endpointDesc.method;
         final List<String> methodParamNames = methodsParams.get(method);
-
-        try {
-          marshallerRegistry.registerTypes(TypeHelper.extractTypes(method));
-        } catch (final IllegalArgumentException e) {
-          final String serviceName = service.getClass().getName();
-          throw new RuntimeException("Failed registering method '" + method.getName() +
-            "' of service '" + serviceName + "': " + e.getMessage());
-        }
 
         validateMethodParams(methodBind, endpointDesc, method, methodParamNames);
 
@@ -175,7 +157,8 @@ public class ServiceRegistry implements ServiceRegistryView {
     return path.toString();
   }
 
-  private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method, final List<String> methodParamNames) {
+  private void validateMethodParams(final String methodBind, final EndpointDescriptor endpointDesc, final Method method,
+                                    final List<String> methodParamNames) {
     final Class<?>[] parameterTypes = method.getParameterTypes();
     if (parameterTypes.length == 1 && parameterTypes[0] == Request.class) {
       return;
