@@ -10,7 +10,6 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.outbrain.ob1k.common.marshalling.ChunkHeader;
@@ -337,10 +336,11 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     }
 
     if (error instanceof IllegalArgumentException) {
-      // stack-trace not interesting.
-      logger.info("The requested URI isn't supported: " + request.getUri());
+      // stack-trace not interesting, as the exception probably because of invocation failure
+      logger.info("The requested URI isn't supported: {}", request.getUri());
+      logger.debug("Invocation error: ", error);
     } else {
-      logger.info("The requested URI isn't supported: " + request.getUri(), error);
+      logger.info("The requested URI isn't supported: {}", request.getUri(), error);
     }
     handleResponse(error.toString(), HttpResponseStatus.NOT_IMPLEMENTED, request, ctx);
   }
