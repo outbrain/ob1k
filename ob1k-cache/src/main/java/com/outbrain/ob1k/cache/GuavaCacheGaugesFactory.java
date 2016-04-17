@@ -13,96 +13,31 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 public class GuavaCacheGaugesFactory {
   public static void createGauges(final MetricFactory metricFactory, final Cache cache, final String cacheName) {
     if (metricFactory != null) {
-      metricFactory.registerGauge(cacheName, "averageLoadPenalty", new Gauge<Double>() {
-        @Override
-        public Double getValue() {
-          return cache.stats().averageLoadPenalty();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "averageLoadPenalty", () -> cache.stats().averageLoadPenalty());
 
-      metricFactory.registerGauge(cacheName, "hitRate", new Gauge<Double>() {
-        @Override
-        public Double getValue() {
-          return cache.stats().hitRate();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "hitRate", () -> cache.stats().hitRate());
 
-      metricFactory.registerGauge(cacheName, "loadExceptionRate", new Gauge<Double>() {
-        @Override
-        public Double getValue() {
-          return cache.stats().loadExceptionRate();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "loadExceptionRate", () -> cache.stats().loadExceptionRate());
 
-      metricFactory.registerGauge(cacheName, "missRate", new Gauge<Double>() {
-        @Override
-        public Double getValue() {
-          return cache.stats().missRate();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "missRate", () -> cache.stats().missRate());
 
-      metricFactory.registerGauge(cacheName, "evictionCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().evictionCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "evictionCount", () -> cache.stats().evictionCount());
 
-      metricFactory.registerGauge(cacheName, "hitCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().hitCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "hitCount", () -> cache.stats().hitCount());
 
-      metricFactory.registerGauge(cacheName, "loadCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().loadCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "loadCount", () -> cache.stats().loadCount());
 
-      metricFactory.registerGauge(cacheName, "loadExceptionCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().loadExceptionCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "loadExceptionCount", () -> cache.stats().loadExceptionCount());
 
-      metricFactory.registerGauge(cacheName, "loadSuccessCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().loadSuccessCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "loadSuccessCount", () -> cache.stats().loadSuccessCount());
 
-      metricFactory.registerGauge(cacheName, "missCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().missCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "missCount", () -> cache.stats().missCount());
 
-      metricFactory.registerGauge(cacheName, "requestCount", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().requestCount();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "requestCount", () -> cache.stats().requestCount());
 
-      metricFactory.registerGauge(cacheName, "totalLoadTime", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.stats().totalLoadTime();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "totalLoadTime", () -> cache.stats().totalLoadTime());
 
-      metricFactory.registerGauge(cacheName, "size", new Gauge<Long>() {
-        @Override
-        public Long getValue() {
-          return cache.size();
-        }
-      });
+      metricFactory.registerGauge(cacheName, "size", cache::size);
 
     }
 
