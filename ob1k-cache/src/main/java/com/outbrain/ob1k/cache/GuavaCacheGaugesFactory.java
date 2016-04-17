@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.cache;
 
 import com.google.common.cache.Cache;
-import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 
