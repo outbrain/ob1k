@@ -69,5 +69,6 @@ public class HealthyMemcachedResolverTest {
     final LookupResult lookupResult = lookupResults.get(0);
     Assert.assertEquals("host", memcachedInstance.Node.Address, lookupResult.host());
     Assert.assertEquals("port", memcachedInstance.Service.Port, lookupResult.port());
+    Assert.assertEquals("getResolvedCluster", lookupResults, resolver.getResolvedCluster());
   }
 }

@@ -7,6 +7,7 @@ import com.spotify.dns.LookupResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -48,5 +49,9 @@ public class HealthyMemcachedResolver implements DnsSrvResolver, HealthyTargetsL
 
   private LookupResult toLookupResult(final HealthInfoInstance instance) {
     return LookupResult.create(instance.Node.Address, (int)instance.Service.Port, NODE_PRIORITY, NODE_WEIGHT, LOOKUP_TTL_SEC);
+  }
+
+  public List<LookupResult> getResolvedCluster() {
+    return Collections.unmodifiableList(resolvedCluster);
   }
 }
