@@ -1,14 +1,13 @@
 package com.outbrain.ob1k.cache.memcache.folsom;
 
+import com.google.common.reflect.TypeToken;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.msgpack.MessagePack;
-import org.msgpack.template.Template;
-import org.msgpack.template.Templates;
 
 import java.io.IOException;
-import java.util.Date;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +36,8 @@ public class MessagePackTranscoderTest {
 
   @Test
   public void testRoundTripTranscoding_map() throws IOException {
-    final Template<Map<String, Integer>> mapTemplate = Templates.tMap(Templates.TString, Templates.TInteger);
-    final MessagePackTranscoder<Map<String, Integer>> t = new MessagePackTranscoder<Map<String, Integer>>(messagePack, mapTemplate);
+    final Type type = new TypeToken<Map<String, Integer>>(){}.getType();
+    final MessagePackTranscoder<Map<String, Integer>> t = new MessagePackTranscoder<>(messagePack, type);
 
     final Map<String, Integer> map = new HashMap<>();
     map.put("1", 1);
