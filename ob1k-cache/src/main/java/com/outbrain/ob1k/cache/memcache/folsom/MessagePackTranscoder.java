@@ -19,11 +19,6 @@ public class MessagePackTranscoder<T> implements Transcoder<T> {
   private final MessagePack messagePack;
   private final Type valueType;
 
-  public MessagePackTranscoder(final MessagePack messagePack, final Class<T> valueType) {
-    this.messagePack = Objects.requireNonNull(messagePack, "messagePack must not be null");
-    this.valueType = Objects.requireNonNull(valueType, "valueType must not be null");
-  }
-
   public MessagePackTranscoder(final MessagePack messagePack, final Type valueType) {
     this.messagePack = Objects.requireNonNull(messagePack, "messagePack must not be null");
     this.valueType = Objects.requireNonNull(valueType, "valueType must not be null");

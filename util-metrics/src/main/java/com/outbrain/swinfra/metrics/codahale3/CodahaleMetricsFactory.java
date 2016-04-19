@@ -44,7 +44,7 @@ public class CodahaleMetricsFactory implements MetricFactory {
 
   @Override
   public Meter createMeter(final String component, final String methodName, final String eventType) {
-    final com.codahale.metrics.Meter meter = registry.meter(MetricRegistry.name(component, methodName));
+    final com.codahale.metrics.Meter meter = registry.meter(MetricRegistry.name(component, methodName, eventType));
     return new com.outbrain.swinfra.metrics.codahale3.Meter(meter);
   }
 
