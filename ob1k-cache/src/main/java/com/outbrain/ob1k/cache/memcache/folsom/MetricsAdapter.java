@@ -51,33 +51,34 @@ public class MetricsAdapter implements Metrics {
   private volatile OutstandingRequestsGauge internalOutstandingReqGauge;
 
   public MetricsAdapter(final MetricFactory metricFactory, final String cacheName) {
-    this.gets = metricFactory.createTimer(cacheName, "get.requests");
-    this.getSuccesses = metricFactory.createMeter(cacheName, "get", "successes");
-    this.getHits = metricFactory.createMeter(cacheName, "get", "hits");
-    this.getMisses = metricFactory.createMeter(cacheName, "get", "misses");
-    this.getFailures = metricFactory.createMeter(cacheName, "get", "failures");
+    final String baseName = "folsom." + cacheName;
+    this.gets = metricFactory.createTimer(baseName, "get.requests");
+    this.getSuccesses = metricFactory.createMeter(baseName, "get", "successes");
+    this.getHits = metricFactory.createMeter(baseName, "get", "hits");
+    this.getMisses = metricFactory.createMeter(baseName, "get", "misses");
+    this.getFailures = metricFactory.createMeter(baseName, "get", "failures");
 
-    this.multigets = metricFactory.createTimer(cacheName, "multiget.requests");
-    this.multigetSuccesses = metricFactory.createMeter(cacheName, "multiget", "successes");
-    this.multigetFailures = metricFactory.createMeter(cacheName, "multiget", "failures");
+    this.multigets = metricFactory.createTimer(baseName, "multiget.requests");
+    this.multigetSuccesses = metricFactory.createMeter(baseName, "multiget", "successes");
+    this.multigetFailures = metricFactory.createMeter(baseName, "multiget", "failures");
 
-    this.sets = metricFactory.createTimer(cacheName, "set.requests");
-    this.setSuccesses = metricFactory.createMeter(cacheName, "set", "successes");
-    this.setFailures = metricFactory.createMeter(cacheName, "set", "failures");
+    this.sets = metricFactory.createTimer(baseName, "set.requests");
+    this.setSuccesses = metricFactory.createMeter(baseName, "set", "successes");
+    this.setFailures = metricFactory.createMeter(baseName, "set", "failures");
 
-    this.deletes = metricFactory.createTimer(cacheName, "delete.requests");
-    this.deleteSuccesses = metricFactory.createMeter(cacheName, "delete", "successes");
-    this.deleteFailures = metricFactory.createMeter(cacheName, "delete", "failures");
+    this.deletes = metricFactory.createTimer(baseName, "delete.requests");
+    this.deleteSuccesses = metricFactory.createMeter(baseName, "delete", "successes");
+    this.deleteFailures = metricFactory.createMeter(baseName, "delete", "failures");
 
-    this.incrDecrs = metricFactory.createTimer(cacheName, "incrdecr.requests");
-    this.incrDecrSuccesses = metricFactory.createMeter(cacheName, "incrdecr", "successes");
-    this.incrDecrFailures = metricFactory.createMeter(cacheName, "incrdecr", "failures");
+    this.incrDecrs = metricFactory.createTimer(baseName, "incrdecr.requests");
+    this.incrDecrSuccesses = metricFactory.createMeter(baseName, "incrdecr", "successes");
+    this.incrDecrFailures = metricFactory.createMeter(baseName, "incrdecr", "failures");
 
-    this.touches = metricFactory.createTimer(cacheName, "touch.requests");
-    this.touchSuccesses = metricFactory.createMeter(cacheName, "touch", "successes");
-    this.touchFailures = metricFactory.createMeter(cacheName, "touch", "failures");
+    this.touches = metricFactory.createTimer(baseName, "touch.requests");
+    this.touchSuccesses = metricFactory.createMeter(baseName, "touch", "successes");
+    this.touchFailures = metricFactory.createMeter(baseName, "touch", "failures");
 
-    metricFactory.registerGauge(cacheName, "outstandingRequests.count",
+    metricFactory.registerGauge(baseName, "outstandingRequests.count",
       () -> internalOutstandingReqGauge == null ? 0 : internalOutstandingReqGauge.getOutstandingRequests());
   }
 
