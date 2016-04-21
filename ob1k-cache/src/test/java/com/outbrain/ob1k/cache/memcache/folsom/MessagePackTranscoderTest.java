@@ -37,7 +37,7 @@ public class MessagePackTranscoderTest {
   @Test
   public void testRoundTripTranscoding_map() throws IOException {
     final Type type = new TypeToken<Map<String, Integer>>(){}.getType();
-    final MessagePackTranscoder<Map<String, Integer>> t = new MessagePackTranscoder<>(messagePack, type);
+    final MessagePackTranscoder<Map<String, Integer>> t = new MessagePackTranscoder<>(messagePack, new TypeToken<Map<String, Integer>>(){}.getType());
 
     final Map<String, Integer> map = new HashMap<>();
     map.put("1", 1);

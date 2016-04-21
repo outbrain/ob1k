@@ -8,6 +8,7 @@ import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
 import org.msgpack.MessagePack;
 
+import java.lang.reflect.Type;
 import java.util.Objects;
 
 /**
@@ -36,7 +37,7 @@ public class MemcachedClientBuilder<T> {
    * @return The builder
    */
   public static <T> MemcachedClientBuilder<T> newJsonClient(final ObjectMapper objectMapper, final Class<T> valueType) {
-    return new MemcachedClientBuilder<>(new JsonTranscoder<>(objectMapper, valueType));
+    return newClient(new JsonTranscoder<>(objectMapper, valueType));
   }
 
   /**
@@ -53,7 +54,31 @@ public class MemcachedClientBuilder<T> {
    */
   public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Class<T> valueType) {
     messagePack.register(valueType);
-    return new MemcachedClientBuilder<>(new MessagePackTranscoder<>(messagePack, valueType));
+    return newClient(new MessagePackTranscoder<>(messagePack, valueType));
+  }
+
+  /**
+   * Create a client builder for MessagePack values.
+   * @return The builder
+   */
+  public static <T> MemcachedClientBuilder<T> newMessagePackClient(final Type valueType) {
+    return newMessagePackClient(DefaultMessagePackHolder.INSTANCE, valueType);
+  }
+
+  /**
+   * Create a client builder for MessagePack values.
+   * @return The builder
+   */
+  public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Type valueType) {
+    return newClient(new MessagePackTranscoder<>(messagePack, valueType));
+  }
+
+  /**
+   * Create a client builder
+   * @return The builder
+   */
+  public static <T> MemcachedClientBuilder<T> newClient(final Transcoder<T> transcoder) {
+    return new MemcachedClientBuilder<>(transcoder);
   }
 
   public MemcachedClientBuilder<T> withObjectSizeMonitoring(final MetricFactory metricFactory, final String cacheName, final long sampleRate) {
