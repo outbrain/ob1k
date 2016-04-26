@@ -31,6 +31,7 @@ public class MessagePackTranscoderTest {
     Assert.assertEquals("decoded person age", person.age, decodedPerson.age);
     Assert.assertEquals("decoded person name", person.name, decodedPerson.name);
     Assert.assertEquals("decoded person weight", person.weight, decodedPerson.weight, 0.01f);
+
     Assert.assertNotSame(person, decodedPerson);
   }
 
@@ -47,4 +48,12 @@ public class MessagePackTranscoderTest {
     Assert.assertEquals(map, decodedMap);
   }
 
+  @Test
+  public void testRoundTripTranscoding_primitive() throws IOException {
+    final MessagePackTranscoder<Long> t = new MessagePackTranscoder<>(messagePack, Long.class);
+
+    final Long val = 666l;
+    final Long decodedVal = t.decode(t.encode(val));
+    Assert.assertEquals(val, decodedVal);
+  }
 }
