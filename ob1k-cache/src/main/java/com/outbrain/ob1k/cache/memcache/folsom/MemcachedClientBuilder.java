@@ -53,7 +53,9 @@ public class MemcachedClientBuilder<T> {
    * @return The builder
    */
   public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Class<T> valueType) {
-    messagePack.register(valueType);
+    if (!valueType.isPrimitive()) {
+      messagePack.register(valueType);
+    }
     return newClient(new MessagePackTranscoder<>(messagePack, valueType));
   }
 
