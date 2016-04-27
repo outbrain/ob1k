@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
+import org.apache.commons.lang3.ClassUtils;
 import org.msgpack.MessagePack;
 
 import java.lang.reflect.Type;
@@ -53,7 +54,7 @@ public class MemcachedClientBuilder<T> {
    * @return The builder
    */
   public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Class<T> valueType) {
-    if (!valueType.isPrimitive()) {
+    if (!ClassUtils.isPrimitiveOrWrapper(valueType)) {
       messagePack.register(valueType);
     }
     return newClient(new MessagePackTranscoder<>(messagePack, valueType));
