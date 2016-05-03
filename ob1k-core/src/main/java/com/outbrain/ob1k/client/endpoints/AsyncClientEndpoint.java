@@ -104,16 +104,9 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
 
     @Override
     public ComposableFuture<T> execute() {
-      String remoteTarget;
+      final String remoteTarget;
       try{
-        remoteTarget = targetProvider.provideTarget();
-        if (firstInvocationTarget != null) {
-          if (firstInvocationTarget.equals(remoteTarget)) {
-            remoteTarget = targetProvider.provideTarget(); // try providing another target. Target provider is thread local and it will ensure that it will provide a different target if possible
-          }
-        } else {
-          firstInvocationTarget = remoteTarget;
-        }
+        remoteTarget = provideTarget();
       } catch (final RuntimeException e) {
         return fromError(e);
       }
@@ -124,6 +117,19 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
         result.consume((res) -> doubleDispatchStrategy.onComplete(res, startTime));
       }
       return result;
+    }
+
+    private String provideTarget() {
+      String remoteTarget;
+      remoteTarget = targetProvider.provideTarget();
+      if (firstInvocationTarget != null) {
+        if (firstInvocationTarget.equals(remoteTarget)) {
+          remoteTarget = targetProvider.provideTarget(); // try providing another target. Target provider is thread local and it will ensure that it will provide a different target if possible
+        }
+      } else {
+        firstInvocationTarget = remoteTarget;
+      }
+      return remoteTarget;
     }
   }
 
