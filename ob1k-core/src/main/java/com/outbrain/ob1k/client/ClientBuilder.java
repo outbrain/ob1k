@@ -14,7 +14,6 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.common.ContentType;
-import com.outbrain.ob1k.common.endpoints.ServiceEndpointContract;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import java.io.Closeable;
 import java.lang.reflect.Method;
@@ -39,6 +38,7 @@ public class ClientBuilder<T extends Service> {
 
   private TargetProvider targetProvider = new EmptyTargetProvider();
   private ContentType clientType = ContentType.JSON;
+  private DoubleDispatchStrategy doubleDispatchStrategy;
 
   public ClientBuilder(final Class<T> type) {
     this.type = type;
@@ -142,6 +142,16 @@ public class ClientBuilder<T extends Service> {
     return this;
   }
 
+  public ClientBuilder<T> withDoubleDispatch(final DoubleDispatchStrategy doubleDispatchStrategy) {
+    this.doubleDispatchStrategy = doubleDispatchStrategy;
+    return this;
+  }
+
+  public ClientBuilder<T> withDoubleDispatch(final long durationMs) {
+    this.doubleDispatchStrategy = new StaticDoubleDispatchStrategy(durationMs);
+    return this;
+  }
+
   public ClientBuilder<T> bindEndpoint(final String methodName, final HttpRequestMethodType requestMethodType,
                                        final String path, final ServiceFilter... filters) {
     final List<? extends ServiceFilter> serviceFilters;
@@ -200,7 +210,7 @@ public class ClientBuilder<T extends Service> {
 
         if (isAsyncMethod(method)) {
           final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, endpointDescriptor.filters);
-          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]));
+          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]), doubleDispatchStrategy);
         } else if (isStreamingMethod(method)) {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
           clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));

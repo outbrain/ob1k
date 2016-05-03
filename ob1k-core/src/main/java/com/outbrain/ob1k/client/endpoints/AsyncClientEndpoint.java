@@ -2,6 +2,7 @@ package com.outbrain.ob1k.client.endpoints;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 
+import com.outbrain.ob1k.client.DoubleDispatchStrategy;
 import com.outbrain.ob1k.client.ctx.AsyncClientRequestContext;
 import com.outbrain.ob1k.client.ctx.DefaultAsyncClientRequestContext;
 import com.outbrain.ob1k.client.targets.TargetProvider;
@@ -10,6 +11,8 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.handlers.FutureAction;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
@@ -19,6 +22,7 @@ import org.apache.commons.codec.EncoderException;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Handle the async invocation chain of filters and remote target on the client side
@@ -42,9 +46,10 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
   };
 
   public AsyncClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
-                             final Endpoint endpoint, final AsyncFilter[] filters) {
+                             final Endpoint endpoint, final AsyncFilter[] filters,
+                             final DoubleDispatchStrategy doubleDispatchStrategy) {
 
-    super(httpClient, marshallerRegistry, endpoint);
+    super(httpClient, marshallerRegistry, endpoint, doubleDispatchStrategy);
     this.filters = filters;
   }
 
@@ -83,15 +88,58 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     }
   }
 
+  private class InvokeAsyncAction<T> implements FutureAction<T> {
+    private final TargetProvider targetProvider;
+    private final AsyncClientEndpoint asyncClientEndpoint;
+    private final Object[] params;
+    private final DoubleDispatchStrategy doubleDispatchStrategy;
+    private volatile String firstInvocationTarget;
+
+    public InvokeAsyncAction(final TargetProvider targetProvider, final Object[] params, final DoubleDispatchStrategy doubleDispatchStrategy, final AsyncClientEndpoint asyncClientEndpoint) {
+      this.targetProvider=targetProvider;
+      this.asyncClientEndpoint = asyncClientEndpoint;
+      this.doubleDispatchStrategy = doubleDispatchStrategy;
+      this.params = params;
+    }
+
+    @Override
+    public ComposableFuture<T> execute() {
+      final String remoteTarget;
+      try{
+        remoteTarget = provideTarget();
+      } catch (final RuntimeException e) {
+        return fromError(e);
+      }
+      final DefaultAsyncClientRequestContext ctx = new DefaultAsyncClientRequestContext(remoteTarget, params, asyncClientEndpoint);
+      final long startTime = System.currentTimeMillis();
+      final ComposableFuture<T> result = asyncClientEndpoint.invokeAsync(ctx);
+      if (doubleDispatchStrategy != null) {
+        result.consume((res) -> doubleDispatchStrategy.onComplete(res, startTime));
+      }
+      return result;
+    }
+
+    private String provideTarget() {
+      String remoteTarget;
+      remoteTarget = targetProvider.provideTarget();
+      if (firstInvocationTarget != null) {
+        if (firstInvocationTarget.equals(remoteTarget)) {
+          remoteTarget = targetProvider.provideTarget(); // try providing another target. Target provider is thread local and it will ensure that it will provide a different target if possible
+        }
+      } else {
+        firstInvocationTarget = remoteTarget;
+      }
+      return remoteTarget;
+    }
+  }
+
   @Override
   public Object invoke(final TargetProvider targetProvider, final Object[] params) throws Throwable {
-    final String remoteTarget;
-    try{
-      remoteTarget = targetProvider.provideTarget();
-    } catch (final RuntimeException e) {
-      return fromError(e);
+    final InvokeAsyncAction action = new InvokeAsyncAction(targetProvider, params, doubleDispatchStrategy, this);
+    if (doubleDispatchStrategy != null) {
+      return ComposableFutures.doubleDispatch(doubleDispatchStrategy.getDoubleDispatchIntervalMs(), TimeUnit.MILLISECONDS, action);
+    } else {
+      return action.execute();
     }
-    final DefaultAsyncClientRequestContext ctx = new DefaultAsyncClientRequestContext(remoteTarget, params, this);
-    return invokeAsync(ctx);
-  }
+ }
 }

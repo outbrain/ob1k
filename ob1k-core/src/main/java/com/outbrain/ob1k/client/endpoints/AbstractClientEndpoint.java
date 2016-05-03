@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
+import com.outbrain.ob1k.client.DoubleDispatchStrategy;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.client.ctx.ClientRequestContext;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
@@ -29,13 +30,15 @@ public abstract class AbstractClientEndpoint {
   protected final RequestMarshallerRegistry marshallerRegistry;
   protected final HttpClient httpClient;
   public final Endpoint endpoint;
+  protected final DoubleDispatchStrategy doubleDispatchStrategy;
 
   protected AbstractClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
-                                   final Endpoint endpoint) {
+                                   final Endpoint endpoint, final DoubleDispatchStrategy doubleDispatchStrategy) {
 
     this.httpClient = httpClient;
     this.marshallerRegistry = marshallerRegistry;
     this.endpoint = endpoint;
+    this.doubleDispatchStrategy = doubleDispatchStrategy;
   }
 
   protected Type extractResponseType() {

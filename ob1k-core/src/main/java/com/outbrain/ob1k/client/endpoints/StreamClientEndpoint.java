@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.client.endpoints;
 
+import com.outbrain.ob1k.client.DoubleDispatchStrategy;
 import com.outbrain.ob1k.client.ctx.DefaultStreamClientRequestContext;
 import com.outbrain.ob1k.client.ctx.StreamClientRequestContext;
 import com.outbrain.ob1k.client.targets.TargetProvider;
@@ -42,7 +43,7 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   public StreamClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
                               final Endpoint endpoint, final StreamFilter[] filters) {
 
-    super(httpClient, marshallerRegistry, endpoint);
+    super(httpClient, marshallerRegistry, endpoint, null);
     this.filters = filters;
   }
 
