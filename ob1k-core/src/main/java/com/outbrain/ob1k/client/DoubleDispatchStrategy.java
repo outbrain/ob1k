@@ -10,15 +10,15 @@ import com.outbrain.ob1k.concurrent.Try;
  */
 public interface DoubleDispatchStrategy {
   /**
-   * Implement this method to determine how long should the double dispatch delay be.
+   * This method determines how long should the double dispatch delay be.
    * If invocation will be completed before it passes a double dispatch will not be initiated
-   * This method will be invoked by HttpClient for any RPC call.
+   * It will be invoked by HttpClient for any RPC call.
    * @return The amount of milliseconds that will pass before double dispatch is initiated
    */
   long getDoubleDispatchIntervalMs();
   /**
-   * Implement this method to gather statistics on internal behavior of HttpClient
-   * This method will be invoked by HttpClient for any RPC call
+   * This method gathers statistics on internal behavior of HttpClient
+   * It will be invoked by HttpClient for any RPC call
    * @param result a Try which holds the result of the exception of an invocation (including double dispatch)
    * @param startTimeMs describes when invocation started length of excecution can be deduced by System.currentTimeMillis() - startTimeMs
    */

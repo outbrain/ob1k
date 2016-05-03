@@ -41,10 +41,9 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   };
 
   public StreamClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
-                              final Endpoint endpoint, final StreamFilter[] filters,
-                              final DoubleDispatchStrategy doubleDispatchStrategy) {
+                              final Endpoint endpoint, final StreamFilter[] filters) {
 
-    super(httpClient, marshallerRegistry, endpoint, doubleDispatchStrategy);
+    super(httpClient, marshallerRegistry, endpoint, null);
     this.filters = filters;
   }
 

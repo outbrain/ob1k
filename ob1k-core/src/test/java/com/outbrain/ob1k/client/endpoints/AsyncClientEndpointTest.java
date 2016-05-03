@@ -32,31 +32,34 @@ public class AsyncClientEndpointTest {
 
   @Test
   public void testDoubleDispatchNotTriggered() throws Throwable {
-    final DoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
+    final TestDoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
     final TestTargetProvider targetProvider = new TestTargetProvider("single",1) ;
     final AsyncClientEndpoint asyncClientEndpoint = createDummyAsyncClientEndpoint(doubleDispatchStrategy,BASE_TIME_INTERVAL_MS/2);
     final ComposableFuture<Integer> result = (ComposableFuture<Integer>) asyncClientEndpoint.invoke(targetProvider,null);
     assertEquals(1,result.get().intValue());
     assertEquals(1,targetProvider.getProvideTargetCount());
+    assertEquals(1,doubleDispatchStrategy.getOnCompleteInvocations());
   }
   @Test
   public void testDoubleDispatchTriggered() throws Throwable {
-    final DoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
+    final TestDoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
     final TestTargetProvider targetProvider = new TestTargetProvider("double",2) ;
     final AsyncClientEndpoint asyncClientEndpoint = createDummyAsyncClientEndpoint(doubleDispatchStrategy,BASE_TIME_INTERVAL_MS*2);
     final ComposableFuture<Integer> result = (ComposableFuture<Integer>) asyncClientEndpoint.invoke(targetProvider,null);
     assertEquals(2,result.get().intValue());
     assertEquals(2,targetProvider.getProvideTargetCount());
+    assertEquals(1,doubleDispatchStrategy.getOnCompleteInvocations());
   }
 
   @Test
   public void testDoubleDispatchTriggeredWithProvideTargetRetry() throws Throwable {
-    final DoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
+    final TestDoubleDispatchStrategy doubleDispatchStrategy = new TestDoubleDispatchStrategy();
     final TestTargetProvider targetProvider = new TestTargetProvider("triple",1) ; // single target....
     final AsyncClientEndpoint asyncClientEndpoint = createDummyAsyncClientEndpoint(doubleDispatchStrategy,BASE_TIME_INTERVAL_MS*2);
     final ComposableFuture<Integer> result = (ComposableFuture<Integer>) asyncClientEndpoint.invoke(targetProvider,null);
     assertEquals(2,result.get().intValue());
     assertEquals(3,targetProvider.getProvideTargetCount());
+    assertEquals(1,doubleDispatchStrategy.getOnCompleteInvocations());
   }
 
   // A provider which performs a round robing on dummy targets
@@ -78,7 +81,6 @@ public class AsyncClientEndpointTest {
     @Override
     public String provideTarget() {
       final String target = prefix + (provideTargetCount.incrementAndGet() % numTargets);
-      System.out.println(target);
       return target;
     }
 
@@ -87,7 +89,8 @@ public class AsyncClientEndpointTest {
     }
   }
 
-  class TestDoubleDispatchStrategy implements DoubleDispatchStrategy {
+  private class TestDoubleDispatchStrategy implements DoubleDispatchStrategy {
+    private final AtomicInteger onCompleteInvocations = new AtomicInteger();
     @Override
     public long getDoubleDispatchIntervalMs() {
       return BASE_TIME_INTERVAL_MS;
@@ -95,7 +98,11 @@ public class AsyncClientEndpointTest {
 
     @Override
     public void onComplete(final Try result, final long startTimeMs) {
-      System.out.println("completed: " + (System.currentTimeMillis() - startTimeMs));
+      onCompleteInvocations.incrementAndGet();
+    }
+
+    public int getOnCompleteInvocations() {
+      return onCompleteInvocations.get();
     }
   }
 
@@ -108,7 +115,6 @@ public class AsyncClientEndpointTest {
       public ComposableFuture<Integer> invokeAsync(final AsyncClientRequestContext ctx) {
         final int invocation = invocations.incrementAndGet();
         final long effectiveOpDelay = invocation == 1 ? opDelay : opDelay/20; //short delay on the second invocation of double dispatch
-        System.out.println("invocation:" + invocation + " opdelay:" + effectiveOpDelay);
         return ComposableFutures.scheduleFuture(() -> ComposableFutures.fromValue(invocation), effectiveOpDelay , TimeUnit.MILLISECONDS);
       }
     };

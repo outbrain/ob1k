@@ -38,7 +38,7 @@ public class ClientBuilder<T extends Service> {
 
   private TargetProvider targetProvider = new EmptyTargetProvider();
   private ContentType clientType = ContentType.JSON;
-  DoubleDispatchStrategy doubleDispatchStrategy;
+  private DoubleDispatchStrategy doubleDispatchStrategy;
 
   public ClientBuilder(final Class<T> type) {
     this.type = type;
@@ -213,7 +213,7 @@ public class ClientBuilder<T extends Service> {
           clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]), doubleDispatchStrategy);
         } else if (isStreamingMethod(method)) {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
-          clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]), doubleDispatchStrategy);
+          clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
         } else {
           throw new IllegalArgumentException("Interface method " + type.getSimpleName() + "::" + methodName +
             " has illegal signature. All public methods must return ComposableFuture or Observable.");

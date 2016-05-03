@@ -88,7 +88,7 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     }
   }
 
-  public class InvokeAsyncAction<T> implements FutureAction<T> {
+  private class InvokeAsyncAction<T> implements FutureAction<T> {
     private final TargetProvider targetProvider;
     private final AsyncClientEndpoint asyncClientEndpoint;
     private final Object[] params;
@@ -118,8 +118,8 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
         return fromError(e);
       }
       final DefaultAsyncClientRequestContext ctx = new DefaultAsyncClientRequestContext(remoteTarget, params, asyncClientEndpoint);
-      final ComposableFuture<T> result = asyncClientEndpoint.invokeAsync(ctx);
       final long startTime = System.currentTimeMillis();
+      final ComposableFuture<T> result = asyncClientEndpoint.invokeAsync(ctx);
       if (doubleDispatchStrategy != null) {
         result.consume((res) -> doubleDispatchStrategy.onComplete(res, startTime));
       }
