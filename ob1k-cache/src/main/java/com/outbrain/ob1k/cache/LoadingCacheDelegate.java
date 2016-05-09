@@ -5,9 +5,12 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Producer;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,10 +27,11 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.newPromise;
  * a wrapper for TypedCache implementation that delegate missing entries to a loader.
  * the loader is used a such a way that prevents concurrent activations on the same key.
  * <p>
- * Created by aronen on 10/26/14.
+ * @author aronen 10/26/14.
  */
 public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private static final long DEFAULT_DURATION_MS = 500;
+  private static final Logger log = LoggerFactory.getLogger(LoadingCacheDelegate.class);
 
   private final TypedCache<K, V> cache;
   private final CacheLoader<K, V> loader;
@@ -135,7 +139,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       loadedResult.consume(loadedRes -> {
         if (loadedRes.isSuccess()) {
           promise.set(loadedRes.getValue());
-          cache.setAsync(key, loadedRes.getValue()).consume(result -> futureValues.remove(key));
+          cacheLoadedValue(key, loadedRes);
         } else {
           final Throwable error = loadedRes.getError();
           if (loaderErrors != null) {
@@ -153,6 +157,13 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       promise.setException(e);
       futureValues.remove(key);
     }
+  }
+
+  private void cacheLoadedValue(final K key, final Try<V> loadedRes) {
+    cache.setAsync(key, loadedRes.getValue()).consume(result -> {
+      futureValues.remove(key);
+      handleCacheLoadedResultsFailure(result);
+    });
   }
 
   private static <T> void consumeFrom(final ComposableFuture<T> source, final Consumer<T> consumer) {
@@ -232,12 +243,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             futureValues.get(key).set(elements.get(key));
           }
 
-          cache.setBulkAsync(elements).consume(setResults -> {
-            for (final K key : missingFromCacheKeys) {
-              futureValues.remove(key);
-            }
-          });
-
+          cacheLoadedValues(missingFromCacheKeys, elements);
         } else {
           for (final K key : missingFromCacheKeys) {
             final ComposablePromise<V> promise = futureValues.get(key);
@@ -256,6 +262,21 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         promise.setException(e);
         futureValues.remove(key);
       }
+    }
+  }
+
+  private void cacheLoadedValues(final List<K> missingFromCacheKeys, final Map<K, V> elements) {
+    cache.setBulkAsync(elements).consume(setBulkResult -> {
+      missingFromCacheKeys.forEach(futureValues::remove);
+
+      handleCacheLoadedResultsFailure(setBulkResult);
+    });
+  }
+
+  private void handleCacheLoadedResultsFailure(final Try<?> setCommandResult) {
+    if(!setCommandResult.isSuccess()) {
+      cacheErrors.inc();
+      log.error("Failed to set loaded value", setCommandResult.getError());
     }
   }
 

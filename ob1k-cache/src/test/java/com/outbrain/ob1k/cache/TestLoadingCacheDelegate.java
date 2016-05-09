@@ -7,6 +7,7 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.codahale3.CodahaleMetricsFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,6 +72,25 @@ public class TestLoadingCacheDelegate {
     } catch (final ExecutionException e) {
       Assert.assertEquals("cache timeouts", 1, registry.getCounters().get("LoadingCacheDelegate.meh.loaderTimeouts").getCount());
     }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") final
+  public void testCacheLoadResultsFailure_shouldCountErrors() throws ExecutionException, InterruptedException {
+    final String key = "key";
+    final String value = "value";
+    final String cacheName = "meh";
+    final TypedCache<String, String> mockCache = Mockito.mock(TypedCache.class);
+    Mockito.when(mockCache.getAsync(key)).thenReturn(ComposableFutures.fromNull());
+    Mockito.when(mockCache.setAsync(key, value)).thenReturn(ComposableFutures.fromError(new RuntimeException("MOCK failure")));
+
+    final CacheLoader<String,String> mockLoader = Mockito.mock(CacheLoader.class);
+    Mockito.when(mockLoader.load(cacheName, key)).thenReturn(ComposableFutures.fromValue(value));
+
+    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(mockCache, mockLoader, cacheName, metricFactory, 1, TimeUnit.HOURS);
+    loadingCache.getAsync(key).get();
+
+    Assert.assertEquals("expected errros", 1, registry.getCounters().get("LoadingCacheDelegate.meh.cacheErrors").getCount());
   }
 
   @Test
