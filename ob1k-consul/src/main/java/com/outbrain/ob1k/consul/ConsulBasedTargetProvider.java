@@ -33,11 +33,11 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
   private final HealthyTargetsList healtyTargetsList;
   private volatile List<String> targets;
 
-  public ConsulBasedTargetProvider(final HealthyTargetsList healtyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
+  public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
     this.tag2weight = tag2weight == null ? Collections.<String, Integer>emptyMap() : new HashMap<>(tag2weight);
-    this.healtyTargetsList = Preconditions.checkNotNull(healtyTargetsList, "healtyTargetsList must not be null");
-    healtyTargetsList.addListener(this);
+    this.healtyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healtyTargetsList must not be null");
+    healthyTargetsList.addListener(this);
   }
 
   @Override
