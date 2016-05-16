@@ -8,9 +8,11 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Collections.nCopies;
 import static junit.framework.TestCase.assertEquals;
 
 /**
@@ -66,9 +68,9 @@ public class AsyncClientEndpointTest {
   private static class TestTargetProvider implements TargetProvider {
     private final AtomicInteger provideTargetCount = new AtomicInteger();
     private final String prefix;
-    private final long numTargets;
+    private final int numTargets;
 
-    public TestTargetProvider(final String prefix, final long numTargets) {
+    public TestTargetProvider(final String prefix, final int numTargets) {
       this.prefix = prefix;
       this.numTargets = numTargets;
     }
@@ -80,8 +82,12 @@ public class AsyncClientEndpointTest {
 
     @Override
     public String provideTarget() {
-      final String target = prefix + (provideTargetCount.incrementAndGet() % numTargets);
-      return target;
+      return prefix + (provideTargetCount.incrementAndGet() % numTargets);
+    }
+
+    @Override
+    public List<String> provideTargets(final int targetsNum) {
+      return nCopies(targetsNum, provideTarget());
     }
 
     public int getProvideTargetCount() {

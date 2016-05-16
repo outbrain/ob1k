@@ -9,8 +9,13 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.lang.Math.min;
 
 /**
  * A {@link TargetProvider} that provides targets registered in consul.
@@ -30,33 +35,24 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
 
   private final String urlSuffix;
   private final Map<String, Integer> tag2weight;
-  private final HealthyTargetsList healtyTargetsList;
+  private final HealthyTargetsList healthyTargetsList;
   private volatile List<String> targets;
 
   public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
     this.tag2weight = tag2weight == null ? Collections.<String, Integer>emptyMap() : new HashMap<>(tag2weight);
-    this.healtyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healtyTargetsList must not be null");
+    this.healthyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healthyTargetsList must not be null");
     healthyTargetsList.addListener(this);
   }
 
   @Override
   public String getTargetLogicalName() {
-    return healtyTargetsList.getModule();
+    return healthyTargetsList.getModule();
   }
 
   @Override
   public String provideTarget() {
-    if (targets.isEmpty()) {
-      throw new IllegalStateException("No targets are currently registered for module " + healtyTargetsList.getModule());
-    }
-
-    final int index = currIndex.get();
-    currIndex.set(index + 1);
-    final List<String> currTargets = targets;
-    final String target = currTargets.get(Math.abs(index % currTargets.size()));
-    log.debug("target provided: {}", target);
-    return target;
+    return provideTargets(1).iterator().next();
   }
 
   private int instanceWeight(final HealthInfoInstance.Service instance) {
@@ -67,6 +63,26 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     }
 
     return 1;
+  }
+
+  @Override
+  public List<String> provideTargets(final int targetsNum) {
+    final List<String> currTargets = targets;
+
+    checkState(!currTargets.isEmpty(), "No targets are currently registered for module " + healthyTargetsList.getModule());
+    checkArgument(targetsNum > 0, "targets number must be more than zero");
+
+    final int targetsSize = currTargets.size();
+    final int index = currIndex.get();
+
+    currIndex.set(index + 1);
+
+    final List<String> providedTargets = new LinkedList<>();
+    for (int i = 0; i < targetsNum; i++) {
+      providedTargets.add(currTargets.get(Math.abs((index + i) % targetsSize)));
+    }
+
+    return providedTargets;
   }
 
   @Override
