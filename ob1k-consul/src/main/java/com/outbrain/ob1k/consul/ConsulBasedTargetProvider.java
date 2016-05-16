@@ -30,25 +30,25 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
 
   private final String urlSuffix;
   private final Map<String, Integer> tag2weight;
-  private final HealthyTargetsList healtyTargetsList;
+  private final HealthyTargetsList healthyTargetsList;
   private volatile List<String> targets;
 
   public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
     this.tag2weight = tag2weight == null ? Collections.<String, Integer>emptyMap() : new HashMap<>(tag2weight);
-    this.healtyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healtyTargetsList must not be null");
+    this.healthyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healthyTargetsList must not be null");
     healthyTargetsList.addListener(this);
   }
 
   @Override
   public String getTargetLogicalName() {
-    return healtyTargetsList.getModule();
+    return healthyTargetsList.getModule();
   }
 
   @Override
   public String provideTarget() {
     if (targets.isEmpty()) {
-      throw new IllegalStateException("No targets are currently registered for module " + healtyTargetsList.getModule());
+      throw new IllegalStateException("No targets are currently registered for module " + healthyTargetsList.getModule());
     }
 
     final int index = currIndex.get();
