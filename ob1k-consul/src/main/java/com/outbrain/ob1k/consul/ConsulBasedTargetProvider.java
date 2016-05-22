@@ -51,7 +51,7 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
 
   @Override
   public String provideTarget() {
-    return provideTargets(1).iterator().next();
+    return provideTargets(1).get(0); // knowing that provideTargets may not return empty collection
   }
 
   private int instanceWeight(final HealthInfoInstance.Service instance) {

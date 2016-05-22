@@ -1,19 +1,18 @@
 package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
-import com.outbrain.ob1k.client.DoubleDispatchStrategy;
-import com.outbrain.ob1k.client.targets.TargetProvider;
+import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.ctx.ClientRequestContext;
+import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.ContentType;
-import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
-
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -30,15 +29,12 @@ public abstract class AbstractClientEndpoint {
   protected final RequestMarshallerRegistry marshallerRegistry;
   protected final HttpClient httpClient;
   public final Endpoint endpoint;
-  protected final DoubleDispatchStrategy doubleDispatchStrategy;
 
   protected AbstractClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
-                                   final Endpoint endpoint, final DoubleDispatchStrategy doubleDispatchStrategy) {
-
+                                   final Endpoint endpoint) {
     this.httpClient = httpClient;
     this.marshallerRegistry = marshallerRegistry;
     this.endpoint = endpoint;
-    this.doubleDispatchStrategy = doubleDispatchStrategy;
   }
 
   protected Type extractResponseType() {
@@ -60,7 +56,9 @@ public abstract class AbstractClientEndpoint {
     return marshaller.marshallRequestParams((Object[]) value);
   }
 
-  public abstract Object invoke(final TargetProvider remoteTarget, final Object[] params) throws Throwable;
+  public abstract DispatchAction createDispatchAction(final Object[] params);
+  public abstract Object dispatch(final TargetProvider targetProvider, final DispatchStrategy dispatchStrategy,
+                                  final DispatchAction dispatchAction);
 
   public static class Endpoint {
 

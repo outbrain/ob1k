@@ -1,8 +1,8 @@
 package com.outbrain.ob1k.client.endpoints;
 
-import com.outbrain.ob1k.client.DoubleDispatchStrategy;
 import com.outbrain.ob1k.client.ctx.DefaultStreamClientRequestContext;
 import com.outbrain.ob1k.client.ctx.StreamClientRequestContext;
+import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
@@ -14,7 +14,6 @@ import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
-import static rx.Observable.error;
 
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -43,7 +42,7 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   public StreamClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
                               final Endpoint endpoint, final StreamFilter[] filters) {
 
-    super(httpClient, marshallerRegistry, endpoint, null);
+    super(httpClient, marshallerRegistry, endpoint);
     this.filters = filters;
   }
 
@@ -83,15 +82,17 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   }
 
   @Override
-  public Object invoke(final TargetProvider targetProvider, final Object[] params) throws Throwable {
-    final String remoteTarget;
-    try{
-      remoteTarget = targetProvider.provideTarget();
-    } catch (final RuntimeException e) {
-      return error(e);
-    }
-    final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
-    return invokeStream(ctx);
+  public DispatchAction createDispatchAction(final Object[] params) {
+    return remoteTarget -> {
+      final DefaultStreamClientRequestContext ctx = new DefaultStreamClientRequestContext(remoteTarget, params, this);
+      return invokeStream(ctx);
+    };
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public Object dispatch(final TargetProvider targetProvider, final DispatchStrategy dispatchStrategy,
+                         final DispatchAction dispatchAction) {
+    return dispatchStrategy.dispatchStream(targetProvider, dispatchAction);
+  }
 }

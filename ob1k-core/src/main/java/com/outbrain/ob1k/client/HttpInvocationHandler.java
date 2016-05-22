@@ -2,7 +2,9 @@ package com.outbrain.ob1k.client;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
+import com.outbrain.ob1k.client.endpoints.DispatchAction;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.http.HttpClient;
 import org.slf4j.Logger;
@@ -22,24 +24,33 @@ class HttpInvocationHandler implements InvocationHandler {
   private final HttpClient client;
   private final Map<Method, AbstractClientEndpoint> endpoints;
   private final TargetProvider targetProvider;
+  private final DispatchStrategy dispatchStrategy;
 
-  HttpInvocationHandler(final TargetProvider targetProvider, final HttpClient client, final Map<Method, AbstractClientEndpoint> endpoints) {
+  HttpInvocationHandler(final TargetProvider targetProvider, final HttpClient client,
+                        final Map<Method, AbstractClientEndpoint> endpoints, final DispatchStrategy dispatchStrategy) {
 
     this.client = checkNotNull(client, "client may not be null");
     this.targetProvider = checkNotNull(targetProvider, "targetProvider may not be null");
     this.endpoints = checkNotNull(endpoints, "endpoints may not be null");
+    this.dispatchStrategy = checkNotNull(dispatchStrategy, "dispatchStrategy may not be null");
   }
 
   @Override
   public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
 
-    if ("close".equals(method.getName()) && method.getParameterTypes().length == 0) {
+    if (isCloseInvoke(method)) {
       client.close();
       logger.debug("client {} is closed.", targetProvider.getTargetLogicalName());
       return null;
     }
 
     final AbstractClientEndpoint endpoint = endpoints.get(method);
-    return endpoint.invoke(targetProvider, args);
+    final DispatchAction dispatchAction = endpoint.createDispatchAction(args);
+
+    return endpoint.dispatch(targetProvider, dispatchStrategy, dispatchAction);
+  }
+
+  private boolean isCloseInvoke(final Method method) {
+    return "close".equals(method.getName()) && method.getParameterTypes().length == 0;
   }
 }
