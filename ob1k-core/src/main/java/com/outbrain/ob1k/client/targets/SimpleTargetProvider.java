@@ -2,6 +2,10 @@ package com.outbrain.ob1k.client.targets;
 
 import com.google.common.base.Preconditions;
 
+import java.util.List;
+
+import static java.util.Collections.nCopies;
+
 /**
  * A {@link TargetProvider} that provides a fixed target.
  * @author eran 6/21/15.
@@ -22,5 +26,10 @@ public class SimpleTargetProvider implements TargetProvider {
   @Override
   public String provideTarget() {
     return target;
+  }
+
+  @Override
+  public List<String> provideTargets(final int targetsNum) {
+    return nCopies(targetsNum, target);
   }
 }

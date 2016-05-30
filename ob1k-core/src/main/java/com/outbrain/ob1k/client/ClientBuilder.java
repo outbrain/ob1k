@@ -2,6 +2,8 @@ package com.outbrain.ob1k.client;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
+import com.outbrain.ob1k.client.dispatch.DefaultDispatchStrategy;
+import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
@@ -38,7 +40,7 @@ public class ClientBuilder<T extends Service> {
 
   private TargetProvider targetProvider = new EmptyTargetProvider();
   private ContentType clientType = ContentType.JSON;
-  private DoubleDispatchStrategy doubleDispatchStrategy;
+  private DispatchStrategy dispatchStrategy = DefaultDispatchStrategy.INSTANCE;
 
   public ClientBuilder(final Class<T> type) {
     this.type = type;
@@ -142,13 +144,8 @@ public class ClientBuilder<T extends Service> {
     return this;
   }
 
-  public ClientBuilder<T> withDoubleDispatch(final DoubleDispatchStrategy doubleDispatchStrategy) {
-    this.doubleDispatchStrategy = doubleDispatchStrategy;
-    return this;
-  }
-
-  public ClientBuilder<T> withDoubleDispatch(final long durationMs) {
-    this.doubleDispatchStrategy = new StaticDoubleDispatchStrategy(durationMs);
+  public ClientBuilder<T> setDispatchStrategy(final DispatchStrategy dispatchStrategy) {
+    this.dispatchStrategy = dispatchStrategy;
     return this;
   }
 
@@ -168,10 +165,11 @@ public class ClientBuilder<T extends Service> {
     if (!type.isInterface()) {
       throw new IllegalArgumentException("Type " + type.getCanonicalName() + " must be an interface as client uses JDK proxy");
     }
+
     final ClassLoader loader = ClientBuilder.class.getClassLoader();
     final HttpClient httpClient = httpClientBuilder.build();
     final Map<Method, AbstractClientEndpoint> endpoints = extractEndpointsFromType(httpClient);
-    final HttpInvocationHandler handler = new HttpInvocationHandler(targetProvider, httpClient, endpoints);
+    final HttpInvocationHandler handler = new HttpInvocationHandler(targetProvider, httpClient, endpoints, dispatchStrategy);
 
     @SuppressWarnings("unchecked")
     final T proxy = (T) Proxy.newProxyInstance(loader, new Class[]{type, Closeable.class}, handler);
@@ -210,7 +208,7 @@ public class ClientBuilder<T extends Service> {
 
         if (isAsyncMethod(method)) {
           final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, endpointDescriptor.filters);
-          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]), doubleDispatchStrategy);
+          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]));
         } else if (isStreamingMethod(method)) {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
           clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
