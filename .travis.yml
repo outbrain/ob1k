@@ -4,3 +4,11 @@ jdk:
 cache:
   directories:
   - $HOME/.m2
+
+before_script:
+  - wget 'https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_linux_amd64.zip'
+  - unzip "consul_0.6.3_linux_amd64.zip"
+  - ./consul --version
+
+script:
+  - ../consul agent -dev -advertise=127.0.0.1 &
