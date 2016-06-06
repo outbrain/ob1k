@@ -274,8 +274,10 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   private void handleCacheLoadedResultsFailure(final Try<?> setCommandResult) {
-    if(!setCommandResult.isSuccess()) {
-      cacheErrors.inc();
+    if (!setCommandResult.isSuccess()) {
+      if (cacheErrors != null) {
+        cacheErrors.inc();
+      }
       log.error("Failed to set loaded value", setCommandResult.getError());
     }
   }
