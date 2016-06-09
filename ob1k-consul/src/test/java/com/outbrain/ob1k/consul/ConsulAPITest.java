@@ -67,10 +67,15 @@ public class ConsulAPITest {
 
   @Test
   public void testFindInstances_shouldFindWhenDCIsSpecified() throws ExecutionException, InterruptedException {
-    final String dc = ConsulAPI.getCatalog().datacenters().get().stream().findFirst().get(); // assuming 1st DC is the closest and is local - according to spec
-    final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances(SERVICE1_NAME, dc).get();
-    Assert.assertNotNull(instances);
-    Assert.assertEquals(1, instances.size());
+    final Set<String> datacenters = ConsulAPI.getCatalog().datacenters().get();
+    boolean found = false;
+    for (final String dc : datacenters) {
+      final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances(SERVICE1_NAME, dc).get();
+      Assert.assertNotNull(instances);
+      found |= !instances.isEmpty();
+    }
+
+    Assert.assertTrue("service wasn't found in all DCs", found);
   }
 
   @Test
@@ -120,6 +125,7 @@ public class ConsulAPITest {
   public void testDisableMaintenance() throws ExecutionException, InterruptedException {
     ConsulAPI.getServiceRegistry().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
     ConsulAPI.getServiceRegistry().disableMaintenance(SERVICE1_REGISTRATION.getID()).get();
+    Thread.sleep(10);
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Assert.assertNotNull(service1Health);
     Assert.assertEquals(1, service1Health.size());
