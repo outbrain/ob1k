@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -42,6 +43,17 @@ public class ConsulAPITest {
     final List<ServiceInstance> instances = ConsulAPI.getCatalog().findDcLocalInstances(SERVICE2_NAME).get();
     Assert.assertNotNull(instances);
     Assert.assertEquals(1, instances.size());
+  }
+
+  @Test
+  public void testServices() throws ExecutionException, InterruptedException {
+    final Map<String, Set<String>> services = ConsulAPI.getCatalog().services("").get();
+    System.out.println("QQQQQQQQQQQQQQQQQQQQQQ "+services);
+    Assert.assertNotNull(services);
+    Assert.assertTrue(services.containsKey(SERVICE1_NAME));
+    Assert.assertTrue(services.containsKey(SERVICE2_NAME));
+    Assert.assertTrue(services.get(SERVICE1_NAME).containsAll(SERVICE1_REGISTRATION.getTags()));
+    Assert.assertTrue(services.get(SERVICE2_NAME).containsAll(SERVICE2_REGISTRATION.getTags()));
   }
 
   @Test
@@ -125,10 +137,17 @@ public class ConsulAPITest {
   public void testDisableMaintenance() throws ExecutionException, InterruptedException {
     ConsulAPI.getServiceRegistry().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
     ConsulAPI.getServiceRegistry().disableMaintenance(SERVICE1_REGISTRATION.getID()).get();
-    Thread.sleep(10);
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Assert.assertNotNull(service1Health);
     Assert.assertEquals(1, service1Health.size());
+  }
+
+  @Test
+  public void testDeregister() throws ExecutionException, InterruptedException {
+    ConsulAPI.getServiceRegistry().deregister(SERVICE1_REGISTRATION.getID()).get();
+    final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
+    Assert.assertNotNull(service1Health);
+    Assert.assertTrue(service1Health.isEmpty());
   }
 
   private static class PassingCheck extends ServiceRegistration.Check {
