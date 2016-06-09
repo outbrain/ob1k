@@ -15,7 +15,6 @@ import java.util.concurrent.ExecutionException;
 /**
  * @author Eran Harel
  */
-@Ignore
 public class ConsulAPITest {
   private static final String SERVICE1_NAME = "MockService1";
   private static final String SERVICE2_NAME = "MockService2";
@@ -68,14 +67,15 @@ public class ConsulAPITest {
 
   @Test
   public void testFindInstances_shouldFindWhenDCIsSpecified() throws ExecutionException, InterruptedException {
-    final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances(SERVICE1_NAME, "dc1").get();
+    final String dc = ConsulAPI.getCatalog().datacenters().get().stream().findFirst().get(); // assuming 1st DC is the closest and is local - according to spec
+    final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances(SERVICE1_NAME, dc).get();
     Assert.assertNotNull(instances);
     Assert.assertEquals(1, instances.size());
   }
 
   @Test
   public void testFindInstances_shouldFindNothingForBogusService() throws ExecutionException, InterruptedException {
-    final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances("ImAmNotAService", "dc1").get();
+    final List<ServiceInstance> instances = ConsulAPI.getCatalog().findInstances("ImAmNotAService", "").get();
     Assert.assertNotNull(instances);
     Assert.assertTrue(instances.isEmpty());
   }
@@ -84,8 +84,7 @@ public class ConsulAPITest {
   public void testDatacenters() throws ExecutionException, InterruptedException {
     final Set<String> dcs = ConsulAPI.getCatalog().datacenters().get();
     Assert.assertNotNull(dcs);
-    Assert.assertEquals(1, dcs.size());
-    Assert.assertEquals("dc1", dcs.iterator().next());
+    Assert.assertTrue(1 <= dcs.size());
   }
 
   @Test
