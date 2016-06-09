@@ -147,6 +147,7 @@ public class ConsulAPITest {
   public void testDeregister() throws ExecutionException, InterruptedException {
     ConsulAPI.getServiceRegistry().deregister(SERVICE1_REGISTRATION.getID()).get();
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
+    Thread.sleep(1000); // fuck teamcity
     Assert.assertNotNull(service1Health);
     Assert.assertTrue(service1Health.isEmpty());
   }
