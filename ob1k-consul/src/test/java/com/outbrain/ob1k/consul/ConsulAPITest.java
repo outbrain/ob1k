@@ -137,6 +137,7 @@ public class ConsulAPITest {
   public void testDisableMaintenance() throws ExecutionException, InterruptedException {
     ConsulAPI.getServiceRegistry().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
     ConsulAPI.getServiceRegistry().disableMaintenance(SERVICE1_REGISTRATION.getID()).get();
+    Thread.sleep(1000); // fuck teamcity
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Assert.assertNotNull(service1Health);
     Assert.assertEquals(1, service1Health.size());
