@@ -68,6 +68,7 @@ public class ConsulAPI {
             return new ClientBuilder<>(ConsulHealth.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
                     .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
+                    .bindEndpoint("filterDcHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&dc={dc}&tag={filterTag}&stale=true")
                     .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + timeoutSeconds + "s")
                     .bindEndpoint("fetchInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
                     .bindEndpoint("fetchInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
