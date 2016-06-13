@@ -15,7 +15,7 @@ public interface ConsulHealth extends Service {
 
   ComposableFuture<List<HealthInfoInstance>> filterDcLocalHealthyInstances(final String service, final String filterTag);
 
-  ComposableFuture<List<HealthInfoInstance>> filterDcHealthyInstances(final String dc, final String service, final String filterTag);
+  ComposableFuture<List<HealthInfoInstance>> filterDcHealthyInstances(final String service, final String dc, final String filterTag);
 
   ComposableFuture<TypedResponse<List<HealthInfoInstance>>> pollHealthyInstances(final String service, final String filterTag, final long index);
 
