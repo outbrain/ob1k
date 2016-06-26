@@ -43,8 +43,8 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
   };
 
   public AsyncClientEndpoint(final HttpClient httpClient, final RequestMarshallerRegistry marshallerRegistry,
-                             final Endpoint endpoint, final AsyncFilter[] filters) {
-    super(httpClient, marshallerRegistry, endpoint);
+                             final EndpointDescription endpointDescription, final AsyncFilter[] filters) {
+    super(httpClient, marshallerRegistry, endpointDescription);
     this.filters = filters;
   }
 

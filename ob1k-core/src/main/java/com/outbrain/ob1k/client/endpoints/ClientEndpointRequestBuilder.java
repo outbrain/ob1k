@@ -2,7 +2,6 @@ package com.outbrain.ob1k.client.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ctx.ClientRequestContext;
-import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint.Endpoint;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
@@ -19,15 +18,15 @@ import java.util.List;
  */
 public class ClientEndpointRequestBuilder {
 
-  public static RequestBuilder build(final HttpClient httpClient, final Endpoint endpoint, final ClientRequestContext ctx,
+  public static RequestBuilder build(final HttpClient httpClient, final EndpointDescription endpointDescription, final ClientRequestContext ctx,
                                      final MarshallingStrategy marshallingStrategy) throws IOException, EncoderException {
 
-    final RequestBuilder requestBuilder = getRequestBuilder(endpoint, httpClient, ctx);
+    final RequestBuilder requestBuilder = getRequestBuilder(endpointDescription, httpClient, ctx);
     final Object[] requestValues = setPathParamsFromValues(requestBuilder, ctx);
 
     requestBuilder.setMarshallingStrategy(marshallingStrategy);
     requestBuilder.setBody(requestValues);
-    requestBuilder.setContentType(endpoint.getContentType());
+    requestBuilder.setContentType(endpointDescription.getContentType());
 
     return requestBuilder;
   }
@@ -52,11 +51,11 @@ public class ClientEndpointRequestBuilder {
     return requestValues.toArray();
   }
 
-  private static RequestBuilder getRequestBuilder(final Endpoint endpoint, final HttpClient httpClient,
+  private static RequestBuilder getRequestBuilder(final EndpointDescription endpointDescription, final HttpClient httpClient,
                                                   final ClientRequestContext ctx) {
 
     final RequestBuilder requestBuilder;
-    final HttpRequestMethodType requestMethodType = endpoint.getRequestMethodType();
+    final HttpRequestMethodType requestMethodType = endpointDescription.getRequestMethodType();
 
     switch (requestMethodType) {
       case GET:

@@ -6,6 +6,7 @@ import com.outbrain.ob1k.client.dispatch.DefaultDispatchStrategy;
 import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
 import com.outbrain.ob1k.client.endpoints.AsyncClientEndpoint;
+import com.outbrain.ob1k.client.endpoints.EndpointDescription;
 import com.outbrain.ob1k.client.endpoints.StreamClientEndpoint;
 import com.outbrain.ob1k.client.targets.EmptyTargetProvider;
 import com.outbrain.ob1k.client.targets.TargetProvider;
@@ -202,7 +203,7 @@ public class ClientBuilder<T extends Service> {
         final String methodName = method.getName();
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
         final RequestMarshallerRegistry registry = createRegistry(type);
-        final AbstractClientEndpoint.Endpoint endpoint = new AbstractClientEndpoint.Endpoint(method, type, clientType,
+        final EndpointDescription endpoint = new EndpointDescription(method, type, clientType,
           endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;
 

@@ -8,6 +8,7 @@ import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
  * represent a single call on the client side.
  */
 public abstract class AbstractClientRequestContext<Endpoint extends AbstractClientEndpoint> implements ClientRequestContext {
+
   protected final String remoteTarget;
   protected final Object[] params;
   protected final Endpoint clientEndpoint;
@@ -28,7 +29,7 @@ public abstract class AbstractClientRequestContext<Endpoint extends AbstractClie
   }
 
   private static String createUrl(final String remoteTarget, final AbstractClientEndpoint clientEndpoint) {
-    final String methodPath = clientEndpoint.endpoint.getMethodPath();
+    final String methodPath = clientEndpoint.getEndpointDescription().getMethodPath();
     return remoteTarget.endsWith("/") || methodPath.startsWith("/") ? remoteTarget + methodPath : remoteTarget + "/" + methodPath;
   }
 
@@ -54,11 +55,11 @@ public abstract class AbstractClientRequestContext<Endpoint extends AbstractClie
 
   @Override
   public String getServiceMethodName() {
-    return clientEndpoint.endpoint.getMethod().getName();
+    return clientEndpoint.getEndpointDescription().getMethod().getName();
   }
 
   @Override
   public String getServiceClassName() {
-    return clientEndpoint.endpoint.getServiceType().getSimpleName();
+    return clientEndpoint.getEndpointDescription().getServiceType().getSimpleName();
   }
 }
