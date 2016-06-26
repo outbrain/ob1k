@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * @author marenzon
  */
-public class ClientEndpointRequestBuilder {
+class ClientEndpointRequestBuilder {
 
   public static RequestBuilder build(final HttpClient httpClient, final EndpointDescription endpointDescription, final ClientRequestContext ctx,
                                      final MarshallingStrategy marshallingStrategy) throws IOException, EncoderException {
