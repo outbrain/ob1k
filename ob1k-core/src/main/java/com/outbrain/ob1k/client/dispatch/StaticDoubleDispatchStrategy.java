@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.client.dispatch;
 
 import com.outbrain.ob1k.client.endpoints.DispatchAction;
+import com.outbrain.ob1k.client.endpoints.EndpointDescription;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -15,6 +16,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static rx.Observable.error;
 
 /**
+ * A static double dispatch implementation of dispatch strategy, which will invoke another dispatch
+ * upon defined period of time, in case the computation haven't done yet.
+ *
  * @author hyadid, marenzon
  */
 public class StaticDoubleDispatchStrategy implements DispatchStrategy {
@@ -26,8 +30,9 @@ public class StaticDoubleDispatchStrategy implements DispatchStrategy {
   }
 
   @Override
-  public <T> ComposableFuture<T> dispatchAsync(final TargetProvider targetProvider,
-                                        final DispatchAction<ComposableFuture<T>> dispatchAction) {
+  public <T> ComposableFuture<T> dispatchAsync(final EndpointDescription endpointDescription,
+                                               final TargetProvider targetProvider,
+                                               final DispatchAction<ComposableFuture<T>> dispatchAction) {
     final List<String> remoteTargets;
     try {
       remoteTargets = targetProvider.provideTargets(2);
@@ -40,7 +45,8 @@ public class StaticDoubleDispatchStrategy implements DispatchStrategy {
   }
 
   @Override
-  public <T> Observable<T> dispatchStream(final TargetProvider targetProvider,
+  public <T> Observable<T> dispatchStream(final EndpointDescription endpointDescription,
+                                          final TargetProvider targetProvider,
                                           final DispatchAction<Observable<T>> dispatchAction) {
     final String remoteTarget;
     try {
@@ -53,7 +59,7 @@ public class StaticDoubleDispatchStrategy implements DispatchStrategy {
   }
 
   private <T> FutureAction<T> createDispatchAction(final DispatchAction<ComposableFuture<T>> dispatchAction,
-                                            final List<String> remoteTargets) {
+                                                   final List<String> remoteTargets) {
     return new FutureAction<T>() {
       private final AtomicInteger targetCount = new AtomicInteger(0);
 

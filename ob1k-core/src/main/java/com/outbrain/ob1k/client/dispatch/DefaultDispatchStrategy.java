@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.client.dispatch;
 
 import com.outbrain.ob1k.client.endpoints.DispatchAction;
+import com.outbrain.ob1k.client.endpoints.EndpointDescription;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import rx.Observable;
@@ -22,7 +23,9 @@ public class DefaultDispatchStrategy implements DispatchStrategy {
   }
 
   @Override
-  public <T> ComposableFuture<T> dispatchAsync(final TargetProvider targetProvider, final DispatchAction<ComposableFuture<T>> dispatchAction) {
+  public <T> ComposableFuture<T> dispatchAsync(final EndpointDescription endpointDescription,
+                                               final TargetProvider targetProvider,
+                                               final DispatchAction<ComposableFuture<T>> dispatchAction) {
     final String remoteTarget;
     try {
       remoteTarget = targetProvider.provideTarget();
@@ -34,7 +37,9 @@ public class DefaultDispatchStrategy implements DispatchStrategy {
   }
 
   @Override
-  public <T> Observable<T> dispatchStream(final TargetProvider targetProvider, final DispatchAction<Observable<T>> dispatchAction) {
+  public <T> Observable<T> dispatchStream(final EndpointDescription endpointDescription,
+                                          final TargetProvider targetProvider,
+                                          final DispatchAction<Observable<T>> dispatchAction) {
     final String remoteTarget;
     try {
       remoteTarget = targetProvider.provideTarget();

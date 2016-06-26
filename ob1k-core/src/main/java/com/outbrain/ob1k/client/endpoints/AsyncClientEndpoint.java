@@ -94,6 +94,6 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
   @SuppressWarnings("unchecked")
   public Object dispatch(final TargetProvider targetProvider, final DispatchStrategy dispatchStrategy,
                          final DispatchAction dispatchAction) {
-    return dispatchStrategy.dispatchAsync(targetProvider, dispatchAction);
+    return dispatchStrategy.dispatchAsync(endpointDescription, targetProvider, dispatchAction);
   }
 }

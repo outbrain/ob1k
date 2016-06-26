@@ -93,6 +93,6 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   @SuppressWarnings("unchecked")
   public Object dispatch(final TargetProvider targetProvider, final DispatchStrategy dispatchStrategy,
                          final DispatchAction dispatchAction) {
-    return dispatchStrategy.dispatchStream(targetProvider, dispatchAction);
+    return dispatchStrategy.dispatchStream(endpointDescription, targetProvider, dispatchAction);
   }
 }
