@@ -24,7 +24,7 @@ public interface DispatchStrategy {
    * Will be called upon asynchronous mono call of the client, and handles the dispatching
    * of the endpoint
    *
-   * @param endpointDescription client endpoint descriptor of the service
+   * @param endpointDescription dispatched client endpoint description
    * @param targetProvider      target provider
    * @param dispatchAction      dispatch action callable
    * @param <T>                 service return type
@@ -37,7 +37,7 @@ public interface DispatchStrategy {
    * Will be called upon asynchronous stream call of the client, and handles the dispatching
    * of the endpoint
    *
-   * @param endpointDescription client endpoint descriptor of the service
+   * @param endpointDescription dispatched client endpoint description
    * @param targetProvider      target provider
    * @param dispatchAction      dispatch action callable
    * @param <T>                 service return type
