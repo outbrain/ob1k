@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.msgpack.core.MessagePack;
 import org.msgpack.jackson.dataformat.JsonArrayFormat;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
+import org.msgpack.jackson.dataformat.MessagePackSerializerFactory;
 
 import java.io.IOException;
 
@@ -36,6 +37,7 @@ public class MessagePackRequestMarshaller extends JacksonRequestMarshaller {
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     objectMapper.setAnnotationIntrospector(new JsonArrayFormat());
+    objectMapper.setSerializerFactory(new MessagePackSerializerFactory());
 
     return objectMapper;
   }
