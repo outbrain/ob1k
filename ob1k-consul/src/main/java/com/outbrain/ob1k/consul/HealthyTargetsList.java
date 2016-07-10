@@ -9,6 +9,7 @@ import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.consul.filter.AllTargetsPredicate;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.swinfra.metrics.api.Counter;
+import com.outbrain.swinfra.metrics.api.Histogram;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
 import org.slf4j.Logger;
@@ -55,6 +56,8 @@ public class HealthyTargetsList {
   private final Counter targetFetchErrors;
   private final Counter targetUpdates;
   private final Counter targetUpdateSkip;
+  private final Histogram newTargetsSize;
+  private final Histogram filteredTargetsSize;
 
   private final Callable<?> retryPoll = () -> {
     pollForTargetsUpdates(0, Collections.emptyMap());
@@ -76,6 +79,9 @@ public class HealthyTargetsList {
     targetFetchErrors = metricFactory.createCounter(component, "targetFetchErrors");
     targetUpdates = metricFactory.createCounter(component, "targetUpdates");
     targetUpdateSkip = metricFactory.createCounter(component, "targetUpdateSkip");
+    newTargetsSize = metricFactory.createHistogram(component, "newTargetsSize", false);
+    filteredTargetsSize = metricFactory.createHistogram(component, "filteredTargetsSize", false);
+
     metricFactory.registerGauge(component, "targetCount", this::getHealthyInstancesCount);
 
     initTargetsAsync();
@@ -110,15 +116,21 @@ public class HealthyTargetsList {
       Collections.unmodifiableList(newTargets.stream().filter(targetsPredicate::apply).collect(Collectors.toList()));
     final Map<InstanceKey, Long> currentInstance2modifyIndex = extractModifyIndices(filteredTargets);
 
+    log.debug("received new targets for module {}, size of filtered: {}, size of received: {}", module,
+      filteredTargets.size(), newTargets.size());
+
+    newTargetsSize.update(newTargets.size());
+    filteredTargetsSize.update(filteredTargets.size());
+
     if (lastInstance2modifyIndex.equals(currentInstance2modifyIndex)) {
       targetUpdateSkip.inc();
-      log.debug("No indices have changed; skipping update");
+      log.debug("No indices have changed for module {}; skipping update", module);
       return lastInstance2modifyIndex;
     }
 
     targetUpdates.inc();
     this.healthyTargetsFuture = ComposableFutures.fromValue(filteredTargets);
-    log.debug("{} target(s) were filtered out", newTargets.size() - filteredTargets.size());
+    log.debug("{} target(s) were filtered out for module {}", newTargets.size() - filteredTargets.size(), module);
     notifyListeners(filteredTargets);
 
     return currentInstance2modifyIndex;
@@ -155,6 +167,10 @@ public class HealthyTargetsList {
         final List<HealthInfoInstance> initialTargets = nullSafeList(initialTargetsTry.getValue());
 
         log.debug("{} initial healthy targets fetched", initialTargets.size());
+        if (initialTargets.isEmpty()) {
+          log.warn("initial targets is empty for module {}", module);
+        }
+
         modifyIndices = setTargetsIfChanged(initialTargets, Collections.emptyMap());
         initializationFuture.set(null);
       } else {
