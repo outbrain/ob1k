@@ -58,16 +58,11 @@ public class BasicClientRpcTest {
     server = ServerBuilder.newBuilder().contextPath(CTX_PATH).
       configure(builder -> builder.useRandomPort().configureExecutorService(5, 10))
       .service(builder -> builder
-        .register(new HelloService(), HELLO_SERVICE_PATH)
-        .register(new ParamsService(), "/params")).resource(builder -> builder.staticPath("/static")).build();
+        .register(new HelloService(), HELLO_SERVICE_PATH))
+      .resource(builder -> builder.staticPath("/static")).build();
 
     final InetSocketAddress address = server.start();
     port = address.getPort();
-  }
-
-  @AfterClass
-  public static void tearDown() {
-    server.stop();
   }
 
   @Test

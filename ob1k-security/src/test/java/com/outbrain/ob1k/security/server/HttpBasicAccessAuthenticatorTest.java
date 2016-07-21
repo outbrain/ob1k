@@ -1,10 +1,10 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.security.server.HttpBasicAuthenticationFilter.HttpBasicAccessAuthenticator;
+import org.asynchttpclient.util.Base64;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;

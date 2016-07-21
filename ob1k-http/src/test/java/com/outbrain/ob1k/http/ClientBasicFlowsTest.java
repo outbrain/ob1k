@@ -2,15 +2,14 @@ package com.outbrain.ob1k.http;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.ning.http.util.Base64;
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 import com.squareup.okhttp.mockwebserver.RecordedRequest;
 import io.netty.handler.codec.http.HttpHeaders;
+import org.asynchttpclient.util.Base64;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import rx.Observable;
 import rx.observables.BlockingObservable;
@@ -91,7 +90,6 @@ public class ClientBasicFlowsTest {
   }
 
   @Test
-  @Ignore
   public void testStream() throws Exception {
 
     final String singleResponse = "Hello World";

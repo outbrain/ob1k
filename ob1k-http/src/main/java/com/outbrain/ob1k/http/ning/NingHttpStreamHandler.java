@@ -1,75 +1,80 @@
 package com.outbrain.ob1k.http.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.ning.http.client.AsyncHandler;
-import com.ning.http.client.HttpResponseBodyPart;
-import com.ning.http.client.HttpResponseHeaders;
-import com.ning.http.client.HttpResponseStatus;
-import com.ning.http.client.providers.netty.response.NettyResponse;
 import com.outbrain.ob1k.http.Response;
+import org.asynchttpclient.AsyncHandler;
+import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
+import org.asynchttpclient.HttpResponseStatus;
 import rx.Observer;
-import java.util.Collections;
+
+import java.io.IOException;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author marenzon
  */
-public class NingHttpStreamHandler implements AsyncHandler<Response> {
+abstract class NingHttpStreamHandler<T extends Response> implements AsyncHandler<T> {
 
   private final long responseMaxSize;
-  private final Observer<Response> target;
-  private volatile HttpResponseHeaders headers;
-  private volatile HttpResponseStatus status;
+  private final Observer<T> stream;
+  protected volatile HttpResponseHeaders headers;
+  protected volatile HttpResponseStatus status;
   private volatile long responseSizesAggregated;
 
-  public NingHttpStreamHandler(final long responseMaxSize, final Observer<Response> target) {
-
+  protected NingHttpStreamHandler(final long responseMaxSize, final Observer<T> stream) {
     this.responseMaxSize = responseMaxSize;
-    this.target = checkNotNull(target, "target may not be null");
+    this.stream = checkNotNull(stream, "stream may not be null");
   }
 
   @Override
-  public STATE onBodyPartReceived(final HttpResponseBodyPart bodyPart) throws Exception {
+  public State onBodyPartReceived(final HttpResponseBodyPart bodyPart) throws Exception {
+    // empty chunk, identifying end of stream
+    if (bodyPart.isLast()) {
+      return State.CONTINUE;
+    }
 
     if (responseMaxSize > 0) {
       responseSizesAggregated += bodyPart.length();
       if (responseSizesAggregated > responseMaxSize) {
-        onThrowable(new RuntimeException("Response size is bigger than the limit: " + responseMaxSize));
-        return STATE.ABORT;
+        stream.onError(new RuntimeException("Response size is bigger than the limit: " + responseMaxSize));
+        return State.ABORT;
       }
     }
 
-    final com.ning.http.client.Response ningResponse = new NettyResponse(status, headers, Collections.singletonList(bodyPart));
-    final Response response = new NingResponse<>(ningResponse, null, null);
+    try {
+      final T response = supplyResponse(bodyPart);
+      stream.onNext(response);
+    } catch (final Exception e) {
+      stream.onError(e);
+      return State.ABORT;
+    }
 
-    target.onNext(response);
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override
-  public STATE onStatusReceived(final HttpResponseStatus responseStatus) throws Exception {
-
+  public State onStatusReceived(final HttpResponseStatus responseStatus) throws Exception {
     this.status = responseStatus;
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override
-  public STATE onHeadersReceived(final HttpResponseHeaders headers) throws Exception {
-
+  public State onHeadersReceived(final HttpResponseHeaders headers) throws Exception {
     this.headers = headers;
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override
   public void onThrowable(final Throwable error) {
-
-    target.onError(error);
+    stream.onError(error);
   }
 
   @Override
-  public Response onCompleted() throws Exception {
-
-    target.onCompleted();
+  public T onCompleted() throws Exception {
+    stream.onCompleted();
     return null;
   }
+
+  public abstract T supplyResponse(final HttpResponseBodyPart bodyPart) throws IOException;
 }

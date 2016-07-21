@@ -10,6 +10,7 @@ import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
+import org.asynchttpclient.Response;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +31,8 @@ public class NingResponse<T> implements TypedResponse<T> {
   private final Response ningResponse;
   private volatile T typedBody;
 
-  public NingResponse(final Response ningResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
+  public NingResponse(final Response ningResponse, final Type type,
+                      final MarshallingStrategy marshallingStrategy) {
 
     this.ningResponse = checkNotNull(ningResponse, "ningResponse may not be null");
     this.marshallingStrategy = marshallingStrategy;
@@ -72,7 +74,7 @@ public class NingResponse<T> implements TypedResponse<T> {
 
     if (typedBody == null) {
 
-      checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
+      checkNotNull(marshallingStrategy, "marshallingStrategy may not be null");
       checkNotNull(type, "class type may not be null");
 
       typedBody = marshallingStrategy.unmarshall(type, this);
@@ -124,7 +126,7 @@ public class NingResponse<T> implements TypedResponse<T> {
   }
 
   @Override
-  public Map<String, List<String>> getHeaders() {
+  public Iterable<Map.Entry<String, String>> getHeaders() {
 
     return ningResponse.getHeaders();
   }
@@ -153,9 +155,9 @@ public class NingResponse<T> implements TypedResponse<T> {
     return ningResponse.hasResponseHeaders();
   }
 
-  private List<Cookie> transformNingResponseCookies(final List<com.ning.http.client.cookie.Cookie> cookies) {
+  private List<Cookie> transformNingResponseCookies(final List<org.asynchttpclient.cookie.Cookie> cookies) {
 
-    final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = ningCookie ->
+    final Function<org.asynchttpclient.cookie.Cookie, Cookie> transformer = ningCookie ->
       new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(),
         ningCookie.getPath(), ningCookie.getMaxAge(),
         ningCookie.isSecure(), ningCookie.isHttpOnly());

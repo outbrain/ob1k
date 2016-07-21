@@ -69,13 +69,15 @@ public abstract class AbstractServerBuilder {
   }
 
   public final Server build() {
-    final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     registerAllServices();
+
+    final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
             appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
+
     return server;
   }
 
