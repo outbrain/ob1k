@@ -5,8 +5,6 @@ import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.RequestContext;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 

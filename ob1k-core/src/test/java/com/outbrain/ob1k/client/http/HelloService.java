@@ -7,11 +7,9 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import rx.Observable;
-import rx.functions.Func1;
 
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;

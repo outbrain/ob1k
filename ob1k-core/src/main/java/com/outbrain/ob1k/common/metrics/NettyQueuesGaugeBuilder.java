@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.common.metrics;
 
-import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;

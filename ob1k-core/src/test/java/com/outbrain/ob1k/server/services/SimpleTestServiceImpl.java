@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;

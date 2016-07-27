@@ -2,7 +2,6 @@ package com.outbrain.ob1k.common.filters;
 
 import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.RequestContext;
 
 /**
  * filters asynchronous requests.

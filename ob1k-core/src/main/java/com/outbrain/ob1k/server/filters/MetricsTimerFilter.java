@@ -4,8 +4,6 @@ import com.google.common.base.Preconditions;
 import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.RequestContext;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;

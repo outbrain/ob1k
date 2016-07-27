@@ -16,7 +16,6 @@ import com.outbrain.ob1k.common.marshalling.ChunkHeader;
 import com.outbrain.ob1k.concurrent.*;
 import com.outbrain.ob1k.server.ResponseHandler;
 import com.outbrain.swinfra.metrics.api.Counter;
-import com.outbrain.swinfra.metrics.api.Gauge;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.*;
