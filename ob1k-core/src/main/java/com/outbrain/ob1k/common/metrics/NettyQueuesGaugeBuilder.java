@@ -19,12 +19,7 @@ public class NettyQueuesGaugeBuilder {
     for (final EventExecutor eventExecutor : elg) {
       if (eventExecutor instanceof SingleThreadEventExecutor) {
         final SingleThreadEventExecutor singleExecutor = (SingleThreadEventExecutor) eventExecutor;
-        factory.registerGauge("EventLoopGroup-" + componentName, "EventLoop-" + index, new Gauge<Integer>() {
-          @Override
-          public Integer getValue() {
-            return singleExecutor.pendingTasks();
-          }
-        });
+        factory.registerGauge("EventLoopGroup-" + componentName, "EventLoop-" + index, singleExecutor::pendingTasks);
 
         index++;
       }

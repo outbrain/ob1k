@@ -36,12 +36,7 @@ public class SimpleTestServiceImpl implements SimpleTestService {
 
     @Override
     public ComposableFuture<Boolean> slowMethod(final long delayTimeMs) {
-        return schedule(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
-                return true;
-            }
-        }, delayTimeMs, TimeUnit.MILLISECONDS);
+        return schedule(() -> true, delayTimeMs, TimeUnit.MILLISECONDS);
     }
 
     @Override

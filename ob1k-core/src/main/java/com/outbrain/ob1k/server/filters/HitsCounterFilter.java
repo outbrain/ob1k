@@ -25,15 +25,12 @@ public class HitsCounterFilter<T> implements AsyncFilter<T, AsyncRequestContext>
   @Override
   public ComposableFuture<T> handleAsync(final AsyncRequestContext ctx) {
     final ComposableFuture<T> futureResult = ctx.invokeAsync();
-    futureResult.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        getTotalCounter(ctx).inc();
-        if (result.isSuccess()) {
-          getSuccessCounter(ctx).inc();
-        } else {
-          getErrorCounter(ctx).inc();
-        }
+    futureResult.consume(result -> {
+      getTotalCounter(ctx).inc();
+      if (result.isSuccess()) {
+        getSuccessCounter(ctx).inc();
+      } else {
+        getErrorCounter(ctx).inc();
       }
     });
 

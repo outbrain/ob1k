@@ -55,12 +55,7 @@ public class HelloService implements IHelloService {
 
   @Override
   public ComposableFuture<Boolean> sleep(final int milliseconds) {
-    return ComposableFutures.schedule(new Callable<Boolean>() {
-      @Override
-      public Boolean call() throws Exception {
-        return true;
-      }
-    }, milliseconds, TimeUnit.MILLISECONDS);
+    return ComposableFutures.schedule(() -> true, milliseconds, TimeUnit.MILLISECONDS);
   }
 
   public ComposableFuture<List<TestBean>> increaseAge(final List<TestBean> beans, final String newHabit) {
@@ -79,19 +74,9 @@ public class HelloService implements IHelloService {
   @Override
   public Observable<String> getMessages(final String name, final int iterations, final boolean failAtEnd) {
     if (failAtEnd) {
-      return Observable.concat(Observable.interval(10, TimeUnit.MILLISECONDS).map(new Func1<Long, String>() {
-        @Override
-        public String call(final Long num) {
-          return "hello " + name + " #" + num;
-        }
-      }).take(iterations), Observable.<String>error(new RuntimeException("last message is really bad!")));
+      return Observable.concat(Observable.interval(10, TimeUnit.MILLISECONDS).map(num -> "hello " + name + " #" + num).take(iterations), Observable.<String>error(new RuntimeException("last message is really bad!")));
     } else {
-      return Observable.interval(100, TimeUnit.MILLISECONDS).map(new Func1<Long, String>() {
-        @Override
-        public String call(final Long num) {
-          return "hello " + name + " #" + num;
-        }
-      }).take(iterations);
+      return Observable.interval(100, TimeUnit.MILLISECONDS).map(num -> "hello " + name + " #" + num).take(iterations);
     }
   }
 

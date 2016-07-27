@@ -301,12 +301,7 @@ public class ServiceRegistry implements ServiceRegistryView {
   public SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> getRegisteredEndpoints() {
     final SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> copy = new TreeMap<>();
     for (final Map.Entry<String, Map<HttpRequestMethodType, ServerEndpoint>> entry : endpoints.getPathToValueMapping().entrySet()) {
-      copy.put(entry.getKey(), Maps.transformValues(entry.getValue(), new Function<ServerEndpoint, ServerEndpointView>() {
-        @Override
-        public ServerEndpointView apply(final ServerEndpoint input) {
-          return input;
-        }
-      }));
+      copy.put(entry.getKey(), Maps.transformValues(entry.getValue(), (Function<ServerEndpoint, ServerEndpointView>) input -> input));
     }
     return unmodifiableSortedMap(copy);
   }

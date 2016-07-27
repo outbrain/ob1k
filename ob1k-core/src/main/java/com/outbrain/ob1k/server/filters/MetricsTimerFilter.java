@@ -28,12 +28,7 @@ public class MetricsTimerFilter<T> implements AsyncFilter<T, AsyncRequestContext
     final Timer.Context time = createTimer(ctx);
 
     final ComposableFuture<T> futureResult = ctx.invokeAsync();
-    futureResult.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        time.stop();
-      }
-    });
+    futureResult.consume(result -> time.stop());
 
     return futureResult;
   }

@@ -25,14 +25,11 @@ public class SimpleHttpServer {
 
     while (isOpen) {
       final SocketChannel requestSocket = socket.accept();
-      new Thread(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            handleRequest(requestSocket);
-          } catch (final Exception e) {
-            e.printStackTrace();
-          }
+      new Thread(() -> {
+        try {
+          handleRequest(requestSocket);
+        } catch (final Exception e) {
+          e.printStackTrace();
         }
       }).start();
 

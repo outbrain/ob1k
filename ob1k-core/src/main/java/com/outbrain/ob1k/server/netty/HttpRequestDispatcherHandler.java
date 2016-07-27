@@ -82,12 +82,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       this.requestTimeoutErrors = metricFactory.createCounter("Ob1kDispatcher", "requestTimeoutErrors");
       this.notFoundErrors = metricFactory.createCounter("Ob1kDispatcher", "notFoundErrors");
       this.unexpectedErrors = metricFactory.createCounter("Ob1kDispatcher", "unexpectedErrors");
-      metricFactory.registerGauge("Ob1kDispatcher", "currentConnections", new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return activeChannels.size();
-        }
-      });
+      metricFactory.registerGauge("Ob1kDispatcher", "currentConnections", activeChannels::size);
     } else {
       internalErrors = null;
       requestTimeoutErrors = null;
@@ -151,41 +146,28 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   public void handleAsyncResponse(final ChannelHandlerContext ctx, final ComposableFuture<Object> response) {
     final ComposableFuture<Object> finalResponse;
     if (requestTimeoutMs > 0) {
-      final ComposableFuture<Object> timeout = ComposableFutures.build(new Producer<Object>() {
-        @Override
-        public void produce(final Consumer<Object> consumer) {
-          ctx.channel().eventLoop().schedule(new Runnable() {
-            @Override
-            public void run() {
-              consumer.consume(Try.fromError(new RequestTimeoutException("calculating response took too long.")));
-            }
-          }, requestTimeoutMs, TimeUnit.MILLISECONDS);
-        }
-      });
+      final ComposableFuture<Object> timeout = ComposableFutures.build(consumer -> ctx.channel().eventLoop().schedule((Runnable) () -> consumer.consume(Try.fromError(new RequestTimeoutException("calculating response took too long."))), requestTimeoutMs, TimeUnit.MILLISECONDS));
 
       finalResponse = ComposableFutures.any(response, timeout);
     } else {
       finalResponse = response;
     }
 
-    finalResponse.consume(new Consumer<Object>() {
-      @Override
-      public void consume(final Try<Object> result) {
-        try {
-          if (result.isSuccess()) {
-            handleOK(result.getValue(), request, ctx);
-          } else {
-            final Throwable error = result.getError();
-            if (error instanceof RequestTimeoutException) {
-              if (requestTimeoutErrors != null) {
-                requestTimeoutErrors.inc();
-              }
+    finalResponse.consume(result -> {
+      try {
+        if (result.isSuccess()) {
+          handleOK(result.getValue(), request, ctx);
+        } else {
+          final Throwable error = result.getError();
+          if (error instanceof RequestTimeoutException) {
+            if (requestTimeoutErrors != null) {
+              requestTimeoutErrors.inc();
             }
-            handleInternalError(error, request, ctx);
           }
-        } catch (final IOException error) {
           handleInternalError(error, request, ctx);
         }
+      } catch (final IOException error) {
+        handleInternalError(error, request, ctx);
       }
     });
 

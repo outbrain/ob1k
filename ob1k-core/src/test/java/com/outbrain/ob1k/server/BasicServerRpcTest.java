@@ -38,32 +38,19 @@ public class BasicServerRpcTest {
   private static Server buildServer(final Listener listener) {
     return ServerBuilder.newBuilder().
             contextPath("/test").
-            configure(new ConfigureBuilderSection() {
-              @Override
-              public void apply(final ConfigureBuilder builder) {
-                builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS);
-                if (listener != null) {
-                  builder.addListener(listener);
-                }
+            configure(builder -> {
+              builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS);
+              if (listener != null) {
+                builder.addListener(listener);
               }
             }).
-            service(new ServiceRegisterBuilderSection() {
-              @Override
-              public void apply(final ServiceRegisterBuilder builder) {
-                builder.register(new SimpleTestServiceImpl(), "/simple").
-                register(new RequestsTestServiceImpl(), "/users", new ServiceBindBuilderSection() {
-                  @Override
-                  public void apply(final ServiceBindBuilder builder) {
-                    builder.endpoint(HttpRequestMethodType.GET, "getAll", "/").
-                    endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
-                    endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
-                    endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
-                    endpoint(HttpRequestMethodType.PUT, "createUser", "/").
-                    endpoint("printDetails", "/print/{firstName}/{lastName}");
-                  }
-                });
-              }
-            }).build();
+            service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple").
+            register(new RequestsTestServiceImpl(), "/users", builder1 -> builder1.endpoint(HttpRequestMethodType.GET, "getAll", "/").
+            endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
+            endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
+            endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
+            endpoint(HttpRequestMethodType.PUT, "createUser", "/").
+            endpoint("printDetails", "/print/{firstName}/{lastName}"))).build();
   }
 
   @Test

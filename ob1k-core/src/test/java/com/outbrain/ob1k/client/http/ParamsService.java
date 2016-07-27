@@ -19,7 +19,7 @@ public class ParamsService implements Service {
   public ComposableFuture<Map<String, String>> handle(final HttpRequest request) {
     final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
     final Map<String,List<String>> params = queryStringDecoder.getParameters();
-    final Map<String, String> res = new HashMap<String, String>();
+    final Map<String, String> res = new HashMap<>();
     for (final String key: params.keySet()) {
       res.put(key, params.get(key).get(0));
     }

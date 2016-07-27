@@ -26,15 +26,12 @@ public class EndpointMappingService implements IEndpointMappingService {
 
   public ComposableFuture<SortedMap<String, Map<String, HttpRequestMethodType>>> handle() {
     final SortedMap<String, Map<HttpRequestMethodType, ServerEndpointView>> registeredEndpoints = registry.getRegisteredEndpoints();
-    final Function<Map<HttpRequestMethodType, ServerEndpointView>, Map<String, HttpRequestMethodType>> endpointsMap = new Function<Map<HttpRequestMethodType, ServerEndpointView>, Map<String, HttpRequestMethodType>>() {
-      @Override
-      public Map<String, HttpRequestMethodType> apply(final Map<HttpRequestMethodType, ServerEndpointView> input) {
-        final Map<String, HttpRequestMethodType> result = new HashMap<>();
-        for (final ServerEndpointView endpoint : input.values()) {
-          result.put(endpoint.getTargetAsString(), endpoint.getRequestMethodType());
-        }
-        return result;
+    final Function<Map<HttpRequestMethodType, ServerEndpointView>, Map<String, HttpRequestMethodType>> endpointsMap = input -> {
+      final Map<String, HttpRequestMethodType> result = new HashMap<>();
+      for (final ServerEndpointView endpoint : input.values()) {
+        result.put(endpoint.getTargetAsString(), endpoint.getRequestMethodType());
       }
+      return result;
     };
     return ComposableFutures.fromValue(Maps.transformValues(registeredEndpoints, endpointsMap));
   }
