@@ -19,22 +19,22 @@ public class StaticPathResolver {
   private final String contextPath;
 
 
-  public StaticPathResolver(String contextPath, Set<String> folders, Map<String, String> fileMappings, Map<String, String> staticResources) {
+  public StaticPathResolver(final String contextPath, final Set<String> folders, final Map<String, String> fileMappings, final Map<String, String> staticResources) {
     this.fileMappings = new HashMap<>();
     this.staticResources = new HashMap<>();
 
     this.contextPath = contextPath;
-    String trimmedContextPath = trimSlash(contextPath);
+    final String trimmedContextPath = trimSlash(contextPath);
 
     this.folders = new ArrayList<>();
-    for (String folder : folders) {
-      String fullPath = getTrimmedFullStaticPath(trimmedContextPath, folder);
+    for (final String folder : folders) {
+      final String fullPath = getTrimmedFullStaticPath(trimmedContextPath, folder);
       this.folders.add(fullPath);
     }
 
-    for (String mappingKey : fileMappings.keySet()) {
-      String newKey = trimmedContextPath.isEmpty() ? "/" + trimSlash(mappingKey) : "/" + trimmedContextPath + "/" + trimSlash(mappingKey);
-      String value = fileMappings.get(mappingKey);
+    for (final String mappingKey : fileMappings.keySet()) {
+      final String newKey = trimmedContextPath.isEmpty() ? "/" + trimSlash(mappingKey) : "/" + trimmedContextPath + "/" + trimSlash(mappingKey);
+      final String value = fileMappings.get(mappingKey);
       this.fileMappings.put(newKey, value);
     }
 
@@ -45,13 +45,13 @@ public class StaticPathResolver {
     }
   }
 
-  private String getTrimmedFullStaticPath(String trimmedContextPath, String folder) {
-    String trimmedStaticPath = trimSlash(folder);
+  private String getTrimmedFullStaticPath(final String trimmedContextPath, final String folder) {
+    final String trimmedStaticPath = trimSlash(folder);
     return trimmedContextPath.isEmpty() ? "/" + trimmedStaticPath : "/" + trimmedContextPath + "/" + trimmedStaticPath;
   }
 
-  public boolean isStaticPath(String path) {
-    for (String folder : folders) {
+  public boolean isStaticPath(final String path) {
+    for (final String folder : folders) {
       if (path.startsWith(folder))
         return true;
     }
@@ -83,7 +83,7 @@ public class StaticPathResolver {
       }
     }
 
-    for (String folder : folders) {
+    for (final String folder : folders) {
       if (uri.startsWith(folder)) {
         return uri.substring(contextPath.length());
       }

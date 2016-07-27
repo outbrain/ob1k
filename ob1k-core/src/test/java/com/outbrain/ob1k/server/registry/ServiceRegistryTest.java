@@ -59,7 +59,7 @@ public class ServiceRegistryTest {
 
   public static class MyService implements Service {
 
-    public ComposableFuture<Double> handleFloat(Float param) {
+    public ComposableFuture<Double> handleFloat(final Float param) {
       return null;
     }
 
@@ -69,7 +69,7 @@ public class ServiceRegistryTest {
   }
 
   public static class MyServiceWithNonComposableFutureMethod implements Service {
-    public ComposableFuture<Double> handleFloat(Float param) {
+    public ComposableFuture<Double> handleFloat(final Float param) {
       return null;
     }
     public ComposableFuture<Long> returnLong() {

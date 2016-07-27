@@ -14,7 +14,7 @@ public class TestBean {
 
   public TestBean() {}
 
-  public TestBean(String name, int age, List<String> habits) {
+  public TestBean(final String name, final int age, final List<String> habits) {
     this.name = name;
     this.age = age;
     this.habits = habits;
@@ -24,7 +24,7 @@ public class TestBean {
     return name;
   }
 
-  public void setName(String name) {
+  public void setName(final String name) {
     this.name = name;
   }
 
@@ -32,7 +32,7 @@ public class TestBean {
     return age;
   }
 
-  public void setAge(int age) {
+  public void setAge(final int age) {
     this.age = age;
   }
 
@@ -40,7 +40,7 @@ public class TestBean {
     return habits;
   }
 
-  public void setHabits(List<String> habits) {
+  public void setHabits(final List<String> habits) {
     this.habits = habits;
   }
 }

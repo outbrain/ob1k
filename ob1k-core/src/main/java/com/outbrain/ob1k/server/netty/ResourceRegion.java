@@ -27,7 +27,7 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
   private long transfered = 0;
 
 
-  public ResourceRegion(InputStream stream, long count) {
+  public ResourceRegion(final InputStream stream, final long count) {
     this.stream = stream;
     this.buff = new byte[BUFFER_SIZE];
     this.count = count;
@@ -47,7 +47,7 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
   protected void deallocate() {
     try {
       stream.close();
-    } catch (IOException e) {
+    } catch (final IOException e) {
       logger.warn("error closing resource", e);
     }
   }
@@ -58,12 +58,12 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
   }
 
   @Override
-  public long transferTo(WritableByteChannel target, long position) throws IOException {
-    ByteBuffer buffer;
+  public long transferTo(final WritableByteChannel target, final long position) throws IOException {
+    final ByteBuffer buffer;
     if (tempBuffer != null) {
       buffer = tempBuffer;
     } else {
-      int bytesRead = stream.read(buff);
+      final int bytesRead = stream.read(buff);
       if (bytesRead != -1) {
         buffer = ByteBuffer.wrap(buff, 0, bytesRead);
       } else {
@@ -71,7 +71,7 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
       }
     }
 
-    int bytesWritten = target.write(buffer);
+    final int bytesWritten = target.write(buffer);
     if (buffer.hasRemaining()) {
       tempBuffer = buffer;
     } else {

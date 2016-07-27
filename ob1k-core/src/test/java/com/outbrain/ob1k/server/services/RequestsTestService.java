@@ -9,7 +9,7 @@ import java.util.List;
  */
 public interface RequestsTestService extends Service {
 
-  public static class Person {
+  class Person {
     public int id;
     public String name;
     public String profession;

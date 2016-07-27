@@ -14,7 +14,7 @@ public class TestEntity {
 
   public TestEntity() {}
 
-  public TestEntity(Set<Long> ids, String name, TestEnum[] options, List<OtherEntity> others) {
+  public TestEntity(final Set<Long> ids, final String name, final TestEnum[] options, final List<OtherEntity> others) {
     this.ids = ids;
     this.name = name;
     this.options = options;
@@ -25,7 +25,7 @@ public class TestEntity {
     return ids;
   }
 
-  public void setIds(Set<Long> ids) {
+  public void setIds(final Set<Long> ids) {
     this.ids = ids;
   }
 
@@ -33,7 +33,7 @@ public class TestEntity {
     return name;
   }
 
-  public void setName(String name) {
+  public void setName(final String name) {
     this.name = name;
   }
 
@@ -41,7 +41,7 @@ public class TestEntity {
     return options;
   }
 
-  public void setOptions(TestEnum[] options) {
+  public void setOptions(final TestEnum[] options) {
     this.options = options;
   }
 
@@ -49,7 +49,7 @@ public class TestEntity {
     return others;
   }
 
-  public void setOthers(List<OtherEntity> others) {
+  public void setOthers(final List<OtherEntity> others) {
     this.others = others;
   }
 }

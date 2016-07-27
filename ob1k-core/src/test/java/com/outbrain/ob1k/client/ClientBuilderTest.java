@@ -8,7 +8,7 @@ public class ClientBuilderTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void shouldBlowUpIfClientTypeIsNotAnInterface() {
-    ClientBuilder<RealService> clientBuilder = new ClientBuilder<>(RealService.class);
+    final ClientBuilder<RealService> clientBuilder = new ClientBuilder<>(RealService.class);
 
     clientBuilder.build();
   }
@@ -18,12 +18,12 @@ public class ClientBuilderTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void shouldBlowUpIfClientTypeContainsSyncMethods() {
-    ClientBuilder<WithSync> clientBuilder = new ClientBuilder<>(WithSync.class);
+    final ClientBuilder<WithSync> clientBuilder = new ClientBuilder<>(WithSync.class);
 
     clientBuilder.build();
   }
 
-  private static interface WithSync extends Service {
+  private interface WithSync extends Service {
     String syncMethod();
   }
 

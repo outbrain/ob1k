@@ -59,7 +59,7 @@ abstract class AbstractServerEndpoint<F extends ServiceFilter> implements Server
     return filters;
   }
 
-  protected Object invokeMethodOnService(Object[] params) throws InvocationTargetException, IllegalAccessException {
+  protected Object invokeMethodOnService(final Object[] params) throws InvocationTargetException, IllegalAccessException {
     return method.invoke(service, params);
   }
 }

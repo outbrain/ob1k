@@ -9,7 +9,7 @@ public class OtherEntity {
 
   public OtherEntity() {}
 
-  public OtherEntity(int value1, String value2) {
+  public OtherEntity(final int value1, final String value2) {
     this.value1 = value1;
     this.value2 = value2;
   }
@@ -18,7 +18,7 @@ public class OtherEntity {
     return value1;
   }
 
-  public void setValue1(int value1) {
+  public void setValue1(final int value1) {
     this.value1 = value1;
   }
 
@@ -26,7 +26,7 @@ public class OtherEntity {
     return value2;
   }
 
-  public void setValue2(String value2) {
+  public void setValue2(final String value2) {
     this.value2 = value2;
   }
 }

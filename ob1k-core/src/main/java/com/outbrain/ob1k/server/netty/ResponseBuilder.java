@@ -103,7 +103,7 @@ public class ResponseBuilder {
     return this;
   }
 
-  public ResponseBuilder setContentType(String contentType) {
+  public ResponseBuilder setContentType(final String contentType) {
     addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return this;
   }

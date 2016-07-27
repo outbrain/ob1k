@@ -11,5 +11,5 @@ import java.util.SortedMap;
  * Created by aronen on 3/1/15.
  */
 public interface IEndpointMappingService extends Service {
-    public ComposableFuture<SortedMap<String, Map<String, HttpRequestMethodType>>> handle();
+    ComposableFuture<SortedMap<String, Map<String, HttpRequestMethodType>>> handle();
 }

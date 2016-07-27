@@ -17,7 +17,7 @@ public interface Server {
   void addListener(Listener listener);
   void removeListener(Listener listener);
 
-  public interface Listener {
-    public void serverStarted(Server server);
+  interface Listener {
+    void serverStarted(Server server);
   }
 }
