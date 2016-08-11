@@ -75,7 +75,7 @@
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
     <findbugs-maven-plugin.version>3.0.3</findbugs-maven-plugin.version>
     <findbugs.skip>false</findbugs.skip>
-    <msgpack.version>0.8.7</msgpack.version>
+    <msgpack.version>0.8.8</msgpack.version>
     <jackson.version>2.6.4</jackson.version>
   </properties>
 
