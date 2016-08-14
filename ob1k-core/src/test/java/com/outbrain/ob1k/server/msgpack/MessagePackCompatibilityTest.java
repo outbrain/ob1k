@@ -31,6 +31,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * This tests are verifying that msgpack-java 0.8 is backward-compatible with 0.6.
@@ -44,14 +45,16 @@ public class MessagePackCompatibilityTest {
   private MessagePack msgPack;
   private ObjectMapper objectMapper;
 
-  // entity to check
-  private BasicEntity entity;
+  // entities to check
+  private BasicEntity basicEntity;
+  private MinimalEntity minimalEntity;
 
   @Before
   public void initialize() {
 
     // pojo to test
-    entity = new BasicEntity(1, "word", asList("abc", "def"), singletonMap(true, "v"));
+    basicEntity = new BasicEntity(1, "word", asList("abc", "def"), singletonMap(true, "v"));
+    minimalEntity = new MinimalEntity(2, "string", asList("tar", "xzf"));
 
     // creating old msgpack client
     msgPack = new MessagePack();
@@ -68,8 +71,8 @@ public class MessagePackCompatibilityTest {
   @Test
   public void pojoCompatibility() throws Exception {
 
-    final byte[] oldBytes = msgPack.write(entity);
-    final byte[] newBytes = objectMapper.writeValueAsBytes(entity);
+    final byte[] oldBytes = msgPack.write(basicEntity);
+    final byte[] newBytes = objectMapper.writeValueAsBytes(basicEntity);
 
     assertArrayEquals("serializations should be the same", oldBytes, newBytes);
 
@@ -83,14 +86,15 @@ public class MessagePackCompatibilityTest {
   @SuppressWarnings("unchecked")
   public void collectionsCompatibility() throws Exception {
 
-    final List<BasicEntity> entities = asList(entity, entity);
+    final List<BasicEntity> entities = asList(basicEntity, basicEntity);
 
     final byte[] oldBytes = msgPack.write(entities);
     final byte[] newBytes = objectMapper.writeValueAsBytes(entities);
 
     assertArrayEquals("serializations should be the same", oldBytes, newBytes);
 
-    final Type entitiesType = new TypeToken<List<BasicEntity>>(){}.getType();
+    final Type entitiesType = new TypeToken<List<BasicEntity>>() {
+    }.getType();
 
     final Template template = msgPack.lookup(entitiesType);
     final Value value = msgPack.read(newBytes);
@@ -107,13 +111,30 @@ public class MessagePackCompatibilityTest {
   public void basicTypeMapCompatibility() throws Exception {
 
     // Test a Integer-type key map
-    createMapCompatibilityTest(singletonMap(1, entity), new TypeReference<Map<Integer, BasicEntity>>(){}.getType());
+    createMapCompatibilityTest(singletonMap(1, basicEntity), new TypeReference<Map<Integer, BasicEntity>>() {
+    }.getType());
 
     // Test a Boolean-type key map
-    createMapCompatibilityTest(singletonMap(true, entity), new TypeReference<Map<Boolean, BasicEntity>>(){}.getType());
+    createMapCompatibilityTest(singletonMap(true, basicEntity), new TypeReference<Map<Boolean, BasicEntity>>() {
+    }.getType());
 
     // Test a String-type key map
-    createMapCompatibilityTest(singletonMap("hello", entity), new TypeReference<Map<String, BasicEntity>>(){}.getType());
+    createMapCompatibilityTest(singletonMap("hello", basicEntity), new TypeReference<Map<String, BasicEntity>>() {
+    }.getType());
+  }
+
+  @Test
+  public void unknownProperties() throws Exception {
+
+    final byte[] basicBytes = msgPack.write(basicEntity);
+    final byte[] minimalBytes = msgPack.write(minimalEntity);
+
+    final MinimalEntity minimal = objectMapper.readValue(basicBytes, MinimalEntity.class);
+    final BasicEntity basic = objectMapper.readValue(minimalBytes, BasicEntity.class);
+
+    assertEquals("minimal value should be of basic", basicEntity.value, minimal.value);
+    assertEquals("basic value should be of minimal", minimalEntity.value, basic.value);
+    assertNull("basic map should be null", basic.map);
   }
 
   @SuppressWarnings("unchecked")
@@ -168,6 +189,39 @@ public class MessagePackCompatibilityTest {
     @Override
     public int hashCode() {
       return Objects.hash(number, value, values, map);
+    }
+  }
+
+  @Message
+  public static class MinimalEntity {
+
+    public int number;
+    public String value;
+    public List<String> values;
+
+    public MinimalEntity() {
+
+    }
+
+    public MinimalEntity(final int number, final String value, final List<String> values) {
+      this.number = number;
+      this.value = value;
+      this.values = values;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      final BasicEntity entity = (BasicEntity) o;
+      return number == entity.number &&
+        Objects.equals(value, entity.value) &&
+        Objects.equals(values, entity.values);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(number, value, values);
     }
   }
 }
