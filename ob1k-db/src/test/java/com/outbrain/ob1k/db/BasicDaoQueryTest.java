@@ -70,19 +70,16 @@ public class BasicDaoQueryTest {
         final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Map<String, Object>>> deployments = dao.list("select id,archived, source from Deployments");
 
-        deployments.consume(new Consumer<List<Map<String, Object>>>() {
-            @Override
-            public void consume(final Try<List<Map<String, Object>>> results) {
-                if (!results.isSuccess()) {
-                    System.out.println("got error: ");
-                    results.getError().printStackTrace();
-                } else {
-                    int index = 0;
-                    for (final Map<String, Object> line : results.getValue()) {
-                        System.out.println("row " + index++);
-                        for (final String column : line.keySet()) {
-                            System.out.println(" column: " + column + " value: " + line.get(column));
-                        }
+        deployments.consume(results -> {
+            if (!results.isSuccess()) {
+                System.out.println("got error: ");
+                results.getError().printStackTrace();
+            } else {
+                int index = 0;
+                for (final Map<String, Object> line : results.getValue()) {
+                    System.out.println("row " + index++);
+                    for (final String column : line.keySet()) {
+                        System.out.println(" column: " + column + " value: " + line.get(column));
                     }
                 }
             }
@@ -103,22 +100,19 @@ public class BasicDaoQueryTest {
         final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Deployment>> deployments = dao.list("select id,modulesRevision,archived,source,status from Deployments WHERE id >= 0", new DeploymentMapper());
 
-        deployments.consume(new Consumer<List<Deployment>>() {
-            @Override
-            public void consume(final Try<List<Deployment>> results) {
-                if (!results.isSuccess()) {
-                    results.getError().printStackTrace();
-                } else {
-                    int index = 0;
-                    for (final Deployment line : results.getValue()) {
-                        System.out.println("row " + index++);
-                        System.out.println(" id: " + line.id);
-                        System.out.println(" source: " + line.source);
-                        System.out.println(" status: " + line.status);
-                        System.out.println(" archived: " + line.archived);
-                        System.out.println(" modulesRevision: " + line.modulesRevision);
-                        System.out.println(" fakeBool: " + line.fakeBool);
-                    }
+        deployments.consume(results -> {
+            if (!results.isSuccess()) {
+                results.getError().printStackTrace();
+            } else {
+                int index = 0;
+                for (final Deployment line : results.getValue()) {
+                    System.out.println("row " + index++);
+                    System.out.println(" id: " + line.id);
+                    System.out.println(" source: " + line.source);
+                    System.out.println(" status: " + line.status);
+                    System.out.println(" archived: " + line.archived);
+                    System.out.println(" modulesRevision: " + line.modulesRevision);
+                    System.out.println(" fakeBool: " + line.fakeBool);
                 }
             }
         });
@@ -137,22 +131,19 @@ public class BasicDaoQueryTest {
     public void testListWithMapping() throws ExecutionException, InterruptedException {
         final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<List<Deployment>> deployments = dao.list("select * from Deployments", new DeploymentMapper());
-        deployments.consume(new Consumer<List<Deployment>>() {
-            @Override
-            public void consume(final Try<List<Deployment>> results) {
-                if (!results.isSuccess()) {
-                    results.getError().printStackTrace();
-                } else {
-                    int index = 0;
-                    for (final Deployment line : results.getValue()) {
-                        System.out.println("row " + index++);
-                        System.out.println(" id: " + line.id);
-                        System.out.println(" source: " + line.source);
-                        System.out.println(" status: " + line.status);
-                        System.out.println(" archived: " + line.archived);
-                        System.out.println(" modulesRevision: " + line.modulesRevision);
-                        System.out.println(" fakeBool: " + line.fakeBool);
-                    }
+        deployments.consume(results -> {
+            if (!results.isSuccess()) {
+                results.getError().printStackTrace();
+            } else {
+                int index = 0;
+                for (final Deployment line : results.getValue()) {
+                    System.out.println("row " + index++);
+                    System.out.println(" id: " + line.id);
+                    System.out.println(" source: " + line.source);
+                    System.out.println(" status: " + line.status);
+                    System.out.println(" archived: " + line.archived);
+                    System.out.println(" modulesRevision: " + line.modulesRevision);
+                    System.out.println(" fakeBool: " + line.fakeBool);
                 }
             }
         });
@@ -171,14 +162,11 @@ public class BasicDaoQueryTest {
     public void testSimpleUpdateQuery() throws ExecutionException, InterruptedException {
         final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
         final ComposableFuture<Long> rowsEffected = dao.execute("update Deployments set SOURCE = concat('*', SOURCE) where id = 1");
-        rowsEffected.consume(new Consumer<Long>() {
-            @Override
-            public void consume(final Try<Long> rows) {
-                if (rows.isSuccess()) {
-                    System.out.println(rows.getValue() + " rows were effected.");
-                } else {
-                    rows.getError().printStackTrace();
-                }
+        rowsEffected.consume(rows -> {
+            if (rows.isSuccess()) {
+                System.out.println(rows.getValue() + " rows were effected.");
+            } else {
+                rows.getError().printStackTrace();
             }
         });
 
@@ -206,14 +194,11 @@ public class BasicDaoQueryTest {
         try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2000/*msec*/,10000 /*msec*/)) {
             final Deployment deployment =
                 insertDeployment(dao, 666L, "test123").
-                    continueOnSuccess(new FutureSuccessHandler<Long, Deployment>() {
-                        @Override
-                        public ComposableFuture<Deployment> handle(final Long result) {
-                            if (result == 0)
-                                return ComposableFutures.fromError(new RuntimeException("row wasn't inserted into table."));
+                    continueOnSuccess((FutureSuccessHandler<Long, Deployment>) result -> {
+                        if (result == 0)
+                            return ComposableFutures.fromError(new RuntimeException("row wasn't inserted into table."));
 
-                            return getDeploymentBySource(dao, "test123");
-                        }
+                        return getDeploymentBySource(dao, "test123");
                     }).get();
 
             Assert.assertTrue(deployment != null);
@@ -256,27 +241,14 @@ public class BasicDaoQueryTest {
     public void testTransaction() {
         final BasicDao dao = new BasicDao(MySqlConnectionPoolBuilder.newBuilder("localhost", 3306, "aronen").forDatabase("test").build());
 
-        final ComposableFuture<Boolean> finalRes = dao.withTransaction(new TransactionHandler<Boolean>() {
-            @Override
-            public ComposableFuture<Boolean> handle(final MySqlAsyncConnection conn) {
-                final ComposableFuture<Long> futureRes1 = dao.execute(conn,
-                    "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy1'");
+        final ComposableFuture<Boolean> finalRes = dao.withTransaction(conn -> {
+            final ComposableFuture<Long> futureRes1 = dao.execute(conn,
+                "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy1'");
 
-                final ComposableFuture<Long> futureRes2 = futureRes1.continueOnSuccess(new FutureSuccessHandler<Long, Long>() {
-                    @Override
-                    public ComposableFuture<Long> handle(final Long result) {
-                        return dao.execute(conn,
-                            "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy2'");
-                    }
-                });
+            final ComposableFuture<Long> futureRes2 = futureRes1.continueOnSuccess((FutureSuccessHandler<Long, Long>) result -> dao.execute(conn,
+                "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy2'"));
 
-                return futureRes2.continueOnSuccess(new FutureSuccessHandler<Long, Boolean>() {
-                    @Override
-                    public ComposableFuture<Boolean> handle(final Long result) {
-                        return ComposableFutures.fromValue(result == 1);
-                    }
-                });
-            }
+            return futureRes2.continueOnSuccess((FutureSuccessHandler<Long, Boolean>) result -> ComposableFutures.fromValue(result == 1));
         });
 
         try {

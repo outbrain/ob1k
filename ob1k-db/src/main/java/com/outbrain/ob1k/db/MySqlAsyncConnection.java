@@ -49,22 +49,12 @@ public class MySqlAsyncConnection {
   }
 
   public ComposableFuture<QueryResult> sendQuery(final String query) {
-    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
-      @Override
-      public Future<QueryResult> provide() {
-        return conn.sendQuery(query);
-      }
-    });
+    return ScalaFutureHelper.from(() -> conn.sendQuery(query));
   }
 
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
     final Buffer<Object> scalaValues = JavaConversions.asScalaBuffer(values);
-    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
-      @Override
-      public Future<QueryResult> provide() {
-        return conn.sendPreparedStatement(query, scalaValues);
-      }
-    });
+    return ScalaFutureHelper.from(() -> conn.sendPreparedStatement(query, scalaValues));
   }
 
   public ComposableFuture<MySqlAsyncConnection> connect() {
@@ -72,33 +62,20 @@ public class MySqlAsyncConnection {
       return ComposableFutures.fromValue(this);
     }
 
-    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<Connection>() {
-      @Override
-      public Future<Connection> provide() {
-        return conn.connect();
-      }
-    });
+    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(conn::connect);
 
-    return composableFuture.continueOnSuccess(new SuccessHandler<Connection, MySqlAsyncConnection>() {
-      @Override
-      public MySqlAsyncConnection handle(final Connection result) {
-        final MySQLConnection connection = (MySQLConnection) result;
-        if (connection == conn) {
-          return MySqlAsyncConnection.this;
-        } else {
-          return new MySqlAsyncConnection(connection);
-        }
+    return composableFuture.continueOnSuccess((SuccessHandler<Connection, MySqlAsyncConnection>) result -> {
+      final MySQLConnection connection = (MySQLConnection) result;
+      if (connection == conn) {
+        return MySqlAsyncConnection.this;
+      } else {
+        return new MySqlAsyncConnection(connection);
       }
     });
   }
 
   public ComposableFuture<MySqlAsyncConnection> startTx() {
-    return this.sendQuery("START TRANSACTION;").continueOnSuccess(new FutureSuccessHandler<QueryResult, MySqlAsyncConnection>() {
-      @Override
-      public ComposableFuture<MySqlAsyncConnection> handle(final QueryResult result) {
-        return ComposableFutures.fromValue(MySqlAsyncConnection.this);
-      }
-    });
+    return this.sendQuery("START TRANSACTION;").continueOnSuccess((FutureSuccessHandler<QueryResult, MySqlAsyncConnection>) result -> ComposableFutures.fromValue(MySqlAsyncConnection.this));
   }
 
   public ComposableFuture<QueryResult> commit() {
@@ -110,22 +87,14 @@ public class MySqlAsyncConnection {
   }
 
   public ComposableFuture<MySqlAsyncConnection> disconnect() {
-    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<Connection>() {
-      @Override
-      public Future<Connection> provide() {
-        return conn.disconnect();
-      }
-    });
+    final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(conn::disconnect);
 
-    return composableFuture.continueOnSuccess(new SuccessHandler<Connection, MySqlAsyncConnection>() {
-      @Override
-      public MySqlAsyncConnection handle(final Connection result) {
-        final MySQLConnection connection = (MySQLConnection) result;
-        if (connection == conn) {
-          return MySqlAsyncConnection.this;
-        } else {
-          return new MySqlAsyncConnection(connection);
-        }
+    return composableFuture.continueOnSuccess((SuccessHandler<Connection, MySqlAsyncConnection>) result -> {
+      final MySQLConnection connection = (MySQLConnection) result;
+      if (connection == conn) {
+        return MySqlAsyncConnection.this;
+      } else {
+        return new MySqlAsyncConnection(connection);
       }
     });
   }

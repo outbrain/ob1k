@@ -39,175 +39,69 @@ class MySqlConnectionPool implements DbConnectionPool {
 
   private static void initializeMetrics(final MetricFactory metricFactory, final ConnectionPool<MySQLConnection> pool) {
     if (metricFactory != null) {
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return pool.availables().size();
-        }
-      });
-
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return pool.queued().size();
-        }
-      });
-
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", new Gauge<Integer>() {
-        @Override
-        public Integer getValue() {
-          return pool.inUse().size();
-        }
-      });
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", () -> pool.availables().size());
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", () -> pool.queued().size());
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", () -> pool.inUse().size());
     }
   }
 
   @Override
   public ComposableFuture<QueryResult> sendQuery(final String query) {
-    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
-      @Override
-      public Future<QueryResult> provide() {
-        return _pool.sendQuery(query);
-      }
-    });
+    return ScalaFutureHelper.from(() -> _pool.sendQuery(query));
   }
 
   @Override
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
     final Buffer<Object> scalaValues = JavaConversions.asScalaBuffer(values);
-    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<QueryResult>() {
-      @Override
-      public Future<QueryResult> provide() {
-        return _pool.sendPreparedStatement(query, scalaValues);
-      }
-    });
+    return ScalaFutureHelper.from(() -> _pool.sendPreparedStatement(query, scalaValues));
   }
 
   private ComposableFuture<MySqlAsyncConnection> take() {
-    final ComposableFuture<MySQLConnection> connFuture = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<MySQLConnection>() {
-      @Override
-      public Future<MySQLConnection> provide() {
-        return _pool.take();
-      }
-    });
+    final ComposableFuture<MySQLConnection> connFuture = ScalaFutureHelper.from(_pool::take);
 
-    return connFuture.continueOnSuccess(new SuccessHandler<MySQLConnection, MySqlAsyncConnection>() {
-      @Override
-      public MySqlAsyncConnection handle(final MySQLConnection result) {
-        return new MySqlAsyncConnection(result);
-      }
-    });
+    return connFuture.continueOnSuccess((SuccessHandler<MySQLConnection, MySqlAsyncConnection>) MySqlAsyncConnection::new);
   }
 
   private ComposableFuture<Boolean> giveBack(final MySqlAsyncConnection conn) {
-    return ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<AsyncObjectPool<MySQLConnection>>() {
-      @Override
-      public Future<AsyncObjectPool<MySQLConnection>> provide() {
-        return _pool.giveBack(conn.getInnerConnection());
-      }
-    }).continueWith(new ResultHandler<AsyncObjectPool<MySQLConnection>, Boolean>() {
-      @Override
-      public Boolean handle(final Try<AsyncObjectPool<MySQLConnection>> result) {
-        return result.isSuccess();
-      }
-    });
+    return ScalaFutureHelper.from(() -> _pool.giveBack(conn.getInnerConnection())).continueWith((ResultHandler<AsyncObjectPool<MySQLConnection>, Boolean>) Try::isSuccess);
   }
 
   @Override
   public <T> ComposableFuture<T> withConnection(final TransactionHandler<T> handler) {
     final ComposableFuture<MySqlAsyncConnection> futureConn = take();
-    return futureConn.continueOnSuccess(new FutureSuccessHandler<MySqlAsyncConnection, T>() {
-      @Override
-      public ComposableFuture<T> handle(final MySqlAsyncConnection conn) {
-        return handler.handle(conn).continueWith(new FutureResultHandler<T, T>() {
-          @Override
-          public ComposableFuture<T> handle(final Try<T> result) {
-            return giveBack(conn).continueWith(new FutureResultHandler<Boolean, T>() {
-              @Override
-              public ComposableFuture<T> handle(final Try<Boolean> giveBackResult) {
-                return ComposableFutures.fromTry(result);
-              }
-            });
-          }
-        });
-      }
-    });
+    return futureConn.continueOnSuccess((FutureSuccessHandler<MySqlAsyncConnection, T>) conn -> handler.handle(conn).continueWith((FutureResultHandler<T, T>) result -> giveBack(conn).continueWith((FutureResultHandler<Boolean, T>) giveBackResult -> ComposableFutures.fromTry(result))));
   }
 
   @Override
   public <T> ComposableFuture<T> withTransaction(final TransactionHandler<T> handler) {
     final ComposableFuture<MySqlAsyncConnection> futureConn = take();
-    return futureConn.continueOnSuccess(new FutureSuccessHandler<MySqlAsyncConnection, T>() {
-      @Override
-      public ComposableFuture<T> handle(final MySqlAsyncConnection conn) {
-        return conn.startTx().continueOnSuccess(new FutureSuccessHandler<MySqlAsyncConnection, T>() {
-          @Override
-          public ComposableFuture<T> handle(final MySqlAsyncConnection result) {
-            return handler.handle(conn);
-          }
-        }).continueOnSuccess(new FutureSuccessHandler<T, T>() {
-          @Override
-          public ComposableFuture<T> handle(final T result) {
-            return conn.commit().continueWith(new FutureResultHandler<QueryResult, T>() {
-              @Override
-              public ComposableFuture<T> handle(final Try<QueryResult> commitResult) {
-                return giveBack(conn).continueWith(new FutureResultHandler<Boolean, T>() {
-                  @Override
-                  public ComposableFuture<T> handle(final Try<Boolean> giveBackResult) {
-                    if (!giveBackResult.isSuccess()) {
-                      logger.warn("can't return connection back to pool", giveBackResult.getError());
-                    }
-
-                    if (commitResult.isSuccess()) {
-                      return fromValue(result);
-                    } else {
-                      return fromError(commitResult.getError());
-                    }
-                  }
-                });
-              }
-            });
-          }
-        }).continueOnError(new FutureErrorHandler<T>() {
-          @Override
-          public ComposableFuture<T> handle(final Throwable error) {
-            return conn.rollBack().continueWith(new FutureResultHandler<QueryResult, T>() {
-              @Override
-              public ComposableFuture<T> handle(final Try<QueryResult> rollBackResult) {
-                return giveBack(conn).continueWith(new FutureResultHandler<Boolean, T>() {
-                  @Override
-                  public ComposableFuture<T> handle(final Try<Boolean> result) {
-                    if (!result.isSuccess()) {
-                      logger.warn("can't return connection back to pool", error);
-                    }
-                    return fromError(error);
-                  }
-                });
-              }
-            });
-          }
-        });
+    return futureConn.continueOnSuccess((FutureSuccessHandler<MySqlAsyncConnection, T>) conn -> conn.startTx().continueOnSuccess((FutureSuccessHandler<MySqlAsyncConnection, T>) result -> handler.handle(conn)).continueOnSuccess((FutureSuccessHandler<T, T>) result -> conn.commit().continueWith((FutureResultHandler<QueryResult, T>) commitResult -> giveBack(conn).continueWith((FutureResultHandler<Boolean, T>) giveBackResult -> {
+      if (!giveBackResult.isSuccess()) {
+        logger.warn("can't return connection back to pool", giveBackResult.getError());
       }
-    });
+
+      if (commitResult.isSuccess()) {
+        return fromValue(result);
+      } else {
+        return fromError(commitResult.getError());
+      }
+    }))).continueOnError((FutureErrorHandler<T>) error -> conn.rollBack().continueWith((FutureResultHandler<QueryResult, T>) rollBackResult -> giveBack(conn).continueWith((FutureResultHandler<Boolean, T>) result -> {
+      if (!result.isSuccess()) {
+        logger.warn("can't return connection back to pool", error);
+      }
+      return fromError(error);
+    }))));
   }
 
   @Override
   public ComposableFuture<Boolean> close() {
-    final ComposableFuture<AsyncObjectPool<MySQLConnection>> future = ScalaFutureHelper.from(new ScalaFutureHelper.FutureProvider<AsyncObjectPool<MySQLConnection>>() {
-      @Override
-      public Future<AsyncObjectPool<MySQLConnection>> provide() {
-        return _pool.close();
-      }
-    });
+    final ComposableFuture<AsyncObjectPool<MySQLConnection>> future = ScalaFutureHelper.from(_pool::close);
 
-    return future.continueWith(new ResultHandler<AsyncObjectPool<MySQLConnection>, Boolean>() {
-      @Override
-      public Boolean handle(final Try<AsyncObjectPool<MySQLConnection>> result) {
-        try {
-          return result.isSuccess();
-        } catch (final Exception e) {
-          return false;
-        }
+    return future.continueWith((ResultHandler<AsyncObjectPool<MySQLConnection>, Boolean>) result -> {
+      try {
+        return result.isSuccess();
+      } catch (final Exception e) {
+        return false;
       }
     });
   }
