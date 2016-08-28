@@ -13,6 +13,7 @@ import java.util.Set;
  */
 public interface ConsulCatalog extends Service {
   ComposableFuture<Map<String, Set<String>>> services(final String dc);
+  ComposableFuture<Map<String, Set<String>>> findDcLocalServices();
   ComposableFuture<List<ServiceInstance>> findInstances(final String service, final String dc);
   ComposableFuture<List<ServiceInstance>> findDcLocalInstances(final String service);
   ComposableFuture<List<ServiceInstance>> filterDcLocalInstances(final String service, final String filterTag);
