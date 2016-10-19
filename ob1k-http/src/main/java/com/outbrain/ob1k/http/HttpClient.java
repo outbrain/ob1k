@@ -34,6 +34,7 @@ public class HttpClient implements Closeable {
   public static final int RETRIES = 3;
   public static final int CONNECTION_TIMEOUT = 200;
   public static final int REQUEST_TIMEOUT = 500;
+  public static final int READ_TIMEOUT = 500;
   public static final int MAX_CONNECTIONS_PER_HOST = 100;
   public static final int MAX_TOTAL_CONNECTIONS = MAX_CONNECTIONS_PER_HOST * 2;
 
@@ -154,20 +155,20 @@ public class HttpClient implements Closeable {
    */
   public static class Builder {
 
-    private MarshallingStrategy marshallingStrategy = new JacksonMarshallingStrategy();
+    private MarshallingStrategy marshallingStrategy = JacksonMarshallingStrategy.INSTANCE;
     private MetricFactory metricFactory;
-    private int connectionTimeout = HttpClient.CONNECTION_TIMEOUT;
-    private int requestTimeout = HttpClient.REQUEST_TIMEOUT;
-    private Integer readTimeout = null;
-    private int retries = HttpClient.RETRIES;
-    private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
-    private int maxTotalConnections = HttpClient.MAX_TOTAL_CONNECTIONS;
+    private int connectionTimeout = CONNECTION_TIMEOUT;
+    private int requestTimeout = REQUEST_TIMEOUT;
+    private int readTimeout = READ_TIMEOUT;
+    private int retries = RETRIES;
+    private int maxConnectionsPerHost = MAX_CONNECTIONS_PER_HOST;
+    private int maxTotalConnections = MAX_TOTAL_CONNECTIONS;
+    private int chunkedFileChunkSize = CHUNKED_FILE_CHUNK_SIZE;
     private boolean compressionEnforced;
     private boolean disableUrlEncoding;
     private boolean followRedirect;
     private boolean acceptAnySslCertificate;
     private long responseMaxSize;
-    private int chunkedFileChunkSize = HttpClient.CHUNKED_FILE_CHUNK_SIZE;
 
     /**
      * Max retries for request
@@ -350,6 +351,7 @@ public class HttpClient implements Closeable {
         setConnectTimeout(connectionTimeout).
         setMaxRequestRetry(retries).
         setRequestTimeout(requestTimeout).
+        setReadTimeout(readTimeout).
         setCompressionEnforced(compressionEnforced).
         setDisableUrlEncodingForBoundRequests(disableUrlEncoding).
         setMaxConnectionsPerHost(maxConnectionsPerHost).
@@ -359,10 +361,6 @@ public class HttpClient implements Closeable {
         setEventLoopGroup(EventLoopGroupHolder.GROUP).
         setFollowRedirect(followRedirect).
         setAcceptAnyCertificate(acceptAnySslCertificate);
-
-      if (readTimeout != null) {
-        configBuilder.setReadTimeout(readTimeout);
-      }
 
       return new HttpClient(new DefaultAsyncHttpClient(configBuilder.build()), responseMaxSize, marshallingStrategy);
     }
