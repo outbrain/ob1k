@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.http.ning;
+package com.outbrain.ob1k.http.providers.ning;
 
 import com.outbrain.ob1k.http.Response;
 import org.asynchttpclient.AsyncHandler;
@@ -18,11 +18,12 @@ abstract class NingHttpStreamHandler<T extends Response> implements AsyncHandler
 
   private final long responseMaxSize;
   private final Observer<T> stream;
-  protected volatile HttpResponseHeaders headers;
-  protected volatile HttpResponseStatus status;
+
+  private volatile HttpResponseHeaders headers;
+  private volatile HttpResponseStatus status;
   private volatile long responseSizesAggregated;
 
-  protected NingHttpStreamHandler(final long responseMaxSize, final Observer<T> stream) {
+  NingHttpStreamHandler(final long responseMaxSize, final Observer<T> stream) {
     this.responseMaxSize = responseMaxSize;
     this.stream = checkNotNull(stream, "stream may not be null");
   }
@@ -43,7 +44,7 @@ abstract class NingHttpStreamHandler<T extends Response> implements AsyncHandler
     }
 
     try {
-      final T response = supplyResponse(bodyPart);
+      final T response = supplyResponse(bodyPart, headers, status);
       stream.onNext(response);
     } catch (final Exception e) {
       stream.onError(e);
@@ -76,5 +77,6 @@ abstract class NingHttpStreamHandler<T extends Response> implements AsyncHandler
     return null;
   }
 
-  public abstract T supplyResponse(final HttpResponseBodyPart bodyPart) throws IOException;
+  abstract T supplyResponse(HttpResponseBodyPart bodyPart, HttpResponseHeaders headers,
+                            HttpResponseStatus status) throws IOException;
 }

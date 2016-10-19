@@ -1,8 +1,10 @@
-package com.outbrain.ob1k.http.ning;
+package com.outbrain.ob1k.http.providers.ning;
 
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
+import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.netty.NettyResponse;
 import rx.Observer;
 
@@ -21,15 +23,16 @@ class NingHttpTypedStreamHandler<T> extends NingHttpStreamHandler<TypedResponse<
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
 
-  public NingHttpTypedStreamHandler(final long responseMaxSize, final Observer<TypedResponse<T>> stream,
-                                    final MarshallingStrategy marshallingStrategy, final Type type) {
+  NingHttpTypedStreamHandler(final long responseMaxSize, final Observer<TypedResponse<T>> stream,
+                             final MarshallingStrategy marshallingStrategy, final Type type) {
     super(responseMaxSize, stream);
     this.marshallingStrategy = checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
     this.type = checkNotNull(type, "type may not be null");
   }
 
   @Override
-  public TypedResponse<T> supplyResponse(final HttpResponseBodyPart bodyPart) throws IOException {
+  TypedResponse<T> supplyResponse(final HttpResponseBodyPart bodyPart, final HttpResponseHeaders headers,
+                                  final HttpResponseStatus status) throws IOException {
     final org.asynchttpclient.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
     final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
 

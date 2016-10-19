@@ -1,9 +1,7 @@
-package com.outbrain.ob1k.http.ning;
+package com.outbrain.ob1k.http.providers.ning;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Lists.transform;
 
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.ning.http.client.Response;
 import com.outbrain.ob1k.concurrent.Try;
@@ -20,18 +18,22 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author marenzon
  */
-public class NingResponse<T> implements TypedResponse<T> {
+class NingResponse<T> implements TypedResponse<T> {
 
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
   private final Response ningResponse;
   private volatile T typedBody;
 
-  public NingResponse(final Response ningResponse, final Type type,
+  NingResponse(final Response ningResponse, final Type type,
                       final MarshallingStrategy marshallingStrategy) {
 
     this.ningResponse = checkNotNull(ningResponse, "ningResponse may not be null");
@@ -162,7 +164,7 @@ public class NingResponse<T> implements TypedResponse<T> {
         ningCookie.getPath(), ningCookie.getMaxAge(),
         ningCookie.isSecure(), ningCookie.isHttpOnly());
 
-    return transform(cookies, transformer);
+    return cookies.stream().map(transformer).collect(Collectors.toList());
   }
 
   @Override

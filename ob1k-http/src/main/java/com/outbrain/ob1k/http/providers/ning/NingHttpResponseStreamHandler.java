@@ -1,9 +1,13 @@
-package com.outbrain.ob1k.http.ning;
+package com.outbrain.ob1k.http.providers.ning;
 
 import com.outbrain.ob1k.http.Response;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
+import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.netty.NettyResponse;
 import rx.Observer;
+
+import java.io.IOException;
 
 import static java.util.Collections.singletonList;
 
@@ -12,12 +16,13 @@ import static java.util.Collections.singletonList;
  */
 class NingHttpResponseStreamHandler extends NingHttpStreamHandler<Response> {
 
-  public NingHttpResponseStreamHandler(final long responseMaxSize, final Observer<Response> stream) {
+  NingHttpResponseStreamHandler(final long responseMaxSize, final Observer<Response> stream) {
     super(responseMaxSize, stream);
   }
 
   @Override
-  public Response supplyResponse(final HttpResponseBodyPart bodyPart) {
+  Response supplyResponse(final HttpResponseBodyPart bodyPart, final HttpResponseHeaders headers,
+                          final HttpResponseStatus status) throws IOException {
     final org.asynchttpclient.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
     return new NingResponse<>(ningResponse, null, null);
   }

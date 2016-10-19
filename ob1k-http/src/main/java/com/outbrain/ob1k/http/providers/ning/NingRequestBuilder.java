@@ -1,4 +1,4 @@
-package com.outbrain.ob1k.http.ning;
+package com.outbrain.ob1k.http.providers.ning;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.RequestBuilder;
@@ -9,7 +9,6 @@ import com.outbrain.ob1k.http.common.Cookie;
 import com.outbrain.ob1k.http.common.Header;
 import com.outbrain.ob1k.http.common.Param;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
-import com.outbrain.ob1k.http.utils.ComposableFutureAdapter.Provider;
 import com.outbrain.ob1k.http.utils.UrlUtils;
 import org.apache.commons.codec.EncoderException;
 import org.asynchttpclient.AsyncCompletionHandler;
@@ -29,11 +28,12 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-import static com.outbrain.ob1k.http.utils.ComposableFutureAdapter.fromListenableFuture;
+import static com.outbrain.ob1k.http.providers.ning.ListenableToComposableFuture.transform;
 
 /**
  * @author marenzon
@@ -362,37 +362,10 @@ public class NingRequestBuilder implements RequestBuilder {
       log.trace("Sending HTTP call to {}: headers=[{}], body=[{}]", ningRequest.getUrl(), ningRequest.getHeaders(), body);
     }
 
-    final Provider<org.asynchttpclient.Response> provider = new Provider<org.asynchttpclient.Response>() {
-      private boolean aborted = false;
-      private long size;
+    final Supplier<ListenableFuture<org.asynchttpclient.Response>> provider = () ->
+      asyncHttpClient.executeRequest(ningRequest, new LimitedResponseSizeHandler());
 
-      @Override
-      public ListenableFuture<org.asynchttpclient.Response> provide() {
-        return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<org.asynchttpclient.Response>() {
-          @Override
-          public org.asynchttpclient.Response onCompleted(final org.asynchttpclient.Response response) throws Exception {
-            if (aborted) {
-              throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
-            }
-            return response;
-          }
-
-          @Override
-          public State onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
-            if (responseMaxSize > 0) {
-              size += content.length();
-              if (size > responseMaxSize) {
-                aborted = true;
-                return State.ABORT;
-              }
-            }
-            return super.onBodyPartReceived(content);
-          }
-        });
-      }
-    };
-
-    return fromListenableFuture(provider);
+    return transform(provider);
   }
 
   private org.asynchttpclient.cookie.Cookie transformToNingCookie(final Cookie cookie) {
@@ -423,5 +396,32 @@ public class NingRequestBuilder implements RequestBuilder {
 
     ningRequestBuilder.setBody(body);
     ningRequestBuilder.setCharset(charset);
+  }
+
+  private class LimitedResponseSizeHandler extends AsyncCompletionHandler<org.asynchttpclient.Response> {
+    private volatile boolean aborted = false;
+    private volatile long size;
+
+    @Override
+    public org.asynchttpclient.Response onCompleted(final org.asynchttpclient.Response response) throws Exception {
+      if (aborted) {
+        throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
+      }
+
+      return response;
+    }
+
+    @Override
+    public State onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
+      if (responseMaxSize > 0) {
+        size += content.length();
+        if (size > responseMaxSize) {
+          aborted = true;
+          return State.ABORT;
+        }
+      }
+
+      return super.onBodyPartReceived(content);
+    }
   }
 }
