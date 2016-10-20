@@ -3,19 +3,36 @@ package com.outbrain.ob1k.concurrent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.outbrain.ob1k.concurrent.combiners.*;
+import com.outbrain.ob1k.concurrent.combiners.BiFunction;
+import com.outbrain.ob1k.concurrent.combiners.Combiner;
+import com.outbrain.ob1k.concurrent.combiners.FutureBiFunction;
+import com.outbrain.ob1k.concurrent.combiners.FutureTriFunction;
+import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.config.Configuration;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.*;
+import com.outbrain.ob1k.concurrent.handlers.ForeachHandler;
+import com.outbrain.ob1k.concurrent.handlers.FutureAction;
+import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.ob1k.concurrent.handlers.RecursiveFutureProvider;
 import com.outbrain.ob1k.concurrent.lazy.LazyComposableFuture;
 import com.outbrain.ob1k.concurrent.stream.FutureProviderToStreamHandler;
 import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.ReplaySubject;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -50,7 +67,7 @@ public class ComposableFutures {
     }
 
     public static <T> ComposableFuture<T> recursive(final Supplier<ComposableFuture<T>> creator, final Predicate<T> stopCriteria) {
-        return creator.get().continueOnSuccess((FutureSuccessHandler<T, T>) result -> {
+        return creator.get().flatMap(result -> {
             if (stopCriteria.apply(result)) {
                 return ComposableFutures.fromValue(result);
             }
@@ -126,12 +143,7 @@ public class ComposableFutures {
     public static <T, R> ComposableFuture<R> foreach(final List<T> elements, final R zero, final ForeachHandler<T, R> handler) {
         ComposableFuture<R> result = fromValue(zero);
         for (final T element : elements) {
-            result = result.continueOnSuccess(new FutureSuccessHandler<R, R>() {
-                @Override
-                public ComposableFuture<R> handle(final R result) {
-                    return handler.handle(element, result);
-                }
-            });
+            result = result.flatMap(elementResult -> handler.handle(element, elementResult));
         }
         return result;
     }
@@ -139,12 +151,7 @@ public class ComposableFutures {
     public static <R> ComposableFuture<R> repeat(final int iterations, final R zero, final FutureSuccessHandler<R, R> handler) {
         ComposableFuture<R> result = fromValue(zero);
         for (int i = 0; i < iterations; ++i) {
-            result = result.continueOnSuccess(new FutureSuccessHandler<R, R>() {
-                @Override
-                public ComposableFuture<R> handle(final R result) {
-                    return handler.handle(result);
-                }
-            });
+            result = result.flatMap(handler::handle);
         }
         return result;
     }
@@ -181,20 +188,14 @@ public class ComposableFutures {
         }
 
         final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
-        return batchRes.continueOnSuccess(new FutureSuccessHandler<List<R>, List<R>>() {
-            @Override
-            public ComposableFuture<List<R>> handle(final List<R> batchResult) {
-                final ComposableFuture<List<R>> rest = batch(elements, index + batchSize, batchSize, producer);
-                return rest.continueOnSuccess(new SuccessHandler<List<R>, List<R>>() {
-                    @Override
-                    public List<R> handle(final List<R> result) throws ExecutionException {
-                        final ArrayList<R> res = new ArrayList<>(result.size() + batchResult.size());
-                        res.addAll(batchResult);
-                        res.addAll(result);
-                        return res;
-                    }
-                });
-            }
+        return batchRes.flatMap(batchResult -> {
+            final ComposableFuture<List<R>> rest = batch(elements, index + batchSize, batchSize, producer);
+            return rest.map(result -> {
+                final List<R> res = new ArrayList<>(result.size() + batchResult.size());
+                res.addAll(batchResult);
+                res.addAll(result);
+                return res;
+            });
         });
     }
 
@@ -223,16 +224,13 @@ public class ComposableFutures {
             futures.add(seqUnordered(elements, index, producer));
         }
 
-        return all(true, futures).continueOnSuccess(new SuccessHandler<List<List<R>>, List<R>>() {
-            @Override
-            public List<R> handle(final List<List<R>> result) throws ExecutionException {
-                final ArrayList<R> combined = new ArrayList<>(elements.size());
-                for (final List<R> lst : result) {
-                    combined.addAll(lst);
-                }
-
-                return combined;
+        return all(true, futures).map(result -> {
+            final List<R> combined = new ArrayList<>(elements.size());
+            for (final List<R> lst : result) {
+                combined.addAll(lst);
             }
+
+            return combined;
         });
     }
 
@@ -242,20 +240,14 @@ public class ComposableFutures {
         if (currentIndex >= elements.size()) {
             return ComposableFutures.fromValue(Collections.<R>emptyList());
         } else {
-            return producer.handle(elements.get(currentIndex)).continueOnSuccess(new FutureSuccessHandler<R, List<R>>() {
-                @Override
-                public ComposableFuture<List<R>> handle(final R result) {
-                    final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
-                    return rest.continueOnSuccess(new SuccessHandler<List<R>, List<R>>() {
-                        @Override
-                        public List<R> handle(final List<R> restResult) throws ExecutionException {
-                            final ArrayList<R> combined = new ArrayList<>(restResult.size() + 1);
-                            combined.addAll(restResult);
-                            combined.add(result);
-                            return combined;
-                        }
-                    });
-                }
+            return producer.handle(elements.get(currentIndex)).flatMap(result -> {
+                final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
+                return rest.map(restResult -> {
+                    final List<R> combined = new ArrayList<>(restResult.size() + 1);
+                    combined.addAll(restResult);
+                    combined.add(result);
+                    return combined;
+                });
             });
         }
     }
@@ -348,12 +340,7 @@ public class ComposableFutures {
 
     public static <T> ComposableFuture<T> submitFuture(final Callable<ComposableFuture<T>> task) {
         final ComposableFuture<ComposableFuture<T>> submitRes = submit(false, task);
-        return submitRes.continueOnSuccess(new FutureSuccessHandler<ComposableFuture<T>, T>() {
-            @Override
-            public ComposableFuture<T> handle(final ComposableFuture<T> result) {
-                return result;
-            }
-        });
+        return submitRes.flatMap(result -> result);
     }
 
     /**
@@ -406,12 +393,7 @@ public class ComposableFutures {
 
     public static <T> ComposableFuture<T> scheduleFuture(final Callable<ComposableFuture<T>> task, final long delay, final TimeUnit unit) {
         final ComposableFuture<ComposableFuture<T>> schedule = schedule(task, delay, unit);
-        return schedule.continueOnSuccess(new FutureSuccessHandler<ComposableFuture<T>, T>() {
-            @Override
-            public ComposableFuture<T> handle(final ComposableFuture<T> result) {
-                return result;
-            }
-        });
+        return schedule.flatMap(result -> result);
     }
 
     /**
@@ -487,14 +469,12 @@ public class ComposableFutures {
      * @return the composed result.
      */
     public static <T> ComposableFuture<T> retry(final int retries, final FutureAction<T> action) {
-        return action.execute().continueOnError(new FutureErrorHandler<T>() {
-            @Override
-            public ComposableFuture<T> handle(final Throwable error) {
-                if (retries < 1)
-                    return ComposableFutures.fromError(error);
-                else
-                    return retry(retries - 1, action);
+        return action.execute().recoverWith(error -> {
+            if (retries < 1) {
+                return ComposableFutures.fromError(error);
             }
+
+            return retry(retries - 1, action);
         });
     }
 
@@ -509,14 +489,12 @@ public class ComposableFutures {
      * @return the composed result.
      */
     public static <T> ComposableFuture<T> retry(final int retries, final long duration, final TimeUnit unit, final FutureAction<T> action) {
-        return action.execute().withTimeout(duration, unit).continueOnError(new FutureErrorHandler<T>() {
-            @Override
-            public ComposableFuture<T> handle(final Throwable error) {
-                if (retries < 1)
-                    return ComposableFutures.fromError(error);
-                else
-                    return retry(retries - 1, action);
+        return action.execute().withTimeout(duration, unit).recoverWith(error -> {
+            if (retries < 1) {
+                return ComposableFutures.fromError(error);
             }
+
+            return retry(retries - 1, action);
         });
     }
 
@@ -529,26 +507,22 @@ public class ComposableFutures {
      * @return the composed result.
      */
     public static <T> ComposableFuture<T> retryLazy(final ComposableFuture<T> future, final int retries) {
-        return future.continueOnError(new FutureErrorHandler<T>() {
-            @Override
-            public ComposableFuture<T> handle(final Throwable error) {
-                if (retries < 1)
-                    return ComposableFutures.fromError(error);
-                else
-                    return retryLazy(future, retries - 1);
+        return future.recoverWith(error -> {
+            if (retries < 1) {
+                return ComposableFutures.fromError(error);
             }
+
+            return retryLazy(future, retries - 1);
         });
     }
 
     public static <T> ComposableFuture<T> retryLazy(final ComposableFuture<T> future, final int retries, final long duration, final TimeUnit unit) {
-        return future.withTimeout(duration, unit).continueOnError(new FutureErrorHandler<T>() {
-            @Override
-            public ComposableFuture<T> handle(final Throwable error) {
-                if (retries < 1)
-                    return ComposableFutures.fromError(error);
-                else
-                    return retryLazy(future, retries - 1, duration, unit);
+        return future.withTimeout(duration, unit).recoverWith(error -> {
+            if (retries < 1) {
+                return ComposableFutures.fromError(error);
             }
+
+            return retryLazy(future, retries - 1, duration, unit);
         });
     }
 
