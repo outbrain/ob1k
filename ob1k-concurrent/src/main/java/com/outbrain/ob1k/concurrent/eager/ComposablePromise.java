@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.concurrent.eager;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.Try;
 
 /**
  * a promise is the producing side of an eager future.
@@ -12,6 +13,15 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
  * Time: 5:25 PM
  */
 public interface ComposablePromise<T> {
+
+  /**
+   * set a value or error inside the corresponding future.
+   * a value(or an error) can only be set once.
+   *
+   * @param value the value
+   */
+  void setTry(Try<T> value);
+
   /**
    * set a value inside the corresponding future.
    * a value(or an error) can only be set once.

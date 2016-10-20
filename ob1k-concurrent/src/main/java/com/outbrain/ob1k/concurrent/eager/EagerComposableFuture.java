@@ -1,15 +1,31 @@
 package com.outbrain.ob1k.concurrent.eager;
 
 import com.google.common.base.Function;
-import com.outbrain.ob1k.concurrent.*;
-import com.outbrain.ob1k.concurrent.handlers.*;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.outbrain.ob1k.concurrent.CancellationToken;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Producer;
+import com.outbrain.ob1k.concurrent.Scheduler;
+import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
+import com.outbrain.ob1k.concurrent.handlers.FutureAction;
+import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
+import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
+import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Time: 2:08 PM
  */
 public final class EagerComposableFuture<T> implements ComposableFuture<T>, ComposablePromise<T> {
+
   private static final Logger logger = LoggerFactory.getLogger(EagerComposableFuture.class);
 
   private final Executor threadPool;
@@ -35,25 +52,6 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     handlers = new HandlersList();
   }
 
-  @Override
-  public void set(final T result) {
-    if (value.compareAndSet(null, Try.fromValue(result))) {
-      done();
-    }
-  }
-
-  @Override
-  public void setException(final Throwable t) {
-    if (value.compareAndSet(null, Try.<T>fromError(t))) {
-      done();
-    }
-  }
-
-  @Override
-  public ComposableFuture<T> future() {
-    return this;
-  }
-
   public static <T> ComposableFuture<T> fromValue(final T value) {
     final EagerComposableFuture<T> result = new EagerComposableFuture<>();
     result.set(value);
@@ -68,14 +66,11 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
 
   public static <T> ComposableFuture<T> build(final Producer<T> producer) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>();
-    producer.produce(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          future.set(result.getValue());
-        } else {
-          future.setException(result.getError());
-        }
+    producer.produce(result -> {
+      if (result.isSuccess()) {
+        future.set(result.getValue());
+      } else {
+        future.setException(result.getError());
       }
     });
 
@@ -87,72 +82,46 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       return fromError(new NullPointerException("task must not be null"));
 
     final EagerComposableFuture<T> future = delegateHandler ?
-        new EagerComposableFuture<T>(executor) :
-        new EagerComposableFuture<T>();
+      new EagerComposableFuture<>(executor) :
+      new EagerComposableFuture<>();
 
-    executor.execute(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          future.set(task.call());
-        } catch (final Exception e) {
-          future.setException(e);
-        }
-      }
+    executor.execute(() -> {
+      future.setTry(Try.apply(task::call));
     });
 
     return future;
   }
 
   public static <T> ComposableFuture<T> schedule(final Scheduler scheduler, final Callable<T> task, final long delay, final TimeUnit unit) {
-    final EagerComposableFuture<T> res = new EagerComposableFuture<>();
-    scheduler.schedule(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          res.set(task.call());
-        } catch (final Exception e) {
-          res.setException(e);
-        }
-      }
+    final EagerComposableFuture<T> future = new EagerComposableFuture<>();
+    scheduler.schedule(() -> {
+      future.setTry(Try.apply(task::call));
     }, delay, unit);
 
-    return res;
+    return future;
   }
-
 
   public static <T> ComposableFuture<T> doubleDispatch(final FutureAction<T> action, final long duration,
                                                        final TimeUnit unit, final Scheduler scheduler) {
     final ComposableFuture<T> first = action.execute();
     final AtomicBoolean done = new AtomicBoolean();
 
-    first.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        done.compareAndSet(false, true);
-      }
-    });
+    first.consume(result -> done.compareAndSet(false, true));
 
     final EagerComposableFuture<T> second = new EagerComposableFuture<>();
-    scheduler.schedule(new Runnable() {
-      @Override
-      public void run() {
-        if (done.compareAndSet(false, true)) {
-          try {
-            final ComposableFuture<T> innerSecond = action.execute();
-            innerSecond.consume(new Consumer<T>() {
-              @Override
-              public void consume(final Try<T> result) {
-                if (result.isSuccess()) {
-                  second.set(result.getValue());
-                } else {
-                  second.setException(result.getError());
-                }
-              }
-            });
-          } catch (final Exception e) {
-            second.setException(e);
-          }
+    scheduler.schedule(() -> {
+      if (done.compareAndSet(false, true)) {
+        try {
+          final ComposableFuture<T> innerSecond = action.execute();
+          innerSecond.consume(result -> {
+            if (result.isSuccess()) {
+              second.set(result.getValue());
+            } else {
+              second.setException(result.getError());
+            }
+          });
+        } catch (final Exception e) {
+          second.setException(e);
         }
       }
     }, duration, unit);
@@ -170,15 +139,12 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     final AtomicBoolean done = new AtomicBoolean();
 
     for (final ComposableFuture<T> future : futures) {
-      future.consume(new Consumer<T>() {
-        @Override
-        public void consume(final Try<T> result) {
-          if (done.compareAndSet(false, true)) {
-            if (result.isSuccess()) {
-              res.set(result.getValue());
-            } else {
-              res.setException(result.getError());
-            }
+      future.consume(result -> {
+        if (done.compareAndSet(false, true)) {
+          if (result.isSuccess()) {
+            res.set(result.getValue());
+          } else {
+            res.setException(result.getError());
           }
         }
       });
@@ -187,29 +153,125 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     return res;
   }
 
+  @Override
+  public void setTry(final Try<T> value) {
+    if (value.isSuccess()) {
+      set(value.getValue());
+    } else {
+      setException(value.getError());
+    }
+  }
+
+  @Override
+  public void set(final T result) {
+    if (value.compareAndSet(null, Try.fromValue(result))) {
+      done();
+    }
+  }
+
+  @Override
+  public void setException(final Throwable t) {
+    if (value.compareAndSet(null, Try.fromError(t))) {
+      done();
+    }
+  }
+
+  @Override
+  public ComposableFuture<T> future() {
+    return this;
+  }
+
   private void done() {
     handlers.execute(threadPool);
   }
 
   @Override
-  public <R> ComposableFuture<R> continueWith(final FutureResultHandler<T, R> handler) {
+  public <R> ComposableFuture<R> map(final Function<T, R> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> res) {
+    this.consume(result -> {
+      if (result.isSuccess()) {
         try {
-          final ComposableFuture<R> nextResult = handler.handle(res);
-          if (nextResult == null) {
+          future.set(handler.apply(result.getValue()));
+        } catch (final UncheckedExecutionException e) {
+          future.setException(e.getCause() != null ? e.getCause() : e);
+        } catch (final Exception e) {
+          future.setException(e);
+        }
+      } else {
+        future.setException(result.getError());
+      }
+    });
+
+    return future;
+  }
+
+  @Override
+  public <R> ComposableFuture<R> flatMap(final Function<T, ComposableFuture<R>> handler) {
+    final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
+    this.consume(result -> {
+      if (result.isSuccess()) {
+        try {
+          final ComposableFuture<R> res = handler.apply(result.getValue());
+          if (res == null) {
             future.set(null);
           } else {
-            nextResult.consume(new Consumer<R>() {
-              @Override
-              public void consume(final Try<R> result) {
-                if (result.isSuccess()) {
-                  future.set(result.getValue());
-                } else {
-                  future.setException(result.getError());
-                }
+            res.consume(futureResult -> {
+              if (futureResult.isSuccess()) {
+                future.set(futureResult.getValue());
+              } else {
+                future.setException(futureResult.getError());
+              }
+            });
+          }
+
+        } catch (final Exception e) {
+          future.setException(e);
+        }
+      } else {
+        future.setException(result.getError());
+      }
+    });
+
+    return future;
+  }
+
+  @Override
+  public ComposableFuture<T> recover(final Function<Throwable, T> handler) {
+    final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
+    this.consume(result -> {
+      if (result.isSuccess()) {
+        future.set(result.getValue());
+      } else {
+        try {
+          future.set(handler.apply(result.getError()));
+        } catch (final UncheckedExecutionException e) {
+          future.setException(e.getCause() != null ? e.getCause() : e);
+        } catch (final Exception e) {
+          future.setException(e);
+        }
+      }
+    });
+
+    return future;
+  }
+
+  @Override
+  public ComposableFuture<T> recoverWith(final Function<Throwable, ComposableFuture<T>> handler) {
+    final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
+    this.consume(result -> {
+      if (result.isSuccess()) {
+        future.set(result.getValue());
+      } else {
+        try {
+          final ComposableFuture<T> res = handler.apply(result.getError());
+          if (res == null) {
+            future.set(null);
+          } else {
+            res.consume(futureResult -> {
+              if (futureResult.isSuccess()) {
+                future.set(futureResult.getValue());
+              } else {
+                future.setException(futureResult.getError());
               }
             });
           }
@@ -224,52 +286,15 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> continueWith(final ResultHandler<T, R> handler) {
-    final EagerComposableFuture<R> result = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> res) {
-        try {
-          result.set(handler.handle(res));
-        } catch (final Exception e) {
-          result.setException(e);
-        }
-      }
-    });
-
-    return result;
-  }
-
-  @Override
-  public <R> ComposableFuture<R> continueOnSuccess(final FutureSuccessHandler<? super T, R> handler) {
+  public <R> ComposableFuture<R> always(final Function<Try<T>, R> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          try {
-            final ComposableFuture<R> res = handler.handle(result.getValue());
-            if (res == null) {
-              future.set(null);
-            } else {
-              res.consume(new Consumer<R>() {
-                @Override
-                public void consume(final Try<R> result) {
-                  if (result.isSuccess()) {
-                    future.set(result.getValue());
-                  } else {
-                    future.setException(result.getError());
-                  }
-                }
-              });
-            }
-
-          } catch (final Exception e) {
-            future.setException(e);
-          }
-        } else {
-          future.setException(result.getError());
-        }
+    this.consume(res -> {
+      try {
+        future.set(handler.apply(res));
+      } catch (final UncheckedExecutionException e) {
+        future.setException(e.getCause() != null ? e.getCause() : e);
+      } catch (final Exception e) {
+        future.setException(e);
       }
     });
 
@@ -277,58 +302,25 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> continueOnSuccess(final SuccessHandler<? super T, ? extends R> handler) {
+  public <R> ComposableFuture<R> alwaysWith(final Function<Try<T>, ComposableFuture<R>> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          try {
-            future.set(handler.handle(result.getValue()));
-          } catch (final ExecutionException e) {
-            future.setException(e.getCause() != null ? e.getCause() : e);
-          } catch (final Exception e) {
-            future.setException(e);
-          }
+    this.consume(res -> {
+      try {
+        final ComposableFuture<R> nextResult = handler.apply(res);
+        if (nextResult == null) {
+          future.set(null);
         } else {
-          future.setException(result.getError());
-        }
-      }
-    });
-
-    return future;
-  }
-
-  @Override
-  public ComposableFuture<T> continueOnError(final FutureErrorHandler<T> handler) {
-    final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          future.set(result.getValue());
-        } else {
-          try {
-            final ComposableFuture<T> res = handler.handle(result.getError());
-            if (res == null) {
-              future.set(null);
+          nextResult.consume(result -> {
+            if (result.isSuccess()) {
+              future.set(result.getValue());
             } else {
-              res.consume(new Consumer<T>() {
-                @Override
-                public void consume(final Try<T> result) {
-                  if (result.isSuccess()) {
-                    future.set(result.getValue());
-                  } else {
-                    future.setException(result.getError());
-                  }
-                }
-              });
+              future.setException(result.getError());
             }
-
-          } catch (final Exception e) {
-            future.setException(e);
-          }
+          });
         }
+
+      } catch (final Exception e) {
+        future.setException(e);
       }
     });
 
@@ -336,23 +328,11 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> continueOnError(final ErrorHandler<? extends T> handler) {
+  public ComposableFuture<T> andThen(final Consumer<T> resultConsumer) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          future.set(result.getValue());
-        } else {
-          try {
-            future.set(handler.handle(result.getError()));
-          } catch (final ExecutionException e) {
-            future.setException(e.getCause() != null ? e.getCause() : e);
-          } catch (final Exception e) {
-            future.setException(e);
-          }
-        }
-      }
+    this.consume(result -> {
+      resultConsumer.consume(result);
+      future.setTry(result);
     });
 
     return future;
@@ -364,16 +344,6 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function) {
-    return continueOnSuccess(new SuccessHandler<T, R>() {
-      @Override
-      public R handle(final T result) {
-        return function.apply(result);
-      }
-    });
-  }
-
-  @Override
   public ComposableFuture<T> withTimeout(final long duration, final TimeUnit unit, final String taskDescription) {
     return withTimeout(ComposableFutures.getScheduler(), duration, unit, taskDescription);
   }
@@ -381,19 +351,10 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   @Override
   public ComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit, final String taskDescription) {
     final ComposablePromise<T> deadline = new EagerComposableFuture<>();
-    final CancellationToken cancellationToken =  scheduler.schedule(new Runnable() {
-      @Override
-      public void run() {
-        deadline.setException(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")"));
-      }
-    }, timeout, unit);
+    final CancellationToken cancellationToken = scheduler.schedule(() ->
+      deadline.setException(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")")), timeout, unit);
 
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        cancellationToken.cancel(false);
-      }
-    });
+    this.consume(result -> cancellationToken.cancel(false));
     return collectFirst(Arrays.asList(this, deadline.future()));
   }
 
@@ -412,45 +373,71 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     return this;
   }
 
-  @Override
-  public T get() throws InterruptedException, ExecutionException {
-    final CountDownLatch latch = new CountDownLatch(1);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        latch.countDown();
-      }
-    });
 
-    latch.await();
-    final Try<T> currentValue = this.value.get();
-    if (currentValue.isSuccess()) {
-      return currentValue.getValue();
-    } else {
-      throw new ExecutionException(currentValue.getError());
-    }
+  /*
+    OLD API - DEPRECATED
+ */
+
+
+  @Override
+  public <R> ComposableFuture<R> continueWith(final FutureResultHandler<T, R> handler) {
+    return alwaysWith(handler::handle);
   }
 
   @Override
-  public T get(final long timeout, final TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-    final CountDownLatch latch = new CountDownLatch(1);
-    this.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        latch.countDown();
+  public <R> ComposableFuture<R> continueWith(final ResultHandler<T, R> handler) {
+    return always(result -> {
+      try {
+        return handler.handle(result);
+      } catch (final ExecutionException e) {
+        // new API doesn't allows checked exceptions - offering throwing runtime instead. sadly, doing this for BC.
+        throw new UncheckedExecutionException(e.getCause());
       }
     });
+  }
 
-    if (latch.await(timeout, unit)) {
-      final Try<T> currentValue = this.value.get();
-      if (currentValue.isSuccess()) {
-        return currentValue.getValue();
-      } else {
-        throw new ExecutionException(currentValue.getError());
+  @Override
+  public <R> ComposableFuture<R> continueOnSuccess(final FutureSuccessHandler<? super T, R> handler) {
+    return flatMap(handler::handle); // sweet
+  }
+
+  @Override
+  public <R> ComposableFuture<R> continueOnSuccess(final SuccessHandler<? super T, ? extends R> handler) {
+    return map(result -> {
+      try {
+        return handler.handle(result);
+      } catch (final ExecutionException e) {
+        // new API doesn't allows checked exceptions - offering throwing runtime instead. sadly, doing this for BC.
+        throw new UncheckedExecutionException(e.getCause());
       }
-    } else {
-      throw new TimeoutException("Timeout occurred while waiting for value (" + timeout + unit + ")");
-    }
+    });
+  }
+
+  @Override
+  public ComposableFuture<T> continueOnError(final FutureErrorHandler<T> handler) {
+    return recoverWith(handler::handle);
+  }
+
+  @Override
+  public ComposableFuture<T> continueOnError(final ErrorHandler<? extends T> handler) {
+    return recover(error -> {
+      try {
+        return handler.handle(error);
+      } catch (final ExecutionException e) {
+        // new API doesn't allows checked exceptions - offering throwing runtime instead. sadly, doing this for BC.
+        throw new UncheckedExecutionException(e.getCause());
+      }
+    });
+  }
+
+  @Override
+  public <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function) {
+    return continueOnSuccess(new SuccessHandler<T, R>() {
+      @Override
+      public R handle(final T result) {
+        return function.apply(result);
+      }
+    });
   }
 
   private static class ConsumerAction<T> implements Runnable {
@@ -472,7 +459,4 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       }
     }
   }
-
-
-
 }

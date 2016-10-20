@@ -1,11 +1,11 @@
 package com.outbrain.ob1k.concurrent.scalaapi
 
+import java.util
 import java.util.concurrent.{Callable, TimeUnit, TimeoutException}
 
 import com.google.common.base.{Predicate, Supplier}
 import com.outbrain.ob1k.concurrent.handlers._
-import com.outbrain.ob1k.concurrent.{ComposableFuture => JavaComposableFuture, ComposableFutures =>
-JavaComposableFutures, Consumer, Producer, Try => JavaTry}
+import com.outbrain.ob1k.concurrent.{Consumer, Producer, ComposableFuture => JavaComposableFuture, ComposableFutures => JavaComposableFutures, Try => JavaTry}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration.Duration
@@ -96,7 +96,13 @@ object ComposableFuture {
   }
 
   def all[T](failOnError: Boolean, futures: ComposableFuture[T]*): ComposableFuture[List[T]] = {
-    JavaComposableFutures.all(failOnError, futures.toList.map(_.future)).map(_.toList)
+    val results: JavaComposableFuture[util.List[T]] = JavaComposableFutures.all(failOnError, futures.toList.map(_.future))
+    results.continueOnSuccess[List[T]](new SuccessHandler[util.List[T], List[T]] {
+      override def handle(result: util.List[T]): List[T] = {
+        import scala.collection.JavaConverters._
+        result.asScala.toList
+      }
+    })
   }
 
   /**
@@ -111,10 +117,15 @@ object ComposableFuture {
   }
 
   def first[K, T](futures: Map[K, ComposableFuture[T]], numOfSuccess: Int): ComposableFuture[Map[K, T]] = {
-    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future), numOfSuccess).map {
-      import scala.collection.JavaConverters._
-      _.asScala.toMap
-    }
+    val results: JavaComposableFuture[util.Map[K, T]] = JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future),
+      numOfSuccess)
+
+    results.continueOnSuccess[Map[K, T]](new SuccessHandler[util.Map[K, T], Map[K, T]] {
+      override def handle(result: util.Map[K, T]): Map[K, T] = {
+        import scala.collection.JavaConverters._
+        result.asScala.toMap
+      }
+    })
   }
 
   /**
@@ -132,13 +143,17 @@ object ComposableFuture {
   def first[K, T](futures: Map[K, ComposableFuture[T]],
                   numOfSuccess: Int,
                   maxDuration: Duration): ComposableFuture[Map[K, T]] = {
-    JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future),
+    val results : ComposableFuture[util.Map[K, T]] = JavaComposableFutures.first[K, T](futures.mapValues(_.future),
                                       numOfSuccess,
                                       maxDuration.toNanos,
-                                      TimeUnit.NANOSECONDS).map {
-      import scala.collection.JavaConverters._
-      _.asScala.toMap
-    }
+                                      TimeUnit.NANOSECONDS)
+
+    results.map(new Function[util.Map[K, T], Map[K, T]] {
+      override def apply(v1: util.Map[K, T]): Map[K, T] = {
+        import scala.collection.JavaConverters._
+        v1.asScala.toMap
+      }
+    })
   }
 
   def submit[T](task: => T, useExecutor: Boolean = true): ComposableFuture[T] = {
