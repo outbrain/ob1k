@@ -3,7 +3,7 @@ package com.outbrain.ob1k.concurrent.scalaapi
 import java.util.concurrent.Executor
 
 import com.outbrain.ob1k.concurrent.eager.{ComposablePromise => JavaComposablePromise}
-import com.outbrain.ob1k.concurrent.{ComposableFutures => JavaComposableFutures}
+import com.outbrain.ob1k.concurrent.{Consumer, Try => JavaTry, ComposableFutures => JavaComposableFutures}
 
 import scala.util.{Failure, Success, Try}
 
@@ -33,6 +33,11 @@ trait ComposablePromise[T] {
 
   protected val promise: JavaComposablePromise[T]
 
+  implicit def toScalaTry[R](javaTry: JavaTry[R]): Try[R] = {
+    if (javaTry.isSuccess) Success(javaTry.getValue)
+    else Failure(javaTry.getError)
+  }
+
   /** Completes the promise with either an exception or a value.
     *
     * @param tryValue     Either the value or the exception to complete the promise with.
@@ -52,7 +57,10 @@ trait ComposablePromise[T] {
     * @return   This promise
     */
   final def completeWith(other: ComposableFuture[T]): this.type = {
-    other consume complete
+    other.asJavaComposableFuture().consume(new Consumer[T] {
+      override def consume(result: JavaTry[T]): Unit = complete(result)
+    })
+
     this
   }
 
