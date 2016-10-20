@@ -23,8 +23,8 @@ public class ConsulAPITest {
   private static final String TAG1 = "tag1";
   private static final String TAG2 = "tag2";
   private static final ServiceRegistration.Check passingCheck = new PassingCheck();
-  private static final ServiceRegistration SERVICE1_REGISTRATION = new ServiceRegistration(SERVICE1_NAME, 8080,  Sets.newHashSet(TAG1, TAG2), passingCheck, 0);
-  private static final ServiceRegistration SERVICE2_REGISTRATION = new ServiceRegistration(SERVICE2_NAME, 8080,  Sets.newHashSet(TAG1), passingCheck, 0);
+  private static final ServiceRegistration SERVICE1_REGISTRATION = new ServiceRegistration(SERVICE1_NAME, null, 8080, Sets.newHashSet(TAG1, TAG2), passingCheck, 0);
+  private static final ServiceRegistration SERVICE2_REGISTRATION = new ServiceRegistration(SERVICE2_NAME, null, 8080,  Sets.newHashSet(TAG1), passingCheck, 0);
 
   @Before
   public void setup() throws ExecutionException, InterruptedException {

@@ -29,7 +29,7 @@ public class ExampleServiceRegistrationDataProvider implements ServiceRegistrati
     final String checkUrl = String.format("http://%s:%d%s%s", "127.0.0.1", server.getPort(), server.getContextPath(), checkPath);
     final ServiceRegistration.Check check = new ServiceRegistration.Check(checkUrl, 1);
 
-    return new ServiceRegistration(server.getApplicationName(), server.getPort(), extendedTags(tags, server), check, instance);
+    return new ServiceRegistration(server.getApplicationName(), null, server.getPort(), extendedTags(tags, server), check, instance);
   }
 
   private Set<String> extendedTags(final Set<String> tags, final Server server) {

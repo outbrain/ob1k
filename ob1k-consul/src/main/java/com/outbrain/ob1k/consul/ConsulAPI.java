@@ -12,9 +12,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class ConsulAPI {
 
-    private static final String AGENT_ADDRESS = System.getProperty("com.outbrain.ob1k.consul.agent.address", "localhost:8500");
-    private static final String AGENT_BASE_URL = "http://" + AGENT_ADDRESS + "/v1/";
-
+    static final String AGENT_ADDRESS = System.getProperty("com.outbrain.ob1k.consul.agent.address", "localhost:8500");
+    static final String AGENT_BASE_URL = "http://" + AGENT_ADDRESS + "/v1/";
 
     public static ConsulServiceRegistry getServiceRegistry() {
         return ConsulServiceRegistryHolder.INSTANCE;

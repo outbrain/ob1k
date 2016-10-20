@@ -42,7 +42,7 @@ public class ConsulServiceRegistrator implements Server.Listener {
     ConsulAPI.getServiceRegistry().register(registration).consume(responseFuture -> {
       logger.info("{} registration success={}", registration.getID(), responseFuture.isSuccess());
       if (!responseFuture.isSuccess()) {
-        logger.warn("Failed to register service: {}", responseFuture.getError().toString());
+        logger.warn("Failed to register service: {}", responseFuture.getError());
       }
     });
   }
@@ -53,11 +53,12 @@ public class ConsulServiceRegistrator implements Server.Listener {
       public void run() {
         logger.info("Going to deregister service {}", registration.getID());
         try {
-          final URLConnection urlConnection = new URL("http://localhost:8500/v1/agent/service/deregister/" + registration.getID()).openConnection();
+          final String deregisterUrl = ConsulAPI.AGENT_BASE_URL + "agent/service/deregister/" + registration.getID();
+          final URLConnection urlConnection = new URL(deregisterUrl).openConnection();
           urlConnection.setConnectTimeout(500);
           urlConnection.setReadTimeout(500);
           urlConnection.getInputStream().close();
-          logger.info("Deregistered service {}", registration.getID());
+          logger.info("Unregistered service {}", registration.getID());
         } catch (final IOException e) {
           logger.error("Failed to deregister service {}", registration.getID(), e);
         }
