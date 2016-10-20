@@ -1,14 +1,14 @@
 package com.outbrain.ob1k.concurrent.combiners;
 
-import com.outbrain.ob1k.concurrent.*;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Try;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,20 +26,14 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
 public class Combiner {
 
   public static <T> ComposableFuture<T> any(final Iterable<ComposableFuture<T>> elements) {
-    return ComposableFutures.build(new Producer<T>() {
-      @Override
-      public void produce(final Consumer<T> consumer) {
-        final AtomicBoolean done = new AtomicBoolean();
-        for (final ComposableFuture<T> future : elements) {
-          future.consume(new Consumer<T>() {
-            @Override
-            public void consume(final Try<T> result) {
-              if (done.compareAndSet(false, true)) {
-                consumer.consume(result);
-              }
-            }
-          });
-        }
+    return ComposableFutures.build(consumer -> {
+      final AtomicBoolean done = new AtomicBoolean();
+      for (final ComposableFuture<T> future : elements) {
+        future.consume(result -> {
+          if (done.compareAndSet(false, true)) {
+            consumer.consume(result);
+          }
+        });
       }
     });
   }
@@ -51,12 +45,7 @@ public class Combiner {
       elementsMap.put(index++, element);
     }
 
-    return all(failOnError, elementsMap).continueOnSuccess(new SuccessHandler<Map<Integer, T>, List<T>>() {
-      @Override
-      public List<T> handle(final Map<Integer, T> result) {
-        return new ArrayList<>(result.values());
-      }
-    });
+    return all(failOnError, elementsMap).map(result -> new ArrayList<>(result.values()));
   }
 
   public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> elements) {
@@ -104,92 +93,83 @@ public class Combiner {
       return fromValue(empty);
     }
 
-    return ComposableFutures.build(new Producer<Map<K, T>>() {
-      @Override
-      public void produce(final Consumer<Map<K, T>> consumer) {
-        final AtomicReferenceArray<KeyValue<K, T>> results = new AtomicReferenceArray<>(elements.size());
-        final AtomicReference<Status> status = new AtomicReference<>(new Status(elements.size(), numOfSuccess, 0, 0, false));
-        int counter = 0;
+    return ComposableFutures.build(consumer -> {
+      final AtomicReferenceArray<KeyValue<K, T>> results = new AtomicReferenceArray<>(elements.size());
+      final AtomicReference<Status> status = new AtomicReference<>(new Status(elements.size(), numOfSuccess, 0, 0, false));
+      int counter = 0;
 
-        if (timeout != null) {
-          schedule(new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-              while (true) {
-                final Status currentStatus = status.get();
-                if (currentStatus.isDone())
-                  break;
+      if (timeout != null) {
+        schedule(() -> {
+          while (true) {
+            final Status currentStatus = status.get();
+            if (currentStatus.isDone())
+              break;
 
-                final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                    currentStatus.results, currentStatus.successfulResults, true);
+            final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                currentStatus.results, currentStatus.successfulResults, true);
 
-                final boolean success = status.compareAndSet(currentStatus, newStatus);
-                if (success) {
+            final boolean success = status.compareAndSet(currentStatus, newStatus);
+            if (success) {
+              consumer.consume(Try.fromValue(collectResults(results)));
+              break;
+            }
+          }
+          return null;
+        }, timeout, timeUnit);
+      }
+
+      for (final Map.Entry<K, ComposableFuture<T>> element : elements.entrySet()) {
+        final ComposableFuture<T> future = element.getValue();
+        final K key = element.getKey();
+        final int index = counter;
+        counter++;
+
+        future.consume(result -> {
+          if (result.isSuccess()) {
+            final T element1 = result.getValue();
+            results.set(index, new KeyValue<>(key, element1));
+
+            while (true) {
+              final Status currentStatus = status.get();
+              if (currentStatus.isDone())
+                break;
+
+              final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                  currentStatus.results + 1, currentStatus.successfulResults + 1, false);
+
+              final boolean success = status.compareAndSet(currentStatus, newStatus);
+              if (success) {
+                if (newStatus.isDone()) {
                   consumer.consume(Try.fromValue(collectResults(results)));
-                  break;
                 }
-              }
-              return null;
-            }
-          }, timeout, timeUnit);
-        }
-
-        for (final Map.Entry<K, ComposableFuture<T>> element : elements.entrySet()) {
-          final ComposableFuture<T> future = element.getValue();
-          final K key = element.getKey();
-          final int index = counter;
-          counter++;
-
-          future.consume(new Consumer<T>() {
-            @Override
-            public void consume(final Try<T> result) {
-              if (result.isSuccess()) {
-                final T element = result.getValue();
-                results.set(index, new KeyValue<>(key, element));
-
-                while (true) {
-                  final Status currentStatus = status.get();
-                  if (currentStatus.isDone())
-                    break;
-
-                  final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                      currentStatus.results + 1, currentStatus.successfulResults + 1, false);
-
-                  final boolean success = status.compareAndSet(currentStatus, newStatus);
-                  if (success) {
-                    if (newStatus.isDone()) {
-                      consumer.consume(Try.fromValue(collectResults(results)));
-                    }
-                    break;
-                  }
-                }
-
-              } else {
-                final Throwable error = result.getError();
-                while (true) {
-                  final Status currentStatus = status.get();
-                  if (currentStatus.isDone())
-                    break;
-
-                  final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
-                      currentStatus.results + 1, currentStatus.successfulResults, failOnError);
-
-                  final boolean success = status.compareAndSet(currentStatus, newStatus);
-                  if (success) {
-                    if (failOnError) {
-                      consumer.consume(Try.<Map<K, T>>fromError(error));
-                    } else {
-                      if (newStatus.isDone()) {
-                        consumer.consume(Try.fromValue(collectResults(results)));
-                      }
-                    }
-                    break;
-                  }
-                }
+                break;
               }
             }
-          });
-        }
+
+          } else {
+            final Throwable error = result.getError();
+            while (true) {
+              final Status currentStatus = status.get();
+              if (currentStatus.isDone())
+                break;
+
+              final Status newStatus = new Status(currentStatus.total, currentStatus.minSuccessful,
+                  currentStatus.results + 1, currentStatus.successfulResults, failOnError);
+
+              final boolean success = status.compareAndSet(currentStatus, newStatus);
+              if (success) {
+                if (failOnError) {
+                  consumer.consume(Try.fromError(error));
+                } else {
+                  if (newStatus.isDone()) {
+                    consumer.consume(Try.fromValue(collectResults(results)));
+                  }
+                }
+                break;
+              }
+            }
+          }
+        });
       }
     });
   }
@@ -207,19 +187,9 @@ public class Combiner {
   }
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right, final BiFunction<T1, T2, R> combiner) {
-    final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.continueOnSuccess(new SuccessHandler<T1, BiContainer<T1, T2>>() {
-      @Override
-      public BiContainer<T1, T2> handle(final T1 result) {
-        return new BiContainer<>(result, null);
-      }
-    });
+    final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.map(result -> new BiContainer<>(result, null));
 
-    final ComposableFuture<BiContainer<T1, T2>> upliftRight = right.continueOnSuccess(new SuccessHandler<T2, BiContainer<T1, T2>>() {
-      @Override
-      public BiContainer<T1, T2> handle(final T2 result) {
-        return new BiContainer<>(null, result);
-      }
-    });
+    final ComposableFuture<BiContainer<T1, T2>> upliftRight = right.map(result -> new BiContainer<>(null, result));
 
     final HashMap<String, ComposableFuture<BiContainer<T1, T2>>> elements = new HashMap<>();
     final String leftKey = "left";
@@ -227,30 +197,21 @@ public class Combiner {
     elements.put(leftKey, upliftLeft);
     elements.put(rightKey, upliftRight);
 
-    return all(true, elements).continueOnSuccess(new SuccessHandler<Map<String, BiContainer<T1, T2>>, R>() {
-      @Override
-      public R handle(final Map<String, BiContainer<T1, T2>> result) throws ExecutionException {
-        final BiContainer<T1, T2> leftContainer = result.get(leftKey);
-        final BiContainer<T1, T2> rightContainer = result.get(rightKey);
+    return all(true, elements).map(result -> {
+      final BiContainer<T1, T2> leftContainer = result.get(leftKey);
+      final BiContainer<T1, T2> rightContainer = result.get(rightKey);
+      try {
         return combiner.apply(leftContainer.left, rightContainer.right);
+      } catch (final ExecutionException e) {
+        throw new UncheckedExecutionException(e.getCause());
       }
     });
   }
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left, final ComposableFuture<T2> right, final FutureBiFunction<T1, T2, R> combiner) {
-    final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.continueOnSuccess(new SuccessHandler<T1, BiContainer<T1, T2>>() {
-      @Override
-      public BiContainer<T1, T2> handle(final T1 result) {
-        return new BiContainer<>(result, null);
-      }
-    });
+    final ComposableFuture<BiContainer<T1, T2>> upliftLeft = left.map(result -> new BiContainer<>(result, null));
 
-    final ComposableFuture<BiContainer<T1, T2>> upliftRight = right.continueOnSuccess(new SuccessHandler<T2, BiContainer<T1, T2>>() {
-      @Override
-      public BiContainer<T1, T2> handle(final T2 result) {
-        return new BiContainer<>(null, result);
-      }
-    });
+    final ComposableFuture<BiContainer<T1, T2>> upliftRight = right.map(result -> new BiContainer<>(null, result));
 
     final HashMap<String, ComposableFuture<BiContainer<T1, T2>>> elements = new HashMap<>();
     final String leftKey = "left";
@@ -258,13 +219,10 @@ public class Combiner {
     elements.put(leftKey, upliftLeft);
     elements.put(rightKey, upliftRight);
 
-    return all(true, elements).continueOnSuccess(new FutureSuccessHandler<Map<String, BiContainer<T1, T2>>, R>() {
-      @Override
-      public ComposableFuture<R> handle(final Map<String, BiContainer<T1, T2>> result) {
-        final BiContainer<T1, T2> leftContainer = result.get(leftKey);
-        final BiContainer<T1, T2> rightContainer = result.get(rightKey);
-        return combiner.apply(leftContainer.left, rightContainer.right);
-      }
+    return all(true, elements).flatMap(result -> {
+      final BiContainer<T1, T2> leftContainer = result.get(leftKey);
+      final BiContainer<T1, T2> rightContainer = result.get(rightKey);
+      return combiner.apply(leftContainer.left, rightContainer.right);
     });
   }
 
@@ -273,26 +231,11 @@ public class Combiner {
                                                             final ComposableFuture<T3> third,
                                                             final TriFunction<T1, T2, T3, R> combiner) {
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftFirst = first.continueOnSuccess(new SuccessHandler<T1, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T1 result) {
-        return new TriContainer<>(result, null, null);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftFirst = first.map(result -> new TriContainer<>(result, null, null));
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftSecond = second.continueOnSuccess(new SuccessHandler<T2, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T2 result) {
-        return new TriContainer<>(null, result, null);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftSecond = second.map(result -> new TriContainer<>(null, result, null));
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftThird = third.continueOnSuccess(new SuccessHandler<T3, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T3 result) {
-        return new TriContainer<>(null, null, result);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftThird = third.map(result -> new TriContainer<>(null, null, result));
 
     final HashMap<String, ComposableFuture<TriContainer<T1, T2, T3>>> elements = new HashMap<>();
     final String firstKey = "first";
@@ -303,14 +246,15 @@ public class Combiner {
     elements.put(secondKey, upliftSecond);
     elements.put(thirdKey, upliftThird);
 
-    return all(true, elements).continueOnSuccess(new SuccessHandler<Map<String, TriContainer<T1, T2, T3>>, R>() {
-      @Override
-      public R handle(final Map<String, TriContainer<T1, T2, T3>> result) throws ExecutionException {
-        final TriContainer<T1, T2, T3> firstContainer = result.get(firstKey);
-        final TriContainer<T1, T2, T3> secondContainer = result.get(secondKey);
-        final TriContainer<T1, T2, T3> thirdContainer = result.get(thirdKey);
+    return all(true, elements).map(result -> {
+      final TriContainer<T1, T2, T3> firstContainer = result.get(firstKey);
+      final TriContainer<T1, T2, T3> secondContainer = result.get(secondKey);
+      final TriContainer<T1, T2, T3> thirdContainer = result.get(thirdKey);
 
+      try {
         return combiner.apply(firstContainer.first, secondContainer.second, thirdContainer.third);
+      } catch (final ExecutionException e) {
+        throw new UncheckedExecutionException(e.getCause());
       }
     });
 
@@ -321,26 +265,11 @@ public class Combiner {
                                                             final ComposableFuture<T3> third,
                                                             final FutureTriFunction<T1, T2, T3, R> combiner) {
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftFirst = first.continueOnSuccess(new SuccessHandler<T1, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T1 result) {
-        return new TriContainer<>(result, null, null);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftFirst = first.map(result -> new TriContainer<>(result, null, null));
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftSecond = second.continueOnSuccess(new SuccessHandler<T2, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T2 result) {
-        return new TriContainer<>(null, result, null);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftSecond = second.map(result -> new TriContainer<>(null, result, null));
 
-    final ComposableFuture<TriContainer<T1, T2, T3>> upliftThird = third.continueOnSuccess(new SuccessHandler<T3, TriContainer<T1, T2, T3>>() {
-      @Override
-      public TriContainer<T1, T2, T3> handle(final T3 result) {
-        return new TriContainer<>(null, null, result);
-      }
-    });
+    final ComposableFuture<TriContainer<T1, T2, T3>> upliftThird = third.map(result -> new TriContainer<>(null, null, result));
 
     final HashMap<String, ComposableFuture<TriContainer<T1, T2, T3>>> elements = new HashMap<>();
     final String firstKey = "first";
@@ -351,15 +280,12 @@ public class Combiner {
     elements.put(secondKey, upliftSecond);
     elements.put(thirdKey, upliftThird);
 
-    return all(true, elements).continueOnSuccess(new FutureSuccessHandler<Map<String, TriContainer<T1, T2, T3>>, R>() {
-      @Override
-      public ComposableFuture<R> handle(final Map<String, TriContainer<T1, T2, T3>> result) {
-        final TriContainer<T1, T2, T3> firstContainer = result.get(firstKey);
-        final TriContainer<T1, T2, T3> secondContainer = result.get(secondKey);
-        final TriContainer<T1, T2, T3> thirdContainer = result.get(thirdKey);
+    return all(true, elements).flatMap(result -> {
+      final TriContainer<T1, T2, T3> firstContainer = result.get(firstKey);
+      final TriContainer<T1, T2, T3> secondContainer = result.get(secondKey);
+      final TriContainer<T1, T2, T3> thirdContainer = result.get(thirdKey);
 
-        return combiner.apply(firstContainer.first, secondContainer.second, thirdContainer.third);
-      }
+      return combiner.apply(firstContainer.first, secondContainer.second, thirdContainer.third);
     });
 
   }
