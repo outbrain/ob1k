@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
 import com.outbrain.ob1k.concurrent.handlers.*;
 import com.outbrain.ob1k.concurrent.lazy.LazyComposableFuture;
 import org.junit.Assert;
@@ -32,15 +31,10 @@ public class LazyComposableFutureTest {
     final String errorMessage = "oh no...";
     final LazyComposableFuture<Object> res = LazyComposableFuture.fromError(new RuntimeException(errorMessage));
 
-    res.consume(new Consumer<Object>() {
-      @Override
-      public void consume(final Try<Object> result) {
-        System.out.println("got: " + result);
-      }
-    });
+    res.consume(result -> System.out.println("got: " + result));
 
     try {
-      final Object result = res.get();
+      res.get();
       Assert.fail("should get an exception");
     } catch (final ExecutionException e) {
       final Throwable cause = e.getCause();
@@ -54,23 +48,15 @@ public class LazyComposableFutureTest {
   public void testBuildFuture() throws ExecutionException, InterruptedException {
     final AtomicInteger producerCounter = new AtomicInteger();
     final String message = "great success";
-    final ComposableFuture<String> res = LazyComposableFuture.build(new Producer<String>() {
-      @Override
-      public void produce(final Consumer<String> consumer) {
-        producerCounter.incrementAndGet();
-        consumer.consume(Try.fromValue(message));
-      }
+    final ComposableFuture<String> res = LazyComposableFuture.build(consumer -> {
+      producerCounter.incrementAndGet();
+      consumer.consume(Try.fromValue(message));
     });
 
     Thread.sleep(100);
     Assert.assertEquals(producerCounter.get(), 0);
 
-    res.consume(new Consumer<String>() {
-      @Override
-      public void consume(final Try<String> result) {
-        System.out.println("got: " + result);
-      }
-    });
+    res.consume(result -> System.out.println("got: " + result));
 
     final String result = res.get();
     Assert.assertTrue(result.equals(message));
@@ -84,19 +70,9 @@ public class LazyComposableFutureTest {
       public String handle(final String result) {
         return result + ",two";
       }
-    }).continueOnSuccess(new FutureSuccessHandler<String, String>() {
-      @Override
-      public ComposableFuture<String> handle(final String result) {
-        return LazyComposableFuture.fromValue(result + ",three");
-      }
-    });
+    }).flatMap(result -> ComposableFutures.fromValue(result + ",three"));
 
-    res.consume(new Consumer<String>() {
-      @Override
-      public void consume(final Try<String> result) {
-        System.out.println("get: " + result);
-      }
-    });
+    res.consume(result -> System.out.println("get: " + result));
 
     final String result = res.get();
     Assert.assertEquals(result, "one,two,three");
@@ -139,31 +115,20 @@ public class LazyComposableFutureTest {
   public void testSubmit() throws ExecutionException, InterruptedException {
     final AtomicInteger prodCounter = new AtomicInteger();
     final ExecutorService executor = Executors.newFixedThreadPool(1);
-    final ComposableFuture<String> res = LazyComposableFuture.submit(executor, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        prodCounter.incrementAndGet();
-        return "first";
-      }
+    final ComposableFuture<String> res = LazyComposableFuture.submit(executor, () -> {
+      prodCounter.incrementAndGet();
+      return "first";
     }, false).continueOnSuccess(new FutureSuccessHandler<String, String>() {
       @Override
       public ComposableFuture<String> handle(final String result) {
-        return LazyComposableFuture.submit(executor, new Callable<String>() {
-          @Override
-          public String call() throws Exception {
-            prodCounter.incrementAndGet();
-            return result + ",second";
-          }
+        return LazyComposableFuture.submit(executor, () -> {
+          prodCounter.incrementAndGet();
+          return result + ",second";
         }, false);
       }
     });
 
-    res.consume(new Consumer<String>() {
-      @Override
-      public void consume(final Try<String> result) {
-        System.out.println("got: " + result);
-      }
-    });
+    res.consume(result -> System.out.println("got: " + result));
 
     final String result = res.get();
     Assert.assertEquals(result, "first,second");
@@ -174,26 +139,11 @@ public class LazyComposableFutureTest {
   @Test
   public void testSchedule() throws ExecutionException, InterruptedException {
     final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-schedule");
-    final ComposableFuture<Integer> res1 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
-      @Override
-      public Integer call() throws Exception {
-        return 1;
-      }
-    }, 100, TimeUnit.MILLISECONDS);
+    final ComposableFuture<Integer> res1 = LazyComposableFuture.schedule(scheduler, () -> 1, 100, TimeUnit.MILLISECONDS);
 
-    final ComposableFuture<Integer> res2 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
-      @Override
-      public Integer call() throws Exception {
-        return 2;
-      }
-    }, 300, TimeUnit.MILLISECONDS);
+    final ComposableFuture<Integer> res2 = LazyComposableFuture.schedule(scheduler, () -> 2, 300, TimeUnit.MILLISECONDS);
 
-    final ComposableFuture<Integer> res3 = LazyComposableFuture.schedule(scheduler, new Callable<Integer>() {
-      @Override
-      public Integer call() throws Exception {
-        return 3;
-      }
-    }, 200, TimeUnit.MILLISECONDS);
+    final ComposableFuture<Integer> res3 = LazyComposableFuture.schedule(scheduler, () -> 3, 200, TimeUnit.MILLISECONDS);
 
     final ComposableFuture<List<Integer>> res = LazyComposableFuture.collectAll(Arrays.asList(res1, res2, res3));
 
@@ -208,22 +158,12 @@ public class LazyComposableFutureTest {
   @Test
   public void testWithTimeout() throws ExecutionException, InterruptedException {
     final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-with-timeout");
-    final LazyComposableFuture<String> fast = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "fast";
-      }
-    }, 100, TimeUnit.MILLISECONDS).withTimeout(scheduler, 200, TimeUnit.MILLISECONDS);
+    final LazyComposableFuture<String> fast = LazyComposableFuture.schedule(scheduler, () -> "fast", 100, TimeUnit.MILLISECONDS).withTimeout(scheduler, 200, TimeUnit.MILLISECONDS);
 
     final String res1 = fast.get();
     Assert.assertEquals(res1, "fast");
 
-    final LazyComposableFuture<String> slow = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "slow";
-      }
-    }, 200, TimeUnit.MILLISECONDS).withTimeout(scheduler, 100, TimeUnit.MILLISECONDS);
+    final LazyComposableFuture<String> slow = LazyComposableFuture.schedule(scheduler, () -> "slow", 200, TimeUnit.MILLISECONDS).withTimeout(scheduler, 100, TimeUnit.MILLISECONDS);
 
     try {
       final String res2 = slow.get();
@@ -242,16 +182,13 @@ public class LazyComposableFutureTest {
     final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-double-dispatch");
 
     final AtomicBoolean state1 = new AtomicBoolean(false);
-    final LazyComposableFuture<String> res1 = LazyComposableFuture.submit(executor, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        if (state1.compareAndSet(false, true)) {
-          Thread.sleep(200);
-          return "first";
-        } else {
-          Thread.sleep(50);
-          return "second";
-        }
+    final LazyComposableFuture<String> res1 = LazyComposableFuture.submit(executor, () -> {
+      if (state1.compareAndSet(false, true)) {
+        Thread.sleep(200);
+        return "first";
+      } else {
+        Thread.sleep(50);
+        return "second";
       }
     }, false).doubleDispatch(scheduler, 100, TimeUnit.MILLISECONDS);
 
@@ -263,16 +200,13 @@ public class LazyComposableFutureTest {
     Assert.assertTrue((t2 - t1) < 200);
 
     final AtomicBoolean state2 = new AtomicBoolean(false);
-    final LazyComposableFuture<String> res2 = LazyComposableFuture.submit(executor, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        if (state2.compareAndSet(false, true)) {
-          Thread.sleep(100);
-          return "first";
-        } else {
-          Thread.sleep(50);
-          return "second";
-        }
+    final LazyComposableFuture<String> res2 = LazyComposableFuture.submit(executor, () -> {
+      if (state2.compareAndSet(false, true)) {
+        Thread.sleep(100);
+        return "first";
+      } else {
+        Thread.sleep(50);
+        return "second";
       }
     }, false).doubleDispatch(scheduler, 150, TimeUnit.MILLISECONDS);
 
@@ -284,16 +218,13 @@ public class LazyComposableFutureTest {
     Assert.assertTrue((t4 - t3) < 150);
 
     final AtomicBoolean state3 = new AtomicBoolean(false);
-    final LazyComposableFuture<String> res3 = LazyComposableFuture.submit(executor, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        if (state3.compareAndSet(false, true)) {
-          Thread.sleep(100);
-          return "first";
-        } else {
-          Thread.sleep(200);
-          return "second";
-        }
+    final LazyComposableFuture<String> res3 = LazyComposableFuture.submit(executor, () -> {
+      if (state3.compareAndSet(false, true)) {
+        Thread.sleep(100);
+        return "first";
+      } else {
+        Thread.sleep(200);
+        return "second";
       }
     }, false).doubleDispatch(scheduler, 50, TimeUnit.MILLISECONDS);
 
@@ -311,26 +242,11 @@ public class LazyComposableFutureTest {
   @Test
   public void testColdStream() {
     final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-cold-stream");
-    final ComposableFuture<String> first = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "first";
-      }
-    }, 100, TimeUnit.MILLISECONDS);
+    final ComposableFuture<String> first = LazyComposableFuture.schedule(scheduler, () -> "first", 100, TimeUnit.MILLISECONDS);
 
-    final ComposableFuture<String> second = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "second";
-      }
-    }, 200, TimeUnit.MILLISECONDS);
+    final ComposableFuture<String> second = LazyComposableFuture.schedule(scheduler, () -> "second", 200, TimeUnit.MILLISECONDS);
 
-    final ComposableFuture<String> third = LazyComposableFuture.schedule(scheduler, new Callable<String>() {
-      @Override
-      public String call() throws Exception {
-        return "third";
-      }
-    }, 300, TimeUnit.MILLISECONDS);
+    final ComposableFuture<String> third = LazyComposableFuture.schedule(scheduler, () -> "third", 300, TimeUnit.MILLISECONDS);
 
     final Observable<String> stream = ComposableFutures.toColdObservable(Arrays.asList(first, second, third));
 
@@ -356,12 +272,9 @@ public class LazyComposableFutureTest {
     final AtomicInteger counter = new AtomicInteger(0);
     final int repeats = 5;
 
-    final ComposableFuture<String> lazyString = LazyComposableFuture.apply(new Supplier<String>() {
-      @Override
-      public String get() {
-        counter.incrementAndGet();
-        return "stateless lazy evaluated";
-      }
+    final ComposableFuture<String> lazyString = LazyComposableFuture.apply(() -> {
+      counter.incrementAndGet();
+      return "stateless lazy evaluated";
     });
 
     final Observable<String> stringObservable = ComposableFutures.toColdObservable(new RecursiveFutureProvider<String>() {
