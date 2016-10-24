@@ -2,6 +2,7 @@ package com.outbrain.ob1k.concurrent.scalaapi
 
 import java.util
 import java.util.concurrent.{Callable, TimeUnit, TimeoutException}
+import java.util.function
 
 import com.google.common.base.{Predicate, Supplier}
 import com.outbrain.ob1k.concurrent.handlers._
@@ -97,8 +98,8 @@ object ComposableFuture {
 
   def all[T](failOnError: Boolean, futures: ComposableFuture[T]*): ComposableFuture[List[T]] = {
     val results: JavaComposableFuture[util.List[T]] = JavaComposableFutures.all(failOnError, futures.toList.map(_.future))
-    results.continueOnSuccess[List[T]](new SuccessHandler[util.List[T], List[T]] {
-      override def handle(result: util.List[T]): List[T] = {
+    results.map[List[T]](new function.Function[util.List[T], List[T]] {
+      override def apply(result: util.List[T]): List[T] = {
         import scala.collection.JavaConverters._
         result.asScala.toList
       }
@@ -120,8 +121,8 @@ object ComposableFuture {
     val results: JavaComposableFuture[util.Map[K, T]] = JavaComposableFutures.first[K, T](futures.mapValues(cf => cf.future),
       numOfSuccess)
 
-    results.continueOnSuccess[Map[K, T]](new SuccessHandler[util.Map[K, T], Map[K, T]] {
-      override def handle(result: util.Map[K, T]): Map[K, T] = {
+    results.map[Map[K, T]](new function.Function[util.Map[K, T], Map[K, T]] {
+      override def apply(result: util.Map[K, T]): Map[K, T] = {
         import scala.collection.JavaConverters._
         result.asScala.toMap
       }
@@ -212,13 +213,13 @@ trait ComposableFuture[T] {
 
   protected val future: JavaComposableFuture[T]
 
-  def map[V](f: T => V): ComposableFuture[V] = future.continueOnSuccess[V](new SuccessHandler[T, V] {
-    override def handle(result: T): V = f(result)
+  def map[V](f: T => V): ComposableFuture[V] = future.map[V](new function.Function[T, V] {
+    override def apply(result: T): V = f(result)
   })
 
   def flatMap[V](f: T => ComposableFuture[V]): ComposableFuture[V] = {
-    future.continueOnSuccess(new FutureSuccessHandler[T, V] {
-      override def handle(result: T): JavaComposableFuture[V] = {
+    future.flatMap[V](new function.Function[T, JavaComposableFuture[_ <: V]] {
+      override def apply(result: T): JavaComposableFuture[V] = {
         Try(f(result)) match {
           case Success(ft) => ft.future
           case Failure(e) => ComposableFuture.fromError(e).future
@@ -245,15 +246,13 @@ trait ComposableFuture[T] {
     case timeout => future.withTimeout(timeout.toNanos, TimeUnit.NANOSECONDS)
   }
 
-  def recover(pf: PartialFunction[Throwable, T]): ComposableFuture[T] = future.continueOnError(new ErrorHandler[T] {
-    override def handle(error: Throwable): T = {
-      Try(pf(error)).orElse(Failure(error)).get
-    }
+  def recover(pf: PartialFunction[Throwable, T]): ComposableFuture[T] = future.recover(new function.Function[Throwable, T] {
+    override def apply(error: Throwable): T = Try(pf(error)).orElse(Failure(error)).get
   })
 
   def recoverWith(pf: PartialFunction[Throwable, ComposableFuture[T]]): ComposableFuture[T] = {
-    future.continueOnError(new FutureErrorHandler[T] {
-      override def handle(result: Throwable): JavaComposableFuture[T] = {
+    future.recoverWith(new function.Function[Throwable, JavaComposableFuture[_ <: T]] {
+      override def apply(result: Throwable): JavaComposableFuture[T] = {
         Try(pf(result)).getOrElse(ComposableFuture.fromError(result)).future
       }
     })

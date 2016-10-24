@@ -1,10 +1,13 @@
 package com.outbrain.ob1k.concurrent;
 
 /**
- * produces a value/error and delivers it to the consumer at some point in the future.
+ * Produces a computation value/error, and provides it to
+ * the consumer at some point of execution time.
  *
- * @author asy ronen
+ * @author aronen
  */
+@FunctionalInterface
 public interface Producer<T> {
+
   void produce(Consumer<T> consumer);
 }

@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.concurrent.eager;
 
-import com.google.common.base.Function;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.CancellationToken;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -28,6 +27,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+
+import static java.util.function.Function.identity;
 
 /**
  * User: aronen
@@ -64,7 +66,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     return result;
   }
 
-  public static <T> ComposableFuture<T> build(final Producer<T> producer) {
+  public static <T> ComposableFuture<T> build(final Producer<? extends T> producer) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>();
     producer.produce(result -> {
       if (result.isSuccess()) {
@@ -85,19 +87,13 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       new EagerComposableFuture<>(executor) :
       new EagerComposableFuture<>();
 
-    executor.execute(() -> {
-      future.setTry(Try.apply(task::call));
-    });
-
+    executor.execute(() -> future.setTry(Try.apply(task::call)));
     return future;
   }
 
   public static <T> ComposableFuture<T> schedule(final Scheduler scheduler, final Callable<T> task, final long delay, final TimeUnit unit) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>();
-    scheduler.schedule(() -> {
-      future.setTry(Try.apply(task::call));
-    }, delay, unit);
-
+    scheduler.schedule(() -> future.setTry(Try.apply(task::call)), delay, unit);
     return future;
   }
 
@@ -154,7 +150,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public void setTry(final Try<T> value) {
+  public void setTry(final Try<? extends T> value) {
     if (value.isSuccess()) {
       set(value.getValue());
     } else {
@@ -186,7 +182,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> map(final Function<T, R> handler) {
+  public <R> ComposableFuture<R> map(final Function<? super T, ? extends R> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
@@ -206,12 +202,12 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> flatMap(final Function<T, ComposableFuture<R>> handler) {
+  public <R> ComposableFuture<R> flatMap(final Function<? super T, ? extends ComposableFuture<? extends R>> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
         try {
-          final ComposableFuture<R> res = handler.apply(result.getValue());
+          final ComposableFuture<? extends R> res = handler.apply(result.getValue());
           if (res == null) {
             future.set(null);
           } else {
@@ -236,7 +232,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> recover(final Function<Throwable, T> handler) {
+  public ComposableFuture<T> recover(final Function<Throwable, ? extends T> handler) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
@@ -256,14 +252,14 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> recoverWith(final Function<Throwable, ComposableFuture<T>> handler) {
+  public ComposableFuture<T> recoverWith(final Function<Throwable, ? extends ComposableFuture<? extends T>> handler) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
         future.set(result.getValue());
       } else {
         try {
-          final ComposableFuture<T> res = handler.apply(result.getError());
+          final ComposableFuture<? extends T> res = handler.apply(result.getError());
           if (res == null) {
             future.set(null);
           } else {
@@ -286,7 +282,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> always(final Function<Try<T>, R> handler) {
+  public <R> ComposableFuture<R> always(final Function<Try<T>, ? extends R> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
     this.consume(res -> {
       try {
@@ -302,11 +298,11 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> alwaysWith(final Function<Try<T>, ComposableFuture<R>> handler) {
+  public <R> ComposableFuture<R> alwaysWith(final Function<Try<T>, ? extends ComposableFuture<? extends R>> handler) {
     final EagerComposableFuture<R> future = new EagerComposableFuture<>(threadPool);
     this.consume(res -> {
       try {
-        final ComposableFuture<R> nextResult = handler.apply(res);
+        final ComposableFuture<? extends R> nextResult = handler.apply(res);
         if (nextResult == null) {
           future.set(null);
         } else {
@@ -328,10 +324,10 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> andThen(final Consumer<T> resultConsumer) {
+  public ComposableFuture<T> andThen(final Consumer<? super T> resultConsumer) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
-      resultConsumer.consume(result);
+      resultConsumer.consume(result.map(identity()));
       future.setTry(result);
     });
 
@@ -339,7 +335,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public void consume(final Consumer<T> consumer) {
+  public void consume(final Consumer<? super T> consumer) {
     handlers.addHandler(new ConsumerAction<>(consumer, this), threadPool);
   }
 
@@ -380,11 +376,13 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
 
 
   @Override
+  @SuppressWarnings({"unchecked", "deprecated"})
   public <R> ComposableFuture<R> continueWith(final FutureResultHandler<T, R> handler) {
     return alwaysWith(handler::handle);
   }
 
   @Override
+  @SuppressWarnings({"unchecked", "deprecated"})
   public <R> ComposableFuture<R> continueWith(final ResultHandler<T, R> handler) {
     return always(result -> {
       try {
@@ -431,20 +429,15 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public <R> ComposableFuture<R> transform(final Function<? super T, ? extends R> function) {
-    return continueOnSuccess(new SuccessHandler<T, R>() {
-      @Override
-      public R handle(final T result) {
-        return function.apply(result);
-      }
-    });
+  public <R> ComposableFuture<R> transform(final com.google.common.base.Function<? super T, ? extends R> function) {
+    return continueOnSuccess(function::apply);
   }
 
   private static class ConsumerAction<T> implements Runnable {
-    final Consumer<T> inner;
+    final Consumer<? super T> inner;
     final EagerComposableFuture<T> current;
 
-    private ConsumerAction(final Consumer<T> inner, final EagerComposableFuture<T> current) {
+    private ConsumerAction(final Consumer<? super T> inner, final EagerComposableFuture<T> current) {
       this.inner = inner;
       this.current = current;
     }
@@ -453,7 +446,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     public void run() {
       try {
         final Try<T> currentValue = current.value.get();
-        inner.consume(currentValue);
+        inner.consume(currentValue.map(identity()));
       } catch (final Throwable error) {
         logger.warn("error while handling future callbacks", error);
       }

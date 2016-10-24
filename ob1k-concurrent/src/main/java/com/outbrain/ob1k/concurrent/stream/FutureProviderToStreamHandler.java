@@ -1,8 +1,6 @@
 package com.outbrain.ob1k.concurrent.stream;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
 import rx.Observable;
 import rx.Subscriber;
@@ -34,20 +32,17 @@ public class FutureProviderToStreamHandler<T> implements Observable.OnSubscribe<
   }
 
   private void handleNextFuture(final ComposableFuture<T> nextFuture) {
-    nextFuture.consume(new Consumer<T>() {
-      @Override
-      public void consume(final Try<T> result) {
-        if (result.isSuccess()) {
-          subscriber.onNext(result.getValue());
-          final boolean next = provider.moveNext();
-          if (next) {
-            handleNextFuture(provider.current());
-          } else {
-            subscriber.onCompleted();
-          }
+    nextFuture.consume(result -> {
+      if (result.isSuccess()) {
+        subscriber.onNext(result.getValue());
+        final boolean next = provider.moveNext();
+        if (next) {
+          handleNextFuture(provider.current());
         } else {
-          subscriber.onError(result.getError());
+          subscriber.onCompleted();
         }
+      } else {
+        subscriber.onError(result.getError());
       }
     });
  }

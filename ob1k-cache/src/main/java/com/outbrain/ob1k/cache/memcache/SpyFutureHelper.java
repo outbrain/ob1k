@@ -34,15 +34,15 @@ public class SpyFutureHelper {
             final T value = realFuture.get();
             consumer.consume(Try.fromValue(value));
           } catch (final InterruptedException e) {
-            consumer.consume(Try.<T>fromError(e));
+            consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
-            consumer.consume(Try.<T>fromError(e.getCause() == null ? e : e.getCause()));
+            consumer.consume(Try.fromError(e.getCause() == null ? e : e.getCause()));
           } catch (final Exception e) {
-            consumer.consume(Try.<T>fromError(e));
+            consumer.consume(Try.fromError(e));
           }
         });
       } catch (final Exception e) {
-        consumer.consume(Try.<T>fromError(e));
+        consumer.consume(Try.fromError(e));
       }
     });
   }
@@ -60,11 +60,11 @@ public class SpyFutureHelper {
           final CASValue<T> value = realFuture.get();
           consumer.consume(Try.fromValue(value));
         } catch (final InterruptedException e) {
-          consumer.consume(Try.<CASValue<T>>fromError(e));
+          consumer.consume(Try.fromError(e));
         } catch (final ExecutionException e) {
-          consumer.consume(Try.<CASValue<T>>fromError(e.getCause() == null ? e : e.getCause()));
+          consumer.consume(Try.fromError(e.getCause() == null ? e : e.getCause()));
         } catch (final Exception e) {
-          consumer.consume(Try.<CASValue<T>>fromError(e));
+          consumer.consume(Try.fromError(e));
         }
       });
     });
@@ -82,11 +82,11 @@ public class SpyFutureHelper {
           final CASResponse casResponse = realFuture.get();
           consumer.consume(Try.fromValue(casResponse));
         } catch (final InterruptedException e) {
-          consumer.consume(Try.<CASResponse>fromError(e));
+          consumer.consume(Try.fromError(e));
         } catch (final ExecutionException e) {
-          consumer.consume(Try.<CASResponse>fromError(e.getCause() == null ? e : e.getCause()));
+          consumer.consume(Try.fromError(e.getCause() == null ? e : e.getCause()));
         } catch (final Exception e) {
-          consumer.consume(Try.<CASResponse>fromError(e));
+          consumer.consume(Try.fromError(e));
         }
       });
     });
@@ -110,11 +110,11 @@ public class SpyFutureHelper {
 
           consumer.consume(Try.fromValue(translatedValues));
         } catch (final InterruptedException e) {
-          consumer.consume(Try.<Map<K, V>>fromError(e));
+          consumer.consume(Try.fromError(e));
         } catch (final ExecutionException e) {
-          consumer.consume(Try.<Map<K, V>>fromError(e.getCause() == null ? e : e.getCause()));
+          consumer.consume(Try.fromError(e.getCause() == null ? e : e.getCause()));
         } catch (final Exception e) {
-          consumer.consume(Try.<Map<K, V>>fromError(e));
+          consumer.consume(Try.fromError(e));
         }
       });
     });
@@ -133,15 +133,15 @@ public class SpyFutureHelper {
             final Boolean value = realFuture.get();
             consumer.consume(Try.fromValue(value));
           } catch (final InterruptedException e) {
-            consumer.consume(Try.<Boolean>fromError(e));
+            consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
-            consumer.consume(Try.<Boolean>fromError(e.getCause() == null ? e : e.getCause()));
+            consumer.consume(Try.fromError(e.getCause() == null ? e : e.getCause()));
           } catch (final Exception e) {
-            consumer.consume(Try.<Boolean>fromError(e));
+            consumer.consume(Try.fromError(e));
           }
         });
       } catch (final Exception e) {
-        consumer.consume(Try.<Boolean>fromError(e));
+        consumer.consume(Try.fromError(e));
       }
     });
   }

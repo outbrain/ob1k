@@ -1,9 +1,12 @@
 package com.outbrain.ob1k.concurrent;
 
 /**
- * consumes the futures value.
- * @author asy ronen
+ * Consumes the future computation value
+ *
+ * @author aronen
  */
+@FunctionalInterface
 public interface Consumer<T> {
-  public void consume(Try<T> result);
+
+  void consume(Try<T> result);
 }

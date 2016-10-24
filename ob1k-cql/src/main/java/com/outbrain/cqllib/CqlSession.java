@@ -10,14 +10,12 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.*;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
 import org.slf4j.Logger;
@@ -28,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromTry;
 
@@ -48,15 +48,13 @@ public class CqlSession {
 
     // this is temp. to reuse current hosts properties:
     final Iterable<String> nodesIter = Splitter.on(",").split(nodes);
-    final String[] nodesArr = Iterables.toArray(Iterables.transform(nodesIter, new Function<String, String>() {
-      @Override
-      public String apply(final String input) {
-        if (input == null) return null;
+    final String[] nodesArr = Iterables.toArray(
+      StreamSupport.stream(nodesIter.spliterator(), false).map(input -> {
+      if (input == null) return null;
 
-        final int idx = input.lastIndexOf(":");
-        return input.substring(0, idx);
-      }
-    }), String.class);
+      final int idx = input.lastIndexOf(":");
+      return input.substring(0, idx);
+    }).collect(Collectors.toList()), String.class);
 
 
     /*PoolingOptions poolingOptions = new PoolingOptions();
@@ -96,53 +94,41 @@ public class CqlSession {
   private ComposableFuture<ResultSet> executeImpl(final Statement statement, final List<TagMetrics> tagMetrics) {
     statement.setRetryPolicy(new RetryPolicyWithMetrics(retryPolicy, tagMetrics));
     final Iterable<Timer.Context> timerContexts = measureOnStart(tagMetrics);
-    return ComposableFutures.build(new Producer<ResultSet>() {
-      @Override
-      public void produce(final Consumer<ResultSet> consumer) {
-        final ResultSetFuture resultSetFuture = session.executeAsync(statement);
-
-        resultSetFuture.addListener(new Runnable() {
-          @Override
-          public void run() {
-            try {
-              final ResultSet result = resultSetFuture.get();
-              consumer.consume(Try.fromValue(result));
-            } catch (final InterruptedException e) {
-              Thread.currentThread().interrupt();
-              consumer.consume(Try.<ResultSet>fromError(e));
-            } catch (final ExecutionException e) {
-              final Throwable finalCause = Exceptions.getFinalCause(e);
-              if (finalCause instanceof NoHostAvailableException) {
-                final String tags = Joiner.on(',').join(tagMetrics);
-                final Map<InetSocketAddress, Throwable> errorsPerHost = ((NoHostAvailableException) finalCause).getErrors();
-                for (final Map.Entry<InetSocketAddress, Throwable> entry : errorsPerHost.entrySet()) {
-                  logger.error("host " + entry.getKey() + " failed to perform statement " + tags + ": " +
-                      entry.getValue().getMessage(), entry.getValue().getMessage());
-                }
-              }
-
-              consumer.consume(Try.<ResultSet>fromError(e.getCause() != null ? e.getCause() : e));
+    return ComposableFutures.<ResultSet>build(consumer -> {
+      final ResultSetFuture resultSetFuture = session.executeAsync(statement);
+      resultSetFuture.addListener(() -> {
+        try {
+          final ResultSet result = resultSetFuture.get();
+          consumer.consume(Try.fromValue(result));
+        } catch (final InterruptedException e) {
+          Thread.currentThread().interrupt();
+          consumer.consume(Try.fromError(e));
+        } catch (final ExecutionException e) {
+          final Throwable finalCause = Exceptions.getFinalCause(e);
+          if (finalCause instanceof NoHostAvailableException) {
+            final String tags = Joiner.on(',').join(tagMetrics);
+            final Map<InetSocketAddress, Throwable> errorsPerHost = ((NoHostAvailableException) finalCause).getErrors();
+            for (final Map.Entry<InetSocketAddress, Throwable> entry : errorsPerHost.entrySet()) {
+              logger.error("host " + entry.getKey() + " failed to perform statement " + tags + ": " +
+                  entry.getValue().getMessage(), entry.getValue().getMessage());
             }
           }
-        }, ComposableFutures.getExecutor());
-      }
-    }).continueWith(new FutureResultHandler<ResultSet, ResultSet>() {
-      @Override
-      public ComposableFuture<ResultSet> handle(final Try<ResultSet> result) {
-        measureOnDone(timerContexts);
-        return fromTry(result);
-      }
+
+          consumer.consume(Try.fromError(e.getCause() != null ? e.getCause() : e));
+        }
+      }, ComposableFutures.getExecutor());
+    }).alwaysWith(result -> {
+      measureOnDone(timerContexts);
+      return fromTry(result);
     });
   }
 
 
   private List<Timer.Context> measureOnStart(final Iterable<TagMetrics> tagMetrics) {
-    return Lists.newArrayList(Iterables.transform(tagMetrics, new Function<TagMetrics, Timer.Context>() {
-      @Override
-      public Timer.Context apply(final TagMetrics input) {
-        return input != null ? input.timer.time() : null;
-      }
-    }));
+    return Lists.newArrayList(
+      StreamSupport.stream(tagMetrics.spliterator(), false).
+      map(input -> input != null ? input.timer.time() : null).
+      collect(Collectors.toList()));
   }
 
   private void measureOnDone(final Iterable<Timer.Context> timerContexts) {
