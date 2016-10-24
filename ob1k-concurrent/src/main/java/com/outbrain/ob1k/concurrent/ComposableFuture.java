@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.concurrent;
 
-import com.google.common.base.Function;
 import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
@@ -14,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
@@ -54,39 +54,39 @@ public interface ComposableFuture<T> {
    * Continues a future with a handler that will be called only if the original future resulted with success
    * in case of an error the error is continued forward.
    *
-   * @param handler the continuation handler that returns a future
+   * @param mapper the continuation handler that returns a future
    * @param <R>     the resulting future type.
    * @return return a new future that will produce the result either from the handler if successful or the original error.
    */
-  <R> ComposableFuture<R> map(Function<T, R> handler);
+  <R> ComposableFuture<R> map(Function<? super T, ? extends R> mapper);
 
   /**
    * Continues a future with a handler that will be called only if the original future resulted with success
    * in case of an error the error is continues forward.
    *
-   * @param handler the continuation handler that returns a future
+   * @param mapper the continuation handler that returns a future
    * @param <R>     the resulting future type.
    * @return a new future that will produce the result either from the handler if successful or the original error.
    */
-  <R> ComposableFuture<R> flatMap(Function<T, ComposableFuture<R>> handler);
+  <R> ComposableFuture<R> flatMap(Function<? super T, ? extends ComposableFuture<? extends R>> mapper);
 
   /**
    * Recovers future with a handler that will be called only if the original future failed
    * in case of a success the original result is continued forward.
    *
-   * @param handler the continuation handler that returns a value or throws an exception.
+   * @param recover the continuation handler that returns a value or throws an exception.
    * @return a new future that will produce the original successful value the the result of the handler.
    */
-  ComposableFuture<T> recover(Function<Throwable, T> handler);
+  ComposableFuture<T> recover(Function<Throwable, ? extends T> recover);
 
   /**
    * Recovers future with a handler that will be called only if the original future failed
    * in case of a success the original result is continued forward.
    *
-   * @param handler the continuation handler that returns a future
+   * @param recover the continuation handler that returns a future
    * @return a new future that will produce the original successful value the the result of the handler.
    */
-  ComposableFuture<T> recoverWith(Function<Throwable, ComposableFuture<T>> handler);
+  ComposableFuture<T> recoverWith(Function<Throwable, ? extends ComposableFuture<? extends T>> recover);
 
   /**
    * Continues a future with a handler that will be called whether the future has resulted
@@ -96,7 +96,7 @@ public interface ComposableFuture<T> {
    * @param <R>     the resulting future type.
    * @return a new future that will produce the result from the handler.
    */
-  <R> ComposableFuture<R> always(Function<Try<T>, R> handler);
+  <R> ComposableFuture<R> always(Function<Try<T>, ? extends R> handler);
 
   /**
    * Continues a future with a handler that will be called whether the future has resulted
@@ -106,16 +106,16 @@ public interface ComposableFuture<T> {
    * @param <R>     the resulting future type.
    * @return a new future that will produce the result from the handler.
    */
-  <R> ComposableFuture<R> alwaysWith(Function<Try<T>, ComposableFuture<R>> handler);
+  <R> ComposableFuture<R> alwaysWith(Function<Try<T>, ? extends ComposableFuture<? extends R>> handler);
 
   /**
    * Applies the side-effecting function to the result of the current future,
    * and returns a new future with same value.
    *
-   * @param resultConsumer the resultConsumer for the current future result
+   * @param consumer the result consumer for the current future result
    * @return a future with same value
    */
-  ComposableFuture<T> andThen(Consumer<T> resultConsumer);
+  ComposableFuture<T> andThen(Consumer<? super T> consumer);
 
   /**
    * Ensures that the (successful) result of the current future satisfies the given predicate,
@@ -124,7 +124,7 @@ public interface ComposableFuture<T> {
    * @param predicate the predicate for the result
    * @return new future with same value if predicate returns true, else new future with a failure
    */
-  default ComposableFuture<T> ensure(final Predicate<T> predicate) {
+  default ComposableFuture<T> ensure(final Predicate<? super T> predicate) {
     return flatMap(result -> {
       if (predicate.test(result)) {
         return fromValue(result);
@@ -140,7 +140,7 @@ public interface ComposableFuture<T> {
    *
    * @param consumer the consumer.
    */
-  void consume(Consumer<T> consumer);
+  void consume(Consumer<? super T> consumer);
 
   /**
    * Blocks until a value is available for consumption and then return it.
@@ -340,5 +340,5 @@ public interface ComposableFuture<T> {
   ComposableFuture<T> continueOnError(ErrorHandler<? extends T> handler);
 
   @Deprecated
-  <R> ComposableFuture<R> transform(Function<? super T, ? extends R> function);
+  <R> ComposableFuture<R> transform(com.google.common.base.Function<? super T, ? extends R> function);
 }

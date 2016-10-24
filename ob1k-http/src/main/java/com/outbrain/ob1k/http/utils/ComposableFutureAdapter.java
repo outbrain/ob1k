@@ -23,10 +23,10 @@ public class ComposableFutureAdapter {
           final T result = source.get();
           consumer.consume(Try.fromValue(result));
         } catch (final InterruptedException e) {
-          consumer.consume(Try.<T>fromError(e));
+          consumer.consume(Try.fromError(e));
         } catch (final ExecutionException e) {
           final Throwable error = e.getCause() != null ? e.getCause() : e;
-          consumer.consume(Try.<T>fromError(error));
+          consumer.consume(Try.fromError(error));
         }
       }, ComposableFutures.getExecutor());
     });

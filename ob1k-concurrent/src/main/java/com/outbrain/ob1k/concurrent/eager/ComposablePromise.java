@@ -20,7 +20,7 @@ public interface ComposablePromise<T> {
    *
    * @param value the value
    */
-  void setTry(Try<T> value);
+  void setTry(Try<? extends T> value);
 
   /**
    * set a value inside the corresponding future.

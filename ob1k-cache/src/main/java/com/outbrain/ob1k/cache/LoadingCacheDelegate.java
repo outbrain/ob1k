@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Producer;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.eager.ComposablePromise;
 import com.outbrain.swinfra.metrics.api.Counter;
@@ -167,69 +166,66 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   private static <T> void consumeFrom(final ComposableFuture<T> source, final Consumer<T> consumer) {
-    source.consume(consumer::consume);
+    source.consume(consumer);
   }
 
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
-    return ComposableFutures.build(new Producer<Map<K, V>>() {
-      @Override
-      public void produce(final Consumer<Map<K, V>> consumer) {
-        final List<? extends K> listKeys = Lists.newArrayList(keys);
-        final List<K> processedKeys = new ArrayList<>();
-        final Map<K, ComposablePromise<V>> res = new HashMap<>();
+    return ComposableFutures.build(consumer -> {
+      final List<? extends K> listKeys = Lists.newArrayList(keys);
+      final List<K> processedKeys = new ArrayList<>();
+      final Map<K, ComposablePromise<V>> res = new HashMap<>();
 
-        for (final K key : listKeys) {
-          final ComposablePromise<V> promise = newPromise();
-          final ComposablePromise<V> prev = futureValues.putIfAbsent(key, promise);
-          if (prev == null) {
-            res.put(key, promise);
-            processedKeys.add(key);
-          } else {
-            res.put(key, prev);
-          }
+      for (final K key : listKeys) {
+        final ComposablePromise<V> promise = newPromise();
+        final ComposablePromise<V> prev = futureValues.putIfAbsent(key, promise);
+        if (prev == null) {
+          res.put(key, promise);
+          processedKeys.add(key);
+        } else {
+          res.put(key, prev);
         }
+      }
 
-        final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache named: " + cacheName);
-        cachedResults.consume(tryGet -> {
-          if (tryGet.isSuccess()) {
-            final Map<K, V> result = tryGet.getValue();
-            final List<K> missingFromCacheKeys = new ArrayList<>();
-            for (final K key : processedKeys) {
-              if (result.containsKey(key)) {
-                final ComposablePromise<V> promise = futureValues.get(key);
-                promise.set(result.get(key));
-                futureValues.remove(key);
+      final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache named: " + cacheName);
+      cachedResults.consume(tryGet -> {
+        if (tryGet.isSuccess()) {
+          final Map<K, V> result = tryGet.getValue();
+          final List<K> missingFromCacheKeys = new ArrayList<>();
+          for (final K key : processedKeys) {
+            if (result.containsKey(key)) {
+              final ComposablePromise<V> promise = futureValues.get(key);
+              promise.set(result.get(key));
+              futureValues.remove(key);
 
-                if (cacheHits != null) {
-                  cacheHits.inc();
-                }
-              } else {
-                missingFromCacheKeys.add(key);
-                if (cacheMiss != null) {
-                  cacheMiss.inc();
-                }
+              if (cacheHits != null) {
+                cacheHits.inc();
+              }
+            } else {
+              missingFromCacheKeys.add(key);
+              if (cacheMiss != null) {
+                cacheMiss.inc();
               }
             }
-
-            if (!missingFromCacheKeys.isEmpty()) {
-              fetchFromLoader(missingFromCacheKeys);
-            }
-          } else {
-            for (final K key : processedKeys) {
-              final ComposablePromise<V> promise = futureValues.get(key);
-              promise.setException(tryGet.getError());
-              futureValues.remove(key);
-            }
-
-            if (cacheErrors != null) {
-              cacheErrors.inc();
-            }
           }
-        });
 
-        consumeFrom(ComposableFutures.all(false, mapToFutures(res)), consumer);
-      }
+          if (!missingFromCacheKeys.isEmpty()) {
+            fetchFromLoader(missingFromCacheKeys);
+          }
+        } else {
+          for (final K key : processedKeys) {
+            final ComposablePromise<V> promise = futureValues.get(key);
+            promise.setException(tryGet.getError());
+            futureValues.remove(key);
+          }
+
+          if (cacheErrors != null) {
+            cacheErrors.inc();
+          }
+        }
+      });
+
+      consumeFrom(ComposableFutures.all(false, mapToFutures(res)), consumer);
     });
   }
 

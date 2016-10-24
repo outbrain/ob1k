@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static java.util.function.Function.identity;
 
 /**
  * combines two or more futures into one.
