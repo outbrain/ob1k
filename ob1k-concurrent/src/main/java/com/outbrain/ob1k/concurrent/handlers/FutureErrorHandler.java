@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
  * Date: 11/3/13
  * Time: 2:32 PM
  */
+@Deprecated
 public interface FutureErrorHandler<R> {
-  public ComposableFuture<R> handle(Throwable error);
+  ComposableFuture<R> handle(Throwable error);
 }

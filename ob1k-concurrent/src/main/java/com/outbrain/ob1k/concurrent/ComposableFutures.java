@@ -180,7 +180,7 @@ public class ComposableFutures {
 
     final List<ComposableFuture<R>> singleBatch = new ArrayList<>(batchSize);
     for (int i = index; i < index + batchSize && i < elements.size(); i++) {
-      singleBatch.add(producer.handle(elements.get(i)));
+      singleBatch.add(producer.apply(elements.get(i)));
     }
 
     final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
@@ -236,7 +236,7 @@ public class ComposableFutures {
     if (currentIndex >= elements.size()) {
       return ComposableFutures.fromValue(Collections.<R>emptyList());
     } else {
-      return producer.handle(elements.get(currentIndex)).flatMap(result -> {
+      return producer.apply(elements.get(currentIndex)).flatMap(result -> {
         final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
         return rest.map(restResult -> {
           final List<R> combined = new ArrayList<>(restResult.size() + 1);
@@ -275,7 +275,7 @@ public class ComposableFutures {
     } else {
       final List<ComposableFuture<R>> singleBatch = new ArrayList<>(batchSize);
       for (int i = index; i < index + batchSize && i < elements.size(); i++) {
-        singleBatch.add(producer.handle(elements.get(i)));
+        singleBatch.add(producer.apply(elements.get(i)));
       }
 
       final ComposableFuture<List<R>> batchRes = all(true, singleBatch);
@@ -358,7 +358,7 @@ public class ComposableFutures {
     return LazyComposableFuture.submit(ExecutorServiceHolder.INSTANCE, task, delegateHandler);
   }
 
-  public static <T, S> ComposableFuture<S> from(final T value, final Function<? super T, ? extends S> function) {
+  public static <T, S> ComposableFuture<S> from(final T value,final Function<? super T, ? extends S> function) {
     return submit(() -> function.apply(value));
   }
 
