@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
  * Date: 6/6/13
  * Time: 2:05 PM
  */
+@Deprecated
 public interface ResultHandler<T, R> {
   R handle(Try<T> result) throws ExecutionException;
 }

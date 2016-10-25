@@ -4,8 +4,8 @@ import com.google.common.base.Predicate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 
 /**
- * @author misha
- * @since 2015-09-23
+ * @author marenzon
+ * @param <T> type of computation value
  */
 public interface RecursiveFutureProvider<T> {
 

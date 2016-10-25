@@ -9,6 +9,7 @@ import com.outbrain.ob1k.concurrent.Try;
  * Date: 6/6/13
  * Time: 2:01 PM
  */
+@Deprecated
 public interface FutureResultHandler<T, R> {
   ComposableFuture<R> handle(Try<T> result);
 }
