@@ -260,7 +260,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       internalErrors.inc();
     }
 
-    logger.warn("Internal error while processing URI: " + request.getUri(), error);
+    logger.warn("Internal error while processing URI: " + request.getUri() + " from remote address " + ctx.channel().remoteAddress(), error);
     try {
       handleResponse(error.toString(), INTERNAL_SERVER_ERROR, request, ctx);
     } catch (final IOException e) {
