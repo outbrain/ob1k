@@ -3,6 +3,7 @@ package com.outbrain.ob1k.consul;
 import com.google.common.base.Preconditions;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -88,7 +90,7 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
   public void onTargetsChanged(final List<HealthInfoInstance> healthTargets) {
     final List<String> targets = new ArrayList<>(healthTargets.size());
     for (final HealthInfoInstance healthInfo : healthTargets) {
-      final String targetUrl = "http://" + healthInfo.Node.Node + ":" + healthInfo.Service.port("http") + healthInfo.Service.context() + urlSuffix;
+      final String targetUrl = createTargetUrl(healthInfo);
       final int weight = instanceWeight(healthInfo.Service);
       for (int i = 0; i < weight; i++) {
         targets.add(targetUrl);
@@ -98,5 +100,13 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     Collections.shuffle(targets);
     this.targets = targets;
     log.debug("New weighed targets: {}", targets);
+  }
+
+  private String createTargetUrl(final HealthInfoInstance healthInfo) {
+    final String nodeAddress = healthInfo.Node.Address;
+    final String serviceAddress = healthInfo.Service.Address;
+    // Take service address (IP) unless it is null/empty - then take the node address (IP)
+    final String targetAddress = Optional.ofNullable(serviceAddress).filter(StringUtils::isNotBlank).orElse(nodeAddress);
+    return "http://" + targetAddress + ":" + healthInfo.Service.port("http") + healthInfo.Service.context() + urlSuffix;
   }
 }

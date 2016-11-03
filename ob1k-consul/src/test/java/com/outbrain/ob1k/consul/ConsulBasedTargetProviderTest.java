@@ -7,6 +7,9 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.google.common.collect.Ordering.natural;
 import static com.google.common.collect.Sets.newHashSet;
@@ -40,10 +43,11 @@ public class ConsulBasedTargetProviderTest {
 
   @Test
   public void testOnTargetsChange() {
-    final String targetName = "myservice.node";
-    targetProvider.onTargetsChanged(createServiceInstances(targetName));
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(1, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
-    assertEquals("onTargetsChanged should have updated targets list", createUrlFromTargetName(targetName),
+    assertEquals("onTargetsChanged should have updated targets list",
+      createUrlFromTargetName(healthInfoInstances.get(0).Service.Address),
       targetProvider.provideTarget());
   }
 
@@ -55,10 +59,10 @@ public class ConsulBasedTargetProviderTest {
   @Test
   public void testSingleProvideTarget() {
     // Initializing with single node
-    final String targetName = "myservice.node";
-    targetProvider.onTargetsChanged(createServiceInstances(targetName));
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(1, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
-    assertEquals("provided target should be same", createUrlFromTargetName(targetName),
+    assertEquals("provided target should be same", createUrlFromTargetName(healthInfoInstances.get(0).Service.Address),
       targetProvider.provideTarget());
     assertEquals("both provided targets calls should return same target", targetProvider.provideTarget(),
       targetProvider.provideTarget());
@@ -67,16 +71,15 @@ public class ConsulBasedTargetProviderTest {
   @Test
   public void testMultipleProvideTarget() {
     // Initializing with multiple node
-    final String firstTargetName = "myservice1.node";
-    final String secondTargetName = "myservice2.node";
-    targetProvider.onTargetsChanged(createServiceInstances(firstTargetName, secondTargetName));
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(2, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
     final String firstProvidedTarget = targetProvider.provideTarget();
     final String secondProvidedTarget = targetProvider.provideTarget();
     final String thirdProvidedTarget = targetProvider.provideTarget();
 
     assertEquals("first two provided targets should be same",
-      createExpectedTargets(firstTargetName, secondTargetName),
+      createExpectedTargets(healthInfoInstances.get(0).Service.Address, healthInfoInstances.get(1).Service.Address),
       natural().sortedCopy(asList(firstProvidedTarget, secondProvidedTarget)));
     assertEquals("first and third provided targets should be same", firstProvidedTarget, thirdProvidedTarget);
   }
@@ -84,26 +87,27 @@ public class ConsulBasedTargetProviderTest {
   @Test
   public void testSingleProvideTargets() {
     // Initializing with single node
-    final String targetName = "myservice.node";
-    targetProvider.onTargetsChanged(createServiceInstances(targetName));
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(1, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
     // We have only one node, but result should contain it twice
     final List<String> targets = targetProvider.provideTargets(2);
     assertEquals("provided targets size should be two", 2, targets.size());
-    assertEquals("provided target should be same", createUrlFromTargetName(targetName), targets.iterator().next());
+    assertEquals("provided target should be same",
+      createUrlFromTargetName(healthInfoInstances.get(0).Service.Address), targets.iterator().next());
   }
 
   @Test
   public void testMultipleProvideTargets() {
     // Initializing with multiple node
-    final String firstTargetName = "myservice1.node";
-    final String secondTargetName = "myservice2.node";
-    targetProvider.onTargetsChanged(createServiceInstances(firstTargetName, secondTargetName));
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(2, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
     final List<String> targets = targetProvider.provideTargets(2);
 
     assertEquals("provided targets size should be two", 2, targets.size());
-    assertEquals("provided targets should be same", createExpectedTargets(firstTargetName, secondTargetName),
+    assertEquals("provided targets should be same",
+      createExpectedTargets(healthInfoInstances.get(0).Service.Address, healthInfoInstances.get(1).Service.Address),
       natural().sortedCopy(targets));
 
     final List<String> moreTargets = targetProvider.provideTargets(2);
@@ -113,22 +117,43 @@ public class ConsulBasedTargetProviderTest {
       targetProvider.provideTargets(1));
   }
 
-  private static List<HealthInfoInstance> createServiceInstances(final String... targetNames) {
-    return stream(targetNames).map(targetName -> {
-      final HealthInfoInstance.Node node = new HealthInfoInstance.Node();
-      node.Node = targetName;
+  @Test
+  public void testTargetByNodeAddress() {
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(1, false);
+    targetProvider.onTargetsChanged(healthInfoInstances);
 
-      final HealthInfoInstance.Service service = new HealthInfoInstance.Service();
-      service.Tags = newHashSet("httpPort-" + PORT, "contextPath-/" + MODULE_NAME);
+    // We set the serviceAddress to be empty, thus expecting to fallback to nodeAddress
+    assertEquals("onTargetsChanged should have updated targets list",
+      createUrlFromTargetName(healthInfoInstances.get(0).Node.Address),
+      targetProvider.provideTarget());
+  }
 
-      final HealthInfoInstance instance = new HealthInfoInstance();
+  private List<HealthInfoInstance> createHealthInfoInstances(final int numOfNodes, final boolean hasServiceAddress) {
+    return IntStream.range(1, numOfNodes + 1).
+      boxed().
+      map(nodeIndex -> createHealthInfoInstance(hasServiceAddress, nodeIndex)).
+      collect(Collectors.toList());
+  }
 
-      instance.Node = node;
-      instance.Service = service;
-      instance.Checks = emptyList();
+  private HealthInfoInstance createHealthInfoInstance(final boolean hasServiceAddress, final int nodeIndex) {
+    final HealthInfoInstance.Node node = new HealthInfoInstance.Node();
+    node.Node = "myservice.node" + nodeIndex;
+    node.Address = nodeIndex + "." + nodeIndex + "." + nodeIndex + "." + nodeIndex;
 
-      return instance;
-    }).collect(toList());
+    final HealthInfoInstance.Service service = new HealthInfoInstance.Service();
+    final String serviceIndex = nodeIndex + "0";
+    service.Tags = newHashSet("httpPort-" + PORT, "contextPath-/" + MODULE_NAME);
+    service.Address = Optional.of(serviceIndex + "." + serviceIndex + "." + serviceIndex + "." + serviceIndex).
+      filter(__ -> hasServiceAddress).
+      orElseGet(() -> "");
+
+    final HealthInfoInstance instance = new HealthInfoInstance();
+
+    instance.Node = node;
+    instance.Service = service;
+    instance.Checks = emptyList();
+
+    return instance;
   }
 
   private static String createUrlFromTargetName(final String targetName) {
