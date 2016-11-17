@@ -1,9 +1,9 @@
 package com.outbrain.ob1k.concurrent.combiners;
 
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
-import static java.util.function.Function.identity;
 
 /**
  * combines two or more futures into one.

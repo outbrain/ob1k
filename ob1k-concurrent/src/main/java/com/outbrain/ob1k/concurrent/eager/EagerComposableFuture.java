@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.concurrent.eager;
 
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.CancellationToken;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -8,6 +7,7 @@ import com.outbrain.ob1k.concurrent.Consumer;
 import com.outbrain.ob1k.concurrent.Producer;
 import com.outbrain.ob1k.concurrent.Scheduler;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureAction;
 import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;

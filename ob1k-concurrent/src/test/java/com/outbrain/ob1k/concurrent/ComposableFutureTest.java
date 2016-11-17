@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
