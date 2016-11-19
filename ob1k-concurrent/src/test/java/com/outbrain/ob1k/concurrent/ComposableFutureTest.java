@@ -69,6 +69,32 @@ public class ComposableFutureTest {
   }
 
   @Test
+  public void testEnsure() throws Exception {
+    final ComposableFuture<String> future = fromValue("hello").ensure(String::isEmpty);
+    try {
+      future.get();
+    } catch (final ExecutionException e) {
+      Assert.assertEquals("ensure failed the chain with NoSuchElementException",
+        NoSuchElementException.class, e.getCause().getClass());
+      return;
+    }
+
+    Assert.fail("exception should have been thrown");
+  }
+
+  @Test
+  public void testAndThen() throws Exception {
+    final List<String> results = new ArrayList<>(1);
+    final ComposableFuture<String> future = fromValue("hello").
+      andThen(valueTry -> results.add(valueTry.getValue()));
+
+    final String value = future.get();
+
+    Assert.assertEquals("future value should be still 'hello'", "hello", value);
+    Assert.assertEquals("list should contain one result", 1, results.size());
+  }
+
+  @Test
   public void testRecursive() throws Exception {
     final AtomicInteger atomicInteger = new AtomicInteger();
     final ComposableFuture<Integer> future = recursive(() -> fromValue(atomicInteger.incrementAndGet()), input -> input >= 10);
