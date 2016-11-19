@@ -18,6 +18,7 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -44,6 +45,7 @@ import static java.util.function.Function.identity;
  * @author asy ronen
  */
 public final class LazyComposableFuture<T> implements ComposableFuture<T> {
+
   private final Producer<T> producer;
   private final Executor executor;
 

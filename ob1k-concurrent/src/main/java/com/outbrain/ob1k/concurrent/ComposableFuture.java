@@ -18,6 +18,7 @@ import java.util.function.Predicate;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
 
 /**
  * <p>A base interface for all future implementation in the system.</p>
@@ -55,7 +56,7 @@ public interface ComposableFuture<T> {
    * in case of an error the error is continued forward.
    *
    * @param mapper the continuation handler that returns a future
-   * @param <R>     the resulting future type.
+   * @param <R>    the resulting future type.
    * @return return a new future that will produce the result either from the handler if successful or the original error.
    */
   <R> ComposableFuture<R> map(Function<? super T, ? extends R> mapper);
@@ -65,7 +66,7 @@ public interface ComposableFuture<T> {
    * in case of an error the error is continues forward.
    *
    * @param mapper the continuation handler that returns a future
-   * @param <R>     the resulting future type.
+   * @param <R>    the resulting future type.
    * @return a new future that will produce the result either from the handler if successful or the original error.
    */
   <R> ComposableFuture<R> flatMap(Function<? super T, ? extends ComposableFuture<? extends R>> mapper);
@@ -116,6 +117,30 @@ public interface ComposableFuture<T> {
    * @return a future with same value
    */
   ComposableFuture<T> andThen(Consumer<? super T> consumer);
+
+  /**
+   * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
+   * computation status (failure/success).
+   * <p>
+   * ComposableFuture[T](success/failure) => ComposableFuture[Try[T]](success)
+   *
+   * @return a new future of {@link Try[T]}, either Success or Failure depends on computation result.
+   */
+  default ComposableFuture<Try<T>> successful() {
+    return always(__ -> __);
+  }
+
+  /**
+   * Creates delayed future of current one, by provided duration.
+   * Applied on successful result.
+   *
+   * @param duration duration to delay
+   * @param unit time unit
+   * @return delayed future
+   */
+  default ComposableFuture<T> delay(final long duration, final TimeUnit unit) {
+    return flatMap(result -> schedule(() -> result, duration, unit));
+  }
 
   /**
    * Ensures that the (successful) result of the current future satisfies the given predicate,
