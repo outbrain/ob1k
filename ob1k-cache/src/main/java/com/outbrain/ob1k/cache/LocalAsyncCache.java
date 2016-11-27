@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ExecutionError;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
 import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
@@ -152,8 +151,10 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
         }
         return res;
       }
-    } catch (ExecutionException | UncheckedExecutionException | ExecutionError e) {
-      return ComposableFutures.fromError(e.getCause());
+    } catch (final com.google.common.util.concurrent.UncheckedExecutionException e) {
+      return fromError(e.getCause());
+    } catch (final ExecutionException | UncheckedExecutionException | ExecutionError e) {
+      return fromError(e.getCause());
     }
   }
 
@@ -173,20 +174,22 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       final ImmutableMap<K, ComposableFuture<V>> innerMap;
       if (loadingCache != null) {
         innerMap = loadingCache.getAll(keys);
-        unloadErrorsFromCache(innerMap,keys);
+        unloadErrorsFromCache(innerMap, keys);
       } else {
         innerMap = localCache.getAllPresent(keys);
       }
 
       final Map<K, ComposableFuture<V>> result = new HashMap<>();
-      for (final K key: innerMap.keySet()) {
+      for (final K key : innerMap.keySet()) {
         final ComposableFuture<V> value = innerMap.get(key);
         result.put(key, value);
       }
 
-      return ComposableFutures.all(true, result);
-    } catch (ExecutionException | UncheckedExecutionException | ExecutionError e) {
-      return ComposableFutures.fromError(e.getCause());
+      return all(true, result);
+    } catch (final com.google.common.util.concurrent.UncheckedExecutionException e) {
+      return fromError(e.getCause());
+    } catch (final ExecutionException | UncheckedExecutionException | ExecutionError e) {
+      return fromError(e.getCause());
     }
   }
 
@@ -266,7 +269,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       result.put(key, setAsync(key, entries.get(key)));
     }
 
-    return ComposableFutures.all(false, result);
+    return all(false, result);
   }
 
 }
