@@ -4,8 +4,6 @@ import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClientIF;
@@ -97,7 +95,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    return casUpdate(key, mapper).continueOnSuccess((FutureSuccessHandler<CASResponse, Boolean>) result -> {
+    return casUpdate(key, mapper).flatMap(result -> {
       if (result == CASResponse.OK || result == CASResponse.OBSERVE_MODIFIED) {
         return fromValue(true);
       }
@@ -119,7 +117,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
         return spyClient.asyncGets(cacheKey, transcoder);
       });
 
-      return getFutureValue.continueOnSuccess((FutureSuccessHandler<CASValue<V>, CASResponse>) result -> {
+      return getFutureValue.flatMap(result -> {
         final V newValue = result == null ? mapper.map(key, null) : mapper.map(key, result.getValue());
         if (newValue == null) {
           return fromValue(CASResponse.OBSERVE_ERROR_IN_ARGS);
@@ -132,7 +130,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
           final ComposableFuture<Boolean> addResponse = SpyFutureHelper.fromOperation(
             () -> spyClient.add(cacheKey, expirationSpyUnits, newValue));
 
-          return addResponse.continueOnSuccess((SuccessHandler<Boolean, CASResponse>) result1 -> {
+          return addResponse.map(result1 -> {
             if (result1 == Boolean.TRUE) {
               return CASResponse.OK;
             } else {

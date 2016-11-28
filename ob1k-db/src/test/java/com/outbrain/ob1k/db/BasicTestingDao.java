@@ -6,7 +6,6 @@ import com.github.mauricio.async.db.exceptions.ConnectionNotConnectedException;
 import com.github.mauricio.async.db.exceptions.ConnectionStillRunningQueryException;
 import com.github.mauricio.async.db.mysql.MySQLConnection;
 import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -45,7 +44,7 @@ public class BasicTestingDao extends BasicDao implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    execute("ROLLBACK;").continueWith((FutureResultHandler<Long, Boolean>) result -> shutdown()).get();
+    execute("ROLLBACK;").alwaysWith(result -> shutdown()).get();
   }
 
   private static class NonCommittingSingleConnectionFactory extends MySQLConnectionFactory {

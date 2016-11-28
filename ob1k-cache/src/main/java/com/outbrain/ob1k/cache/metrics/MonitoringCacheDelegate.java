@@ -1,13 +1,12 @@
 package com.outbrain.ob1k.cache.metrics;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
@@ -32,9 +31,9 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   private final Counter total;
   private final Counter hits;
 
-  private final SuccessHandler<V, V> getCacheMetricsUpdater = new SuccessHandler<V, V>() {
+  private final Function<V, V> getCacheMetricsUpdater = new Function<V, V>() {
     @Override
-    public V handle(final V result) throws ExecutionException {
+    public V apply(final V result) {
       total.inc();
       if (result != null) {
         hits.inc();
@@ -43,7 +42,7 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
     }
   };
 
-  public MonitoringCacheDelegate(final TypedCache<K, V> delegate, String cacheName, final MetricFactory metricFactory) {
+  public MonitoringCacheDelegate(final TypedCache<K, V> delegate, final String cacheName, final MetricFactory metricFactory) {
     checkNotNull(metricFactory, "metricFactory may not be null");
     this.delegate = checkNotNull(delegate, "delegate may not be null");
     final String component = delegate.getClass().getSimpleName() + "." + cacheName;
@@ -62,20 +61,17 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   @Override
   public ComposableFuture<V> getAsync(final K key) {
     return getAsyncMetrics.update(delegate.getAsync(key))
-            .continueOnSuccess(getCacheMetricsUpdater);
+            .map(getCacheMetricsUpdater);
   }
 
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
     return getBulkAsyncMetrics.update(delegate.getBulkAsync(keys))
-            .continueOnSuccess(new SuccessHandler<Map<K,V>, Map<K, V>>() {
-              @Override
-              public Map<K, V> handle(final Map<K, V> result) throws ExecutionException {
-                total.inc(Iterables.size(keys));
-                hits.inc(result.size());
-                return result;
-              }
-            });
+      .map(result -> {
+        total.inc(Iterables.size(keys));
+        hits.inc(result.size());
+        return result;
+      });
   }
 
   @Override

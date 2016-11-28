@@ -12,7 +12,6 @@ import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.common.ContentType;
@@ -234,7 +233,7 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
 
-    return responseFuture.continueOnSuccess((FutureSuccessHandler<com.ning.http.client.Response, Response>) ningResponse -> {
+    return responseFuture.flatMap(ningResponse -> {
       try {
         final Response response = new NingResponse<>(ningResponse, null, null);
         return fromValue(response);
@@ -279,7 +278,7 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
 
-    return responseFuture.continueOnSuccess((FutureSuccessHandler<com.ning.http.client.Response, TypedResponse<T>>) ningResponse -> {
+    return responseFuture.flatMap(ningResponse -> {
       try {
         final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
         return fromValue(response);
@@ -319,7 +318,7 @@ public class NingRequestBuilder implements RequestBuilder {
 
     final ComposableFuture<TypedResponse<T>> responseFuture = asTypedResponse(type);
 
-    return responseFuture.continueOnSuccess((FutureSuccessHandler<TypedResponse<T>, T>) typedResponse -> {
+    return responseFuture.flatMap(typedResponse -> {
       try {
         return fromValue(typedResponse.getTypedBody());
       } catch (final IOException e) {

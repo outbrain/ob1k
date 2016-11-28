@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.cache;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.thimbleware.jmemcached.CacheImpl;
 import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.MemCacheDaemon;
@@ -65,7 +64,7 @@ public abstract class AbstractMemcachedClientTest {
     final String key = "key1";
     final String expectedValue = "value1";
     final ComposableFuture<Serializable> res = client.setAsync(key, expectedValue)
-      .continueOnSuccess((FutureSuccessHandler<Boolean, Serializable>) result -> client.getAsync(key));
+      .flatMap(result -> client.getAsync(key));
 
     final Serializable result = res.get();
     Assert.assertEquals("unexpected result returned from getAsync()", expectedValue, result);
@@ -86,7 +85,7 @@ public abstract class AbstractMemcachedClientTest {
     }
 
     final ComposableFuture<Map<String, Serializable>> res = client.setBulkAsync(expected)
-      .continueOnSuccess((FutureSuccessHandler<Map<String, Boolean>, Map<String, Serializable>>) result -> client.getBulkAsync(expected.keySet()));
+      .flatMap(result -> client.getBulkAsync(expected.keySet()));
 
     final Map<String, Serializable> getResults = res.get();
     Assert.assertEquals("unexpected result returned from getBulkAsync()", expected, getResults);
@@ -109,7 +108,7 @@ public abstract class AbstractMemcachedClientTest {
     final String key = "key1";
     final String expectedValue = "value1";
     final ComposableFuture<Boolean> res = client.setAsync(key, expectedValue)
-      .continueOnSuccess((FutureSuccessHandler<Boolean, Boolean>) result -> client.deleteAsync(key));
+      .flatMap(result -> client.deleteAsync(key));
 
     final Boolean result = res.get();
     Assert.assertTrue("unexpected result returned from getAsync()", result);

@@ -8,14 +8,13 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ExecutionError;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
-import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 
@@ -108,7 +107,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
     return loader.load(cacheName, key).materialize();
   }
 
-  private FutureSuccessHandler<Map<K, V>, V> extractLoaderResultEntry(final K key) {
+  private Function<Map<K, V>, ComposableFuture<V>> extractLoaderResultEntry(final K key) {
     return loaderResults -> {
     final V res = loaderResults.get(key);
     if (res != null) {
@@ -127,7 +126,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
     final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).materialize();
     final Map<K, ComposableFuture<V>> result = new HashMap<>();
     for (final K key : keys) {
-      result.put(key, loaded.continueOnSuccess(extractLoaderResultEntry(key)));
+      result.put(key, loaded.flatMap(extractLoaderResultEntry(key)));
     }
     return result;
   }
@@ -140,7 +139,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
         if (res == null) {
           return fromNull();
         }
-        return res.continueOnError((FutureErrorHandler<V>) error -> {
+        return res.recoverWith(error -> {
           loadingCache.asMap().remove(key, res);
           return fromError(error);
         });
@@ -225,7 +224,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
       final ComposableFuture<V> currentFuture = map.get(key);
       if (currentFuture != null) {
-        return currentFuture.continueOnSuccess((FutureSuccessHandler<V, Boolean>) currentValue -> {
+        return currentFuture.flatMap(currentValue -> {
           try {
             final V newValue = mapper.map(key, currentValue);
             if (newValue == null) {

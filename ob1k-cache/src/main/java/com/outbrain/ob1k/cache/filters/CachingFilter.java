@@ -6,11 +6,7 @@ import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,28 +26,22 @@ public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext> 
   @Override
   public ComposableFuture<V> handleAsync(final AsyncRequestContext ctx) {
     final K key = generator.createKey(ctx.getParams());
-    return cache.getAsync(key).continueOnError(new ErrorHandler<V>() {
-      @Override
-      public V handle(Throwable error) throws ExecutionException {
-        // in case there was an error in the cache we treat it as missing item in the cache.
-        return null;
-      }
-    }).continueOnSuccess(new FutureSuccessHandler<V, V>() {
-      @Override
-      public ComposableFuture<V> handle(V result) {
-        if (result != null) {
-          return ComposableFutures.fromValue(result);
-        } else {
-          return ctx.<V>invokeAsync().continueOnSuccess((SuccessHandler<V, V>) result1 -> {
-            cache.setAsync(key, result1);
-            return result1;
-          });
-        }
+    return cache.getAsync(key).recover(error -> {
+      // in case there was an error in the cache we treat it as missing item in the cache.
+      return null;
+    }).flatMap(result -> {
+      if (result != null) {
+        return ComposableFutures.fromValue(result);
+      } else {
+        return ctx.<V>invokeAsync().map(result1 -> {
+          cache.setAsync(key, result1);
+          return result1;
+        });
       }
     });
   }
 
-  public static interface CacheKeyGenerator<K> {
-    public K createKey(Object[] params);
+  public interface CacheKeyGenerator<K> {
+    K createKey(Object[] params);
   }
 }

@@ -2,13 +2,9 @@ package com.outbrain.ob1k.cache.metrics;
 
 import java.util.concurrent.TimeoutException;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.Try;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
-
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromTry;
 
 /**
  * Holds a set of metrics used for measuring cache operations.
@@ -28,17 +24,13 @@ public class AsyncOperationMetrics<T> {
 
   public ComposableFuture<T> update(ComposableFuture<T> future) {
     final Timer.Context tc = latency.time();
-    return future.continueWith(new FutureResultHandler<T, T>() {
-      @Override
-      public ComposableFuture<T> handle(final Try<T> result) {
-        tc.stop();
-        if (!result.isSuccess()) {
-          errors.inc();
-          if (result.getError() instanceof TimeoutException) {
-            timeouts.inc();
-          }
+    return future.andThen(result -> {
+      tc.stop();
+      if (!result.isSuccess()) {
+        errors.inc();
+        if (result.getError() instanceof TimeoutException) {
+          timeouts.inc();
         }
-        return fromTry(result);
       }
     });
   }

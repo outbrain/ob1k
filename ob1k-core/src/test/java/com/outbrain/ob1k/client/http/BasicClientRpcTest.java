@@ -8,7 +8,6 @@ import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.ContentType;
@@ -324,7 +323,7 @@ public class BasicClientRpcTest {
     @Override
     public ComposableFuture<String> handleAsync(final AsyncClientRequestContext ctx) {
       return ctx.<String>invokeAsync()
-        .continueOnSuccess((FutureSuccessHandler<String, String>) result -> ComposableFutures.fromValue(result + " ?"));
+        .flatMap(result -> ComposableFutures.fromValue(result + " ?"));
     }
   }
 
@@ -332,7 +331,7 @@ public class BasicClientRpcTest {
     @Override
     public ComposableFuture<String> handleAsync(final AsyncClientRequestContext ctx) {
       return ctx.<String>invokeAsync()
-        .continueOnSuccess((FutureSuccessHandler<String, String>) result -> ComposableFutures.fromValue(result + " !!!"));
+        .flatMap(result -> ComposableFutures.fromValue(result + " !!!"));
     }
   }
 
