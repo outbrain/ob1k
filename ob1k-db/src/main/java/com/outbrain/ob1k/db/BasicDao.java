@@ -5,8 +5,6 @@ import com.github.mauricio.async.db.ResultSet;
 import com.github.mauricio.async.db.RowData;
 import com.google.common.base.Joiner;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.JavaConversions;
@@ -59,8 +57,8 @@ public class BasicDao {
   }
 
   private <K, V> ComposableFuture<Map<K, V>> toMap(final ComposableFuture<List<V>> list, final Function<V, K> keyMapper) {
-    return list.continueOnSuccess((SuccessHandler<List<V>, Map<K, V>>) result ->
-      result.stream().collect(Collectors.toMap(keyMapper, Function.identity())));
+    return list.map(result -> result.stream().
+      collect(Collectors.toMap(keyMapper, Function.identity())));
   }
 
   /**
@@ -89,8 +87,8 @@ public class BasicDao {
   }
 
   private <K, V> ComposableFuture<Map<K, List<V>>> toGroupMap(final ComposableFuture<List<V>> list, final Function<V, K> keyMapper) {
-    return list.continueOnSuccess((SuccessHandler<List<V>, Map<K, List<V>>>) result ->
-      result.stream().collect(Collectors.groupingBy(keyMapper)));
+    return list.map(result -> result.stream().
+      collect(Collectors.groupingBy(keyMapper)));
   }
 
   public ComposableFuture<List<Map<String, Object>>> list(final String query) {
@@ -107,7 +105,7 @@ public class BasicDao {
   }
 
   private <T> ComposableFuture<List<T>> _list(final ComposableFuture<QueryResult> queryRes, final ResultSetMapper<T> mapper) {
-    return queryRes.continueOnSuccess((SuccessHandler<QueryResult, List<T>>) res -> {
+    return queryRes.map(res -> {
       final Option<ResultSet> rowsOption = res.rows();
 
       final List<T> response = new ArrayList<>();
@@ -171,7 +169,7 @@ public class BasicDao {
   }
 
   private <T> ComposableFuture<T> _get(final ComposableFuture<QueryResult> queryRes, final ResultSetMapper<T> mapper) {
-    return queryRes.continueOnSuccess((SuccessHandler<QueryResult, T>) res -> {
+    return queryRes.map(res -> {
       final Option<ResultSet> rowsOption = res.rows();
 
       if (rowsOption.isDefined()) {
@@ -225,8 +223,8 @@ public class BasicDao {
 
   public ComposableFuture<Long> executeAndGetId(final String command) {
     return withConnection(conn -> execute(conn, command)
-      .continueOnSuccess((FutureSuccessHandler<Long, Map<String, Object>>) result -> get(conn, "select LAST_INSERT_ID()"))
-      .continueOnSuccess((SuccessHandler<Map<String, Object>, Long>) result -> (Long) result.get("LAST_INSERT_ID()")));
+      .flatMap(result -> get(conn, "select LAST_INSERT_ID()"))
+      .map(result -> (Long) result.get("LAST_INSERT_ID()")));
   }
 
   public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper) {
@@ -240,7 +238,7 @@ public class BasicDao {
   }
 
   private ComposableFuture<Long> _execute(final ComposableFuture<QueryResult> queryRes) {
-    return queryRes.continueOnSuccess(QueryResult::rowsAffected);
+    return queryRes.map(QueryResult::rowsAffected);
   }
 
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final Object id) {

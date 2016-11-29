@@ -7,8 +7,6 @@ import com.outbrain.ob1k.cache.memcache.CacheKeyTranslator;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.spotify.folsom.GetResult;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheStatus;
 
@@ -85,7 +83,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    return casUpdate(key, mapper).continueOnSuccess((FutureSuccessHandler<? super MemcacheStatus, Boolean>) result -> {
+    return casUpdate(key, mapper).flatMap(result -> {
       if (result == MemcacheStatus.OK) {
         return ComposableFutures.fromValue(true);
       }
@@ -103,7 +101,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
       final String stringKey = key(key);
 
       return fromListenableFuture(() -> folsomClient.casGet(stringKey))
-        .continueOnSuccess((FutureSuccessHandler<? super GetResult<V>, MemcacheStatus>) result -> {
+        .flatMap(result -> {
           final V newValue = result == null ? mapper.map(key, null) : mapper.map(key, result.getValue());
           if (newValue == null) {
             return fromValue(MemcacheStatus.INVALID_ARGUMENTS);

@@ -6,9 +6,6 @@ import com.outbrain.ob1k.Response;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.Try;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
 import com.outbrain.ob1k.server.ctx.ServerRequestContext;
 import com.outbrain.ob1k.server.netty.ResponseBuilder;
@@ -43,18 +40,14 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   @Override
   public ComposableFuture<Response> handleAsync(final AsyncServerRequestContext ctx) {
-    return httpAccessAuthenticator.authenticate(ctx.getRequest())
-      .continueWith(new FutureResultHandler<String, Response>() {
-        @Override
-        public ComposableFuture<Response> handle(final Try<String> result) {
-          if (result.isSuccess() && result.getValue() != null) {
-            final String authenticatorId = result.getValue();
-            return handleAuthorizedAsyncRequest(ctx, authenticatorId);
-          } else {
-            return handleUnauthorizedAsyncRequest(ctx);
-          }
-        }
-      });
+    return httpAccessAuthenticator.authenticate(ctx.getRequest()).alwaysWith(result -> {
+      if (result.isSuccess() && result.getValue() != null) {
+        final String authenticatorId = result.getValue();
+        return handleAuthorizedAsyncRequest(ctx, authenticatorId);
+      } else {
+        return handleUnauthorizedAsyncRequest(ctx);
+      }
+    });
   }
 
   private ComposableFuture<Response> handleUnauthorizedAsyncRequest(final AsyncServerRequestContext ctx) {
@@ -65,13 +58,10 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   private ComposableFuture<Response> handleAuthorizedAsyncRequest(final AsyncServerRequestContext ctx,
                                                                   final String authenticatorId) {
-    return ctx.invokeAsync().continueOnSuccess(new FutureSuccessHandler<Object, Response>() {
-      @Override
-      public ComposableFuture<Response> handle(final Object result) {
-        final Response response =
-          httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, result);
-        return ComposableFutures.fromValue(response);
-      }
+    return ctx.invokeAsync().flatMap(result -> {
+      final Response response =
+        httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, result);
+      return ComposableFutures.fromValue(response);
     });
   }
 
@@ -163,15 +153,12 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     }
 
     private ComposableFuture<String> findAuthenticator(final ComposableFuture<Map<String, Boolean>> authenticationResults) {
-      return authenticationResults.continueOnSuccess(new FutureSuccessHandler<Map<String, Boolean>, String>() {
-        @Override
-        public ComposableFuture<String> handle(final Map<String, Boolean> authenticationResults) {
-          String authenticatorId = null;
-          for (final Entry<String, Boolean> authenticationResult : authenticationResults.entrySet()) {
-            if (authenticationResult.getValue()) authenticatorId = authenticationResult.getKey();
-          }
-          return ComposableFutures.fromValue(authenticatorId);
+      return authenticationResults.map(authenticationResults1 -> {
+        String authenticatorId = null;
+        for (final Entry<String, Boolean> authenticationResult : authenticationResults1.entrySet()) {
+          if (authenticationResult.getValue()) authenticatorId = authenticationResult.getKey();
         }
+        return authenticatorId;
       });
     }
 

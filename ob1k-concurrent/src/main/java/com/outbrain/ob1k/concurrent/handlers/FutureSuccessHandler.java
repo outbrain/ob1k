@@ -9,12 +9,7 @@ import java.util.function.Function;
  * Date: 11/3/13
  * Time: 2:30 PM
  */
-public interface FutureSuccessHandler<T, R> extends Function<T, ComposableFuture<R>> {
+public interface FutureSuccessHandler<T, R> {
 
   ComposableFuture<R> handle(T result);
-
-  @Override
-  default ComposableFuture<R> apply(final T result) {
-    return handle(result);
-  }
 }

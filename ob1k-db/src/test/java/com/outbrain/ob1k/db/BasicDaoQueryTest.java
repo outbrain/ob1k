@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.db;
 
 import com.outbrain.ob1k.concurrent.*;
-import com.outbrain.ob1k.concurrent.handlers.*;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -194,7 +193,7 @@ public class BasicDaoQueryTest {
         try (final BasicTestingDao dao = new BasicTestingDao("localhost", 3306, "test", "aronen", null, 2000/*msec*/,10000 /*msec*/)) {
             final Deployment deployment =
                 insertDeployment(dao, 666L, "test123").
-                    continueOnSuccess((FutureSuccessHandler<Long, Deployment>) result -> {
+                    flatMap(result -> {
                         if (result == 0)
                             return ComposableFutures.fromError(new RuntimeException("row wasn't inserted into table."));
 
@@ -245,10 +244,10 @@ public class BasicDaoQueryTest {
             final ComposableFuture<Long> futureRes1 = dao.execute(conn,
                 "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy1'");
 
-            final ComposableFuture<Long> futureRes2 = futureRes1.continueOnSuccess((FutureSuccessHandler<Long, Long>) result -> dao.execute(conn,
+            final ComposableFuture<Long> futureRes2 = futureRes1.flatMap(result -> dao.execute(conn,
                 "insert into Deployments set archived=true, jsonScmRevision=1, prepareOnly=false,source='asy2'"));
 
-            return futureRes2.continueOnSuccess((FutureSuccessHandler<Long, Boolean>) result -> ComposableFutures.fromValue(result == 1));
+            return futureRes2.flatMap(result -> ComposableFutures.fromValue(result == 1));
         });
 
         try {

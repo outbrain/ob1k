@@ -6,14 +6,11 @@ import com.github.mauricio.async.db.QueryResult;
 import com.github.mauricio.async.db.mysql.MySQLConnection;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.Buffer;
-import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.List;
@@ -64,7 +61,7 @@ public class MySqlAsyncConnection {
 
     final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(conn::connect);
 
-    return composableFuture.continueOnSuccess((SuccessHandler<Connection, MySqlAsyncConnection>) result -> {
+    return composableFuture.map(result -> {
       final MySQLConnection connection = (MySQLConnection) result;
       if (connection == conn) {
         return MySqlAsyncConnection.this;
@@ -75,7 +72,7 @@ public class MySqlAsyncConnection {
   }
 
   public ComposableFuture<MySqlAsyncConnection> startTx() {
-    return this.sendQuery("START TRANSACTION;").continueOnSuccess((FutureSuccessHandler<QueryResult, MySqlAsyncConnection>) result -> ComposableFutures.fromValue(MySqlAsyncConnection.this));
+    return this.sendQuery("START TRANSACTION;").flatMap(result -> ComposableFutures.fromValue(MySqlAsyncConnection.this));
   }
 
   public ComposableFuture<QueryResult> commit() {
@@ -89,7 +86,7 @@ public class MySqlAsyncConnection {
   public ComposableFuture<MySqlAsyncConnection> disconnect() {
     final ComposableFuture<Connection> composableFuture = ScalaFutureHelper.from(conn::disconnect);
 
-    return composableFuture.continueOnSuccess((SuccessHandler<Connection, MySqlAsyncConnection>) result -> {
+    return composableFuture.map(result -> {
       final MySQLConnection connection = (MySQLConnection) result;
       if (connection == conn) {
         return MySqlAsyncConnection.this;

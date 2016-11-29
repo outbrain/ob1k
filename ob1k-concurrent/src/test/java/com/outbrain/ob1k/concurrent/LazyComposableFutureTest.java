@@ -65,12 +65,9 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testContinueOnSuccess() throws ExecutionException, InterruptedException {
-    final ComposableFuture<String> res = LazyComposableFuture.fromValue("one").continueOnSuccess(new SuccessHandler<String, String>() {
-      @Override
-      public String handle(final String result) {
-        return result + ",two";
-      }
-    }).flatMap(result -> ComposableFutures.fromValue(result + ",three"));
+    final ComposableFuture<String> res = LazyComposableFuture.fromValue("one").
+      map(result -> result + ",two").
+      flatMap(result -> ComposableFutures.fromValue(result + ",three"));
 
     res.consume(result -> System.out.println("get: " + result));
 
@@ -80,25 +77,17 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testContinueOnFailure() throws ExecutionException, InterruptedException {
-    final ComposableFuture<String> res1 = LazyComposableFuture.fromValue("one").continueOnError((ErrorHandler<String>) error -> "two");
+    final ComposableFuture<String> res1 = LazyComposableFuture.fromValue("one").recover(error -> "two");
 
     Assert.assertEquals(res1.get(), "one");
 
-    final ComposableFuture<String> res2 = LazyComposableFuture.<String>fromError(new RuntimeException("bad start")).continueOnError(new ErrorHandler<String>() {
-      @Override
-      public String handle(final Throwable error) {
-        return "ok";
-      }
-    });
+    final ComposableFuture<String> res2 = LazyComposableFuture.<String>fromError(new RuntimeException("bad start")).
+      recover(error -> "ok");
 
     Assert.assertEquals(res2.get(), "ok");
 
-    final ComposableFuture<String> res3 = LazyComposableFuture.<String>fromError(new RuntimeException("bad start")).continueOnError(new FutureErrorHandler<String>() {
-      @Override
-      public ComposableFuture<String> handle(final Throwable error) {
-        return LazyComposableFuture.fromError(new RuntimeException("even worse"));
-      }
-    });
+    final ComposableFuture<String> res3 = LazyComposableFuture.<String>fromError(new RuntimeException("bad start")).
+      recoverWith(error -> LazyComposableFuture.fromError(new RuntimeException("even worse")));
 
     try {
       res3.get();
@@ -118,15 +107,10 @@ public class LazyComposableFutureTest {
     final ComposableFuture<String> res = LazyComposableFuture.submit(executor, () -> {
       prodCounter.incrementAndGet();
       return "first";
-    }, false).continueOnSuccess(new FutureSuccessHandler<String, String>() {
-      @Override
-      public ComposableFuture<String> handle(final String result) {
-        return LazyComposableFuture.submit(executor, () -> {
-          prodCounter.incrementAndGet();
-          return result + ",second";
-        }, false);
-      }
-    });
+    }, false).flatMap(result -> LazyComposableFuture.submit(executor, () -> {
+      prodCounter.incrementAndGet();
+      return result + ",second";
+    }, false));
 
     res.consume(result -> System.out.println("got: " + result));
 
@@ -166,7 +150,7 @@ public class LazyComposableFutureTest {
     final LazyComposableFuture<String> slow = LazyComposableFuture.schedule(scheduler, () -> "slow", 200, TimeUnit.MILLISECONDS).withTimeout(scheduler, 100, TimeUnit.MILLISECONDS);
 
     try {
-      final String res2 = slow.get();
+      slow.get();
       Assert.fail("should have timed out");
     } catch (final ExecutionException e) {
       final Throwable cause = e.getCause();

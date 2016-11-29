@@ -18,7 +18,6 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -389,6 +388,6 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
 
   @Override
   public <R> ComposableFuture<R> transform(final com.google.common.base.Function<? super T, ? extends R> function) {
-    return continueOnSuccess(function::apply);
+    return map(function::apply);
   }
 }

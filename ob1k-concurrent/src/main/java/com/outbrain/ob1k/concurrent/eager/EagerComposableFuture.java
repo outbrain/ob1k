@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -431,7 +430,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
 
   @Override
   public <R> ComposableFuture<R> transform(final com.google.common.base.Function<? super T, ? extends R> function) {
-    return continueOnSuccess(function::apply);
+    return map(function::apply);
   }
 
   private static class ConsumerAction<T> implements Runnable {
