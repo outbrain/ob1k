@@ -155,7 +155,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
           try {
             final R result = resultTransformer.apply(source.get());
             consumer.consume(Try.fromValue(result));
-          } catch (final InterruptedException e) {
+          } catch (final InterruptedException | RuntimeException e) {
             consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
             final Throwable error = e.getCause() != null ? e.getCause() : e;
