@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.cache.memcache.folsom;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
@@ -19,6 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
@@ -59,13 +61,16 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
     for (final K key : keys) {
       final String stringKey = key(key);
       stringKeys.add(stringKey);
-      keyMap.put(stringKey, key);
+      K prevKey = keyMap.put(stringKey, key);
+      if (prevKey != null) {
+        throw new IllegalStateException("Both " + prevKey + " and " + key + " map to the same string key: " + stringKey);
+      }
     }
 
     return fromListenableFuture(
       () -> folsomClient.get(stringKeys),
       values -> {
-        final Map<K, V> res = new HashMap<>(values.size());
+        final Map<K, V> res = Maps.newHashMapWithExpectedSize(values.size());
         for (int i = 0; i < stringKeys.size(); i++) {
           final V value = values.get(i);
           if (value != null) {
@@ -129,7 +134,6 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
     return fromListenableFuture(() -> folsomClient.delete(key(key)), this::isOK);
   }
 
-
   private String key(final K key) {
     return keyTranslator.translateKey(key);
   }
@@ -138,19 +142,15 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
     return memcacheStatus == MemcacheStatus.OK;
   }
 
-  private interface Provider<T> {
-    ListenableFuture<T> provide();
+  private <T> ComposableFuture<T> fromListenableFuture(final Supplier<ListenableFuture<T>> supplier) {
+    return fromListenableFuture(supplier, Function.identity());
   }
 
-  private <T> ComposableFuture<T> fromListenableFuture(final Provider<T> provider) {
-    return fromListenableFuture(provider, Function.identity());
-  }
-
-  private <T, R> ComposableFuture<R> fromListenableFuture(final Provider<T> provider, final Function<T, R> resultTransformer) {
+  private <T, R> ComposableFuture<R> fromListenableFuture(final Supplier<ListenableFuture<T>> supplier, final Function<T, R> resultTransformer) {
 
     return ComposableFutures.build(consumer -> {
       try {
-        final ListenableFuture<T> source = provider.provide();
+        final ListenableFuture<T> source = supplier.get();
         source.addListener(() -> {
           try {
             final R result = resultTransformer.apply(source.get());
