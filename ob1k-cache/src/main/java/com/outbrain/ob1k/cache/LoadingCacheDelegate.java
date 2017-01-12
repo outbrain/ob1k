@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.cache;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Consumer;
@@ -279,7 +280,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   private static <K, V> Map<K, ComposableFuture<V>> mapToFutures(final Map<K, ComposablePromise<V>> promises) {
-    final HashMap<K, ComposableFuture<V>> result = new HashMap<>(promises.size());
+    final HashMap<K, ComposableFuture<V>> result = Maps.newHashMapWithExpectedSize(promises.size());
     for (final Map.Entry<K, ComposablePromise<V>> promiseEntry : promises.entrySet()) {
       result.put(promiseEntry.getKey(), promiseEntry.getValue().future());
     }
