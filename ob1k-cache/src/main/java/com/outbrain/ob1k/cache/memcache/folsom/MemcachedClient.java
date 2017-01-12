@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.cache.memcache.folsom;
 
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
@@ -65,7 +66,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
     return fromListenableFuture(
       () -> folsomClient.get(stringKeys),
       values -> {
-        final Map<K, V> res = new HashMap<>(values.size());
+        final Map<K, V> res = Maps.newHashMapWithExpectedSize(values.size());
         for (int i = 0; i < stringKeys.size(); i++) {
           final V value = values.get(i);
           if (value != null) {
