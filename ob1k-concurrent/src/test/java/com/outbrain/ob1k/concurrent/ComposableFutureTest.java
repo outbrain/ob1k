@@ -1,25 +1,44 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.util.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
+import static java.lang.System.currentTimeMillis;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.outbrain.ob1k.concurrent.combiners.BiFunction;
-import com.outbrain.ob1k.concurrent.combiners.TriFunction;
-import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.*;
 import org.junit.Assert;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
-import rx.Observable;
+import com.outbrain.ob1k.concurrent.combiners.BiFunction;
+import com.outbrain.ob1k.concurrent.combiners.TriFunction;
+import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
+import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
-import static java.lang.System.currentTimeMillis;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import rx.Observable;
 
 /**
  * User: aronen
@@ -94,6 +113,33 @@ public class ComposableFutureTest {
 
     Assert.assertEquals("future value should be still 'hello'", "hello", value);
     Assert.assertEquals("list should contain one result", 1, results.size());
+  }
+
+  @Test
+  public void testPeekSuccess() throws Exception {
+    final List<String> results = new ArrayList<>(1);
+    final ComposableFuture<String> future = fromValue("hello").
+      peek(valueTry -> results.add(valueTry.getValue()));
+
+    final String value = future.get();
+
+    Assert.assertEquals("future value should be still 'hello'", "hello", value);
+    Assert.assertEquals("list should contain one result", 1, results.size());
+  }
+
+  @Test
+  public void testPeekFailure() throws Exception {
+    final List<String> results = new ArrayList<>();
+    final RuntimeException expectedException = new RuntimeException("failureFuture");
+    final ComposableFuture<String> failureFuture = ComposableFutures.<String>fromError(expectedException).
+      peek(valueTry -> results.add(valueTry.getValue()));
+
+    try {
+      failureFuture.get();
+    } catch (ExecutionException e) {
+      Assert.assertEquals("Cause should be RuntimeException", expectedException, e.getCause());
+      Assert.assertTrue("list should be empty", results.isEmpty());
+    }
   }
 
   @Test

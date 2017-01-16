@@ -256,6 +256,17 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
+  public ComposableFuture<T> peek(Consumer<? super T> resultConsumer) {
+    final LazyComposableFuture<T> outer = this;
+    return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
+      if (result.isSuccess()) {
+        resultConsumer.consume(result.map(identity()));
+      }
+      consumer.consume(result);
+    }));
+  }
+
+  @Override
   public void consume(final Consumer<? super T> consumer) {
     if (executor != null) {
       executor.execute(() -> consumeValue(consumer));
