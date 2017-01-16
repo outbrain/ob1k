@@ -2,6 +2,7 @@ package com.outbrain.ob1k.cache.memcache.folsom;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.outbrain.ob1k.cache.EntryMapper;
@@ -58,15 +57,13 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
     final Map<String, K> keyMap = new HashMap<>();//StreamSupport.stream(keys.spliterator(), false).collect(Collectors.toMap(this::key, Function.identity()));
+    final List<String> stringKeys = new ArrayList<>();
     for (final K key : keys) {
       final String stringKey = key(key);
-      K prevKey = keyMap.putIfAbsent(stringKey, key);
-      if (prevKey != null && !prevKey.equals(key)) {
-        throw new IllegalStateException("Both " + prevKey + " and " + key + " map to the same string key: " + stringKey);
-      }
+      stringKeys.add(stringKey);
+      keyMap.put(stringKey, key);
     }
 
-    final List<String> stringKeys = Lists.newArrayList(keyMap.keySet());
     return fromListenableFuture(
       () -> folsomClient.get(stringKeys),
       values -> {
@@ -135,7 +132,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   }
 
   private String key(final K key) {
-    return Preconditions.checkNotNull(keyTranslator.translateKey(key));
+    return keyTranslator.translateKey(key);
   }
 
   private boolean isOK(final MemcacheStatus memcacheStatus) {
