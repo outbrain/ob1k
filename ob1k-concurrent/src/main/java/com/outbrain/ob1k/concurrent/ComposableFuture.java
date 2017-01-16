@@ -55,7 +55,7 @@ public interface ComposableFuture<T> {
    * Continues a future with a handler that will be called only if the original future resulted with success
    * in case of an error the error is continued forward.
    *
-   * @param mapper the continuation handler that returns a future
+   * @param mapper the continuation handler that returns a value or throws an exception.
    * @param <R>    the resulting future type.
    * @return return a new future that will produce the result either from the handler if successful or the original error.
    */
@@ -73,7 +73,7 @@ public interface ComposableFuture<T> {
 
   /**
    * Recovers future with a handler that will be called only if the original future failed
-   * in case of a success the original result is continued forward.
+   * in case of success the original result is continued forward.
    *
    * @param recover the continuation handler that returns a value or throws an exception.
    * @return a new future that will produce the original successful value the the result of the handler.
@@ -82,7 +82,7 @@ public interface ComposableFuture<T> {
 
   /**
    * Recovers future with a handler that will be called only if the original future failed
-   * in case of a success the original result is continued forward.
+   * in case of success the original result is continued forward.
    *
    * @param recover the continuation handler that returns a future
    * @return a new future that will produce the original successful value the the result of the handler.
@@ -117,6 +117,16 @@ public interface ComposableFuture<T> {
    * @return a future with same value
    */
   ComposableFuture<T> andThen(Consumer<? super T> consumer);
+
+  /**
+   * On success of the current future, applies the side-effecting function to its result.
+   * In case of an error the error is continued forward.
+   * Returns a new future with the same value.
+   *
+   * @param consumer the result consumer for the current future result
+   * @return a future with same value
+   */
+  ComposableFuture<T> peek(Consumer<? super T> consumer);
 
   /**
    * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
@@ -346,7 +356,7 @@ public interface ComposableFuture<T> {
 
   /**
    * continues a future with a handler that will be called only if the original future failed
-   * in case of a success the original result is continued forward.
+   * in case of success the original result is continued forward.
    *
    * @param handler the continuation handler that returns a future
    * @return a new future that will produce the original successful value the the result of the handler.
@@ -356,7 +366,7 @@ public interface ComposableFuture<T> {
 
   /**
    * continues a future with a handler that will be called only if the original future failed
-   * in case of a success the original result is continued forward.
+   * in case of success the original result is continued forward.
    *
    * @param handler the continuation handler that returns a value or throws an exception.
    * @return a new future that will produce the original successful value the the result of the handler.

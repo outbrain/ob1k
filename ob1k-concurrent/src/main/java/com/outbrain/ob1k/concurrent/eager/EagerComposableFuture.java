@@ -335,6 +335,19 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
+  public ComposableFuture<T> peek(Consumer<? super T> consumer) {
+    final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
+    this.consume(result -> {
+      if (result.isSuccess()) {
+        consumer.consume(result.map(identity()));
+      }
+      future.setTry(result);
+    });
+
+    return future;
+  }
+
+  @Override
   public void consume(final Consumer<? super T> consumer) {
     handlers.addHandler(new ConsumerAction<>(consumer, this), threadPool);
   }
