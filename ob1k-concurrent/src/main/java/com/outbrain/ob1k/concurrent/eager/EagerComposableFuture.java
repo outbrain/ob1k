@@ -18,7 +18,6 @@ import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -29,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static java.util.Arrays.asList;
 import static java.util.function.Function.identity;
 
 /**
@@ -116,13 +116,13 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
               second.setException(result.getError());
             }
           });
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           second.setException(e);
         }
       }
     }, duration, unit);
 
-    return collectFirst(Arrays.asList(first, second));
+    return collectFirst(asList(first, second));
   }
 
   public static <T> ComposableFuture<T> collectFirst(final List<ComposableFuture<T>> futures) {
@@ -190,7 +190,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
           future.set(handler.apply(result.getValue()));
         } catch (final UncheckedExecutionException e) {
           future.setException(e.getCause() != null ? e.getCause() : e);
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           future.setException(e);
         }
       } else {
@@ -208,19 +208,8 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       if (result.isSuccess()) {
         try {
           final ComposableFuture<? extends R> res = handler.apply(result.getValue());
-          if (res == null) {
-            future.set(null);
-          } else {
-            res.consume(futureResult -> {
-              if (futureResult.isSuccess()) {
-                future.set(futureResult.getValue());
-              } else {
-                future.setException(futureResult.getError());
-              }
-            });
-          }
-
-        } catch (final Exception e) {
+          consumeFrom(future, res);
+        } catch (final Throwable e) {
           future.setException(e);
         }
       } else {
@@ -242,7 +231,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
           future.set(handler.apply(result.getError()));
         } catch (final UncheckedExecutionException e) {
           future.setException(e.getCause() != null ? e.getCause() : e);
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           future.setException(e);
         }
       }
@@ -260,19 +249,8 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       } else {
         try {
           final ComposableFuture<? extends T> res = handler.apply(result.getError());
-          if (res == null) {
-            future.set(null);
-          } else {
-            res.consume(futureResult -> {
-              if (futureResult.isSuccess()) {
-                future.set(futureResult.getValue());
-              } else {
-                future.setException(futureResult.getError());
-              }
-            });
-          }
-
-        } catch (final Exception e) {
+          consumeFrom(future, res);
+        } catch (final Throwable e) {
           future.setException(e);
         }
       }
@@ -289,7 +267,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
         future.set(handler.apply(res));
       } catch (final UncheckedExecutionException e) {
         future.setException(e.getCause() != null ? e.getCause() : e);
-      } catch (final Exception e) {
+      } catch (final Throwable e) {
         future.setException(e);
       }
     });
@@ -303,19 +281,8 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     this.consume(res -> {
       try {
         final ComposableFuture<? extends R> nextResult = handler.apply(res);
-        if (nextResult == null) {
-          future.set(null);
-        } else {
-          nextResult.consume(result -> {
-            if (result.isSuccess()) {
-              future.set(result.getValue());
-            } else {
-              future.setException(result.getError());
-            }
-          });
-        }
-
-      } catch (final Exception e) {
+        consumeFrom(future, nextResult);
+      } catch (final Throwable e) {
         future.setException(e);
       }
     });
@@ -327,8 +294,11 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   public ComposableFuture<T> andThen(final Consumer<? super T> resultConsumer) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
-      resultConsumer.consume(result.map(identity()));
-      future.setTry(result);
+      try {
+        resultConsumer.consume(result.map(identity()));
+      } finally {
+        future.setTry(result);
+      }
     });
 
     return future;
@@ -351,7 +321,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
       deadline.setException(new TimeoutException("Timeout occurred on task ('" + taskDescription + "' " + timeout + " " + unit + ")")), timeout, unit);
 
     this.consume(result -> cancellationToken.cancel(false));
-    return collectFirst(Arrays.asList(this, deadline.future()));
+    return collectFirst(asList(this, deadline.future()));
   }
 
   @Override
@@ -369,6 +339,13 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     return this;
   }
 
+  private <R> void consumeFrom(final ComposablePromise<R> promise, final ComposableFuture<? extends R> future) {
+    if (future == null) {
+      promise.set(null);
+    } else {
+      future.consume(promise::setTry);
+    }
+  }
 
   /*
     OLD API - DEPRECATED
@@ -389,7 +366,7 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
         return handler.handle(result);
       } catch (final ExecutionException e) {
         // new API doesn't allows checked exceptions - offering throwing runtime instead. sadly, doing this for BC.
-        throw new UncheckedExecutionException(e.getCause());
+        throw new UncheckedExecutionException(e);
       }
     });
   }
