@@ -13,7 +13,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import rx.Observable;
-import rx.functions.Action1;
 import rx.observables.BlockingObservable;
 
 import java.io.IOException;
@@ -51,11 +50,8 @@ public class ClientBasicFlowsTest {
     }
     
     public void enqueue(final MockResponse response) {
-      enqueue(new Function<RecordedRequest, MockResponse>() {
-        @Override
-        public MockResponse apply(final RecordedRequest input) {
-          return response.clone();
-        }
+      enqueue(input -> {
+        return response.clone();
       });
     }
 
@@ -111,12 +107,9 @@ public class ClientBasicFlowsTest {
     final AtomicInteger counter = new AtomicInteger(0);
     final AtomicReference<Response> lastResponse = new AtomicReference<>();
 
-    responseStream.forEach(new Action1<Response>() {
-      @Override
-      public void call(final Response response) {
-        counter.incrementAndGet();
-        lastResponse.set(response);
-      }
+    responseStream.forEach(response -> {
+      counter.incrementAndGet();
+      lastResponse.set(response);
     });
 
     assertEquals("response elements size equals to repeats", repeats, counter.get());
@@ -126,11 +119,8 @@ public class ClientBasicFlowsTest {
   @Test
   public void testRequestWithBody() throws Exception {
 
-    dispatcher.enqueue(new Function<RecordedRequest, MockResponse>() {
-      @Override
-      public MockResponse apply(final RecordedRequest request) {
-        return new MockResponse().setBody(request.getBody());
-      }
+    dispatcher.enqueue(request -> {
+      return new MockResponse().setBody(request.getBody());
     });
 
     final String name = "julia";
@@ -147,12 +137,9 @@ public class ClientBasicFlowsTest {
   @Test
   public void testRequestWithQueryParam() throws Exception {
 
-    dispatcher.enqueue(new Function<RecordedRequest, MockResponse>() {
-      @Override
-      public MockResponse apply(final RecordedRequest request) {
-        // a bit ugly, will changed until MockWebServer will support extracting query params
-        return new MockResponse().setBody(request.getPath());
-      }
+    dispatcher.enqueue(request -> {
+      // a bit ugly, will changed until MockWebServer will support extracting query params
+      return new MockResponse().setBody(request.getPath());
     });
 
     final HttpClient httpClient = HttpClient.createDefault();
@@ -166,12 +153,9 @@ public class ClientBasicFlowsTest {
   @Test
   public void testRequestWithPathParam() throws Exception {
 
-    dispatcher.enqueue(new Function<RecordedRequest, MockResponse>() {
-      @Override
-      public MockResponse apply(final RecordedRequest request) {
-        // a bit ugly, will changed until MockWebServer will support extracting query params
-        return new MockResponse().setBody(request.getPath());
-      }
+    dispatcher.enqueue(request -> {
+      // a bit ugly, will changed until MockWebServer will support extracting query params
+      return new MockResponse().setBody(request.getPath());
     });
 
     final HttpClient httpClient = HttpClient.createDefault();
@@ -225,13 +209,10 @@ public class ClientBasicFlowsTest {
   @Test
   public void testBasicAuth() throws Exception {
 
-    dispatcher.enqueue(new Function<RecordedRequest, MockResponse>() {
-      @Override
-      public MockResponse apply(final RecordedRequest input) {
-        final String authHeader = input.getHeader(HttpHeaders.Names.AUTHORIZATION).replace("Basic ", "");
-        final String credentials = new String(Base64.decode(authHeader));
-        return new MockResponse().setBody(credentials);
-      }
+    dispatcher.enqueue(input -> {
+      final String authHeader = input.getHeader(HttpHeaders.Names.AUTHORIZATION).replace("Basic ", "");
+      final String credentials = new String(Base64.decode(authHeader));
+      return new MockResponse().setBody(credentials);
     });
 
     final String basicUsername = "moshe";

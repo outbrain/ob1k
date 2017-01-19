@@ -4,7 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Lists.transform;
 
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.ning.http.client.Response;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
@@ -159,5 +161,20 @@ public class NingResponse<T> implements TypedResponse<T> {
         ningCookie.isSecure(), ningCookie.isHttpOnly());
 
     return transform(cookies, transformer);
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder response = new StringBuilder("Response(statusCode=[");
+
+    response.append(getStatusCode());
+    response.append("],");
+    response.append("headers=[");
+    response.append(getHeaders());
+    response.append("],responseBody=[");
+    response.append(Try.apply(this::getResponseBody));
+    response.append("]");
+
+    return response.toString();
   }
 }
