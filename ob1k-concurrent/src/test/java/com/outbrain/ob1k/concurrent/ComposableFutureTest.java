@@ -1,52 +1,27 @@
 package com.outbrain.ob1k.concurrent;
 
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
+import com.outbrain.ob1k.concurrent.handlers.*;
+
 import org.junit.Ignore;
 import org.junit.Test;
+
 import rx.Observable;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
-
-import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
+
 /**
  * User: aronen
  * Date: 7/2/13
@@ -158,73 +133,13 @@ public class ComposableFutureTest {
   }
 
   @Test
-  public void testBatchUnorderedAtMostParallelism() throws Exception {
-    testBatchUnordered((elements, parallelism) -> {
-      CyclicBarrier barrier = new CyclicBarrier(parallelism + 1);
-      return batchUnordered(elements, parallelism, produce(num -> {
-        try {
-          barrier.await(100, TimeUnit.MICROSECONDS);
-          fail("parallelism exceeded specified value");
-        } catch (TimeoutException | BrokenBarrierException e) {
-          barrier.reset();
-        }
-      }));
-    });
-  }
+  public void testBatchUnordered() throws Exception {
+    final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    final ComposableFuture<List<String>> res = batchUnordered(nums, 2, result -> schedule(() -> "num:" + result, 1, TimeUnit.SECONDS));
 
-  @Test
-  public void testBatchUnorderedAtLeastParallelism() throws Exception {
-    testBatchUnordered((elements, parallelism) -> {
-      CyclicBarrier barrier = new CyclicBarrier(parallelism);
-      AtomicInteger processed = new AtomicInteger();
-      int end = elements.size() / parallelism * parallelism;
-      return batchUnordered(elements, parallelism, produce(num -> {
-        if (processed.getAndIncrement() < end) {
-          barrier.await(1, TimeUnit.SECONDS);
-        }
-      }));
-    });
-  }
+    final List<String> results = res.get();
+    assertEquals(results.size(), nums.size());
 
-  @Test
-  public void testBatchUnorderedDoesNotWaitForSlowlyProcessedElements() throws Exception {
-    testBatchUnordered((elements, parallelism) -> {
-      CountDownLatch latch = new CountDownLatch(1);
-      AtomicInteger processed = new AtomicInteger();
-      int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
-      return batchUnordered(elements, parallelism, produce(num -> {
-        if (num == elementToGetStuckAt) {
-          latch.await(1, TimeUnit.SECONDS);
-        }
-        if (processed.incrementAndGet() == elements.size() - 1) {
-          latch.countDown();
-        }
-      }));
-    });
-  }
-
-  private interface CheckedConsumer<T> {
-    void accept(T element) throws Exception;
-  }
-
-  private FutureSuccessHandler<Integer, Integer> produce(CheckedConsumer<Integer> r) {
-    return num -> ComposableFutures.submit(true, () -> {
-      try {
-        r.accept(num);
-      } catch (Throwable t) {
-        // Don't throw AssertionError, the thread will hang.
-        throw new RuntimeException(t);
-      }
-      return 2 * num;
-    });
-  }
-
-  private void testBatchUnordered(BiFunction<List<Integer>, Integer, ComposableFuture<List<Integer>>> test) throws Exception {
-    final List<Integer> nums = IntStream.range(0, 1000).boxed().collect(toList());
-    for (int parallelism = 1; parallelism < 10; parallelism++) {
-      final List<Integer> results = test.apply(nums, parallelism).get();
-      assertEquals(nums.stream().map(x -> 2 * x).collect(toList()), results.stream().sorted().collect(toList()));
-    }
   }
 
   @Test
@@ -321,7 +236,7 @@ public class ComposableFutureTest {
 
 //      final ComposableFuture<Double> weight = fromError(new RuntimeException("Illegal Weight error!"));
 
-    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight,
+    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight, 
       (TriFunction<String, Integer, Double, Person>) (name1, age1, weight1) -> new Person(age1, name1, weight1));
 
     try {
@@ -350,7 +265,7 @@ public class ComposableFutureTest {
     }
 
   }
-
+  
   @Test
   public void testCatchingThrowable() throws Exception {
     final ComposableFuture<Object> failedFuture = fromValue("Success").map(__ -> {
