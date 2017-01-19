@@ -144,7 +144,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
         } catch (final UncheckedExecutionException e) {
           final Throwable error = e.getCause() != null ? e.getCause() : e;
           consumer.consume(Try.fromError(error));
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           consumer.consume(Try.fromError(e));
         }
       } else {
@@ -165,7 +165,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
           } else {
             next.consume(consumer);
           }
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           consumer.consume(Try.fromError(e));
         }
       } else {
@@ -185,7 +185,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
           consumer.consume(Try.fromValue(recover.apply(result.getError())));
         } catch (final UncheckedExecutionException e) {
           consumer.consume(Try.fromError(e.getCause() != null ? e.getCause() : e));
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           consumer.consume(Try.fromError(e));
         }
       }
@@ -206,7 +206,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
           } else {
             next.consume(consumer);
           }
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
           consumer.consume(Try.fromError(e));
         }
       }
@@ -222,7 +222,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
       } catch (final UncheckedExecutionException e) {
         final Throwable error = e.getCause() != null ? e.getCause() : e;
         consumer.consume(Try.fromError(error));
-      } catch (final Exception e) {
+      } catch (final Throwable e) {
         consumer.consume(Try.fromError(e));
       }
     }));
@@ -239,8 +239,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
         } else {
           next.consume(consumer);
         }
-
-      } catch (final Exception e) {
+      } catch (final Throwable e) {
         consumer.consume(Try.fromError(e));
       }
     }));
@@ -375,7 +374,7 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
         return handler.handle(result);
       } catch (final ExecutionException e) {
         // new API doesn't allows checked exceptions - offering throwing runtime instead. sadly, doing this for BC.
-        throw new UncheckedExecutionException(e.getCause());
+        throw new UncheckedExecutionException(e);
       }
     });
   }
