@@ -1,10 +1,5 @@
 package com.outbrain.ob1k.http.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-import static com.outbrain.ob1k.http.utils.ComposableFutureAdapter.fromListenableFuture;
-
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.HttpResponseBodyPart;
@@ -14,8 +9,8 @@ import com.ning.http.client.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
-import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.http.TypedResponse;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.http.common.Cookie;
 import com.outbrain.ob1k.http.common.Header;
 import com.outbrain.ob1k.http.common.Param;
@@ -23,19 +18,29 @@ import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.utils.ComposableFutureAdapter.Provider;
 import com.outbrain.ob1k.http.utils.UrlUtils;
 import org.apache.commons.codec.EncoderException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.http.utils.ComposableFutureAdapter.fromListenableFuture;
 
 /**
  * @author marenzon
  */
 public class NingRequestBuilder implements RequestBuilder {
+
+  private static final Logger log = LoggerFactory.getLogger(RequestBuilder.class);
 
   private final AsyncHttpClient asyncHttpClient;
   private final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder;
@@ -356,6 +361,15 @@ public class NingRequestBuilder implements RequestBuilder {
     }
 
     final Request ningRequest = ningRequestBuilder.build();
+
+    if (log.isTraceEnabled()) {
+      final String body = ningRequest.getByteData() == null
+        ? ningRequest.getStringData() :
+        new String(ningRequest.getByteData(), Charset.forName(charset));
+
+      log.trace("Sending HTTP call to {}: headers=[{}], body=[{}]", ningRequest.getUrl(), ningRequest.getHeaders(), body);
+    }
+
     final Provider<com.ning.http.client.Response> provider = new Provider<com.ning.http.client.Response>() {
       private boolean aborted = false;
       private long size;
