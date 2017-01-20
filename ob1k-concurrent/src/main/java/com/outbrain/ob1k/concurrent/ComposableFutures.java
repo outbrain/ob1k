@@ -3,8 +3,6 @@ package com.outbrain.ob1k.concurrent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.Combiner;
 import com.outbrain.ob1k.concurrent.combiners.FutureBiFunction;
@@ -39,8 +37,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static java.util.Collections.singletonList;
 
 /**
  * A set of helpers for ComposableFuture
@@ -259,11 +255,18 @@ public class ComposableFutures {
         return left.flatMap(leftResults -> {
           final int rightIndex = leftIndex + 1;
           final ComposableFuture<List<R>> right = processTree(elements, rightIndex, indexes, producer);
-          return right.flatMap(rightResults ->
-                  ComposableFutures.fromValue(Lists.newArrayList(Iterables.concat(singletonList(rootResult), leftResults, rightResults))));
+          return right.map(rightResults -> concat(rootResult, leftResults, rightResults));
         });
       });
     }
+  }
+
+  private static <R> List<R> concat(R rootResult, List<R> leftResults, List<R> rightResults) {
+    List<R> results = new ArrayList<>(1 + leftResults.size() + rightResults.size());
+    results.add(rootResult);
+    results.addAll(leftResults);
+    results.addAll(rightResults);
+    return results;
   }
 
   /**
