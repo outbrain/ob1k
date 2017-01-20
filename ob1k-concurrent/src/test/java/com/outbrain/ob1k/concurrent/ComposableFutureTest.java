@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
+import com.google.common.collect.ImmutableSet;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
@@ -156,7 +157,7 @@ public class ComposableFutureTest {
     final List<Integer> nums = IntStream.range(1, 100_000).boxed().collect(toList());
     final ComposableFuture<List<Integer>> res = batchUnordered(nums, 8, num -> ComposableFutures.schedule(() -> num, 10, TimeUnit.MICROSECONDS));
     final List<Integer> results = res.get();
-    nums.removeAll(results);
+    nums.removeAll(ImmutableSet.copyOf(results));
     assertTrue(nums.isEmpty());
   }
 
