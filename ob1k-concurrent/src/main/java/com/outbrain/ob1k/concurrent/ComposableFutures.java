@@ -3,6 +3,8 @@ package com.outbrain.ob1k.concurrent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.Combiner;
 import com.outbrain.ob1k.concurrent.combiners.FutureBiFunction;
@@ -27,7 +29,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,6 +39,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.util.Collections.singletonList;
 
 /**
  * A set of helpers for ComposableFuture
@@ -196,28 +202,31 @@ public class ComposableFutures {
   }
 
   /**
-   * Execute the producer on each element in the list in batches.
-   * The batch size represent the max level of parallelism and each parallel flow will opportunistically try to process
+   * Execute the producer on each element in the list in parallel.
+   * Each parallel flow will opportunistically try to process
    * The next available item on the list upon completion of the previous one.
    * Use this method when execution time for each element is highly irregular so that slow elements
-   * In the beginning of the list won't necessarily hold up the rest of the execution.
+   * In the beginning of the list won't necessarily hold back the rest of the execution.
    * <p>
    * An error in one of the futures produced by the producer will end the flow and return a future containing the error
    *
    * @param elements  the input to the producer
-   * @param batchSize how many items will be processed in parallel
+   * @param parallelism how many items will be processed in parallel
    * @param producer  produces a future based on input from the element list
    * @param <T>       the type of the elements in the input list
    * @param <R>       the result type of the future returning from the producer
    * @return a future containing a list of all the results produced by the producer.
    */
-  public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int batchSize,
+  public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int parallelism,
                                                                 final FutureSuccessHandler<T, R> producer) {
 
-    final AtomicInteger index = new AtomicInteger(0);
-    final List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
-    for (int i = 0; i < batchSize; i++) {
-      futures.add(seqUnordered(elements, index, producer));
+    NavigableMap<Integer, Boolean> indexes = new ConcurrentSkipListMap<>();
+    final List<ComposableFuture<List<R>>> futures = new ArrayList<>(parallelism);
+    for (int i = 1; i <= elements.size(); i++) {
+      indexes.put(i, Boolean.TRUE);
+    }
+    for (int i = 1; i <= parallelism; i++) {
+      futures.add(processTree(elements, i, indexes, producer));
     }
 
     return all(true, futures).map(result -> {
@@ -230,19 +239,28 @@ public class ComposableFutures {
     });
   }
 
-  private static <T, R> ComposableFuture<List<R>> seqUnordered(final List<T> elements, final AtomicInteger index,
-                                                               final FutureSuccessHandler<T, R> producer) {
-    final int currentIndex = index.getAndIncrement();
-    if (currentIndex >= elements.size()) {
-      return ComposableFutures.fromValue(Collections.<R>emptyList());
+  private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements, Integer rootIndex,
+                                                              final NavigableMap<Integer, Boolean> indexes,
+                                                              final FutureSuccessHandler<T, R> producer) {
+    if (rootIndex > elements.size()) {
+      return ComposableFutures.fromValue(Collections.emptyList());
+    }
+
+    if (indexes.remove(rootIndex) == null) {
+      final Map.Entry<Integer, Boolean> currentTop = indexes.firstEntry();
+      return currentTop == null ?
+              ComposableFutures.fromValue(Collections.emptyList()) :
+              processTree(elements, currentTop.getKey(), indexes, producer);
     } else {
-      return producer.handle(elements.get(currentIndex)).flatMap(result -> {
-        final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
-        return rest.map(restResult -> {
-          final List<R> combined = new ArrayList<>(restResult.size() + 1);
-          combined.addAll(restResult);
-          combined.add(result);
-          return combined;
+      ComposableFuture<R> root = producer.handle(elements.get(rootIndex - 1));
+      return root.flatMap(rootResult -> {
+        int leftIndex = rootIndex << 1;
+        final ComposableFuture<List<R>> left = processTree(elements, leftIndex, indexes, producer);
+        return left.flatMap(leftResults -> {
+          final int rightIndex = leftIndex + 1;
+          final ComposableFuture<List<R>> right = processTree(elements, rightIndex, indexes, producer);
+          return right.flatMap(rightResults ->
+                  ComposableFutures.fromValue(Lists.newArrayList(Iterables.concat(singletonList(rootResult), leftResults, rightResults))));
         });
       });
     }

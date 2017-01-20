@@ -1,25 +1,45 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.util.*;
+import com.outbrain.ob1k.concurrent.combiners.BiFunction;
+import com.outbrain.ob1k.concurrent.combiners.TriFunction;
+import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
+import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import rx.Observable;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
-import com.outbrain.ob1k.concurrent.combiners.BiFunction;
-import com.outbrain.ob1k.concurrent.combiners.TriFunction;
-import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.*;
-import org.junit.Assert;
-
-import org.junit.Ignore;
-import org.junit.Test;
-
-import rx.Observable;
-
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertTrue;
 
 /**
  * User: aronen
@@ -133,12 +153,11 @@ public class ComposableFutureTest {
 
   @Test
   public void testBatchUnordered() throws Exception {
-    final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-    final ComposableFuture<List<String>> res = batchUnordered(nums, 2, result -> schedule(() -> "num:" + result, 1, TimeUnit.SECONDS));
-
-    final List<String> results = res.get();
-    Assert.assertEquals(results.size(), nums.size());
-
+    final List<Integer> nums = IntStream.range(1, 100_000).boxed().collect(toList());
+    final ComposableFuture<List<Integer>> res = batchUnordered(nums, 8, num -> ComposableFutures.schedule(() -> num, 10, TimeUnit.MICROSECONDS));
+    final List<Integer> results = res.get();
+    nums.removeAll(results);
+    assertTrue(nums.isEmpty());
   }
 
   @Test
