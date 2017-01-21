@@ -40,7 +40,8 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertTrue;
+import static java.util.stream.Collectors.toSet;
+import static org.junit.Assert.assertEquals;
 
 /**
  * User: aronen
@@ -155,10 +156,10 @@ public class ComposableFutureTest {
   @Test
   public void testBatchUnordered() throws Exception {
     final List<Integer> nums = IntStream.range(1, 100_000).boxed().collect(toList());
-    final ComposableFuture<List<Integer>> res = batchUnordered(nums, 8, num -> ComposableFutures.schedule(() -> num, 10, TimeUnit.MICROSECONDS));
-    final List<Integer> results = res.get();
-    nums.removeAll(ImmutableSet.copyOf(results));
-    assertTrue(nums.isEmpty());
+    final ComposableFuture<List<String>> res = batchUnordered(nums, 8, num -> ComposableFutures.schedule(() -> String.valueOf(num), 10, TimeUnit.NANOSECONDS));
+    final List<String> results = res.get();
+    assertEquals(nums.size(), results.size());
+    assertEquals(nums.stream().map(Object::toString).collect(toSet()), ImmutableSet.copyOf(results));
   }
 
   @Test
