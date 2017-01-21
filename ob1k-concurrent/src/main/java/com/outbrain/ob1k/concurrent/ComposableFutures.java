@@ -27,9 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,6 +35,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
  * A set of helpers for ComposableFuture
@@ -216,13 +215,11 @@ public class ComposableFutures {
   public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int parallelism,
                                                                 final FutureSuccessHandler<T, R> producer) {
 
-    NavigableMap<Integer, Boolean> indexes = new ConcurrentSkipListMap<>();
+    final AtomicIntegerArray pendingNodes = new AtomicIntegerArray(elements.size());
+    final AtomicInteger pendingNodeLowerBound = new AtomicInteger(parallelism + 1);
     final List<ComposableFuture<List<R>>> futures = new ArrayList<>(parallelism);
-    for (int i = 1; i <= elements.size(); i++) {
-      indexes.put(i, Boolean.TRUE);
-    }
-    for (int i = 1; i <= parallelism; i++) {
-      futures.add(processTree(elements, i, indexes, producer));
+    for (int rootNode = 1; rootNode <= parallelism; rootNode++) {
+      futures.add(processTree(elements, rootNode, pendingNodes, pendingNodeLowerBound, producer));
     }
 
     return all(true, futures).map(result -> {
@@ -235,29 +232,58 @@ public class ComposableFutures {
     });
   }
 
-  private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements, Integer rootIndex,
-                                                              final NavigableMap<Integer, Boolean> indexes,
+  /**
+   *
+   * @param elements
+   * @param rootNode: The root of the tree currently being processed.
+   * @param pendingNodes: pending node is marked with 0, processed node with 1.
+   * @param pendingNodeLowerBound: all elements with index < pendingNodeLowerBound are already processed.
+   * @param producer
+   * @param <T>
+   * @param <R>
+   * @return a ComposableFuture that will eventually apply producer to a subset of elements.
+   * The computation progresses serially through a subset of elements in no particular order.
+   * Since the algorithm is recursive, effort is made to limit the recursion depth.
+   * The list of elements is treated as a binary tree rooted at index 1 (which maps to elements index 0),
+   * where each tree rooted at index i has left subtree rooted at 2 * i and right subtree rooted
+   * at 2 * i + 1.
+   * Given an input rootNode, the tree rooted at rootNode is traversed Pre-order serially.
+   * When an already processed element is encountered, the traversal proceeds
+   * from the next highest node (smallest index) in the tree which is still pending computation.
+   * This traversal strategy minimizes contention on the same part of the tree
+   * by separate flows, and decreases the recursion depth.
+   *
+   */
+  private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements,
+                                                              int rootNode,
+                                                              final AtomicIntegerArray pendingNodes,
+                                                              final AtomicInteger pendingNodeLowerBound,
                                                               final FutureSuccessHandler<T, R> producer) {
-    if (rootIndex > elements.size()) {
+    if (rootNode > elements.size()) {
       return ComposableFutures.fromValue(Collections.emptyList());
     }
 
-    if (indexes.remove(rootIndex) == null) {
-      final Map.Entry<Integer, Boolean> currentTop = indexes.firstEntry();
-      return currentTop == null ?
-              ComposableFutures.fromValue(Collections.emptyList()) :
-              processTree(elements, currentTop.getKey(), indexes, producer);
-    } else {
-      ComposableFuture<R> root = producer.handle(elements.get(rootIndex - 1));
+    if (pendingNodes.compareAndSet(rootNode - 1, 0, 1)) {
+      ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
       return root.flatMap(rootResult -> {
-        int leftIndex = rootIndex << 1;
-        final ComposableFuture<List<R>> left = processTree(elements, leftIndex, indexes, producer);
+        int leftNode = rootNode << 1;
+        final ComposableFuture<List<R>> left = processTree(elements, leftNode, pendingNodes, pendingNodeLowerBound, producer);
         return left.flatMap(leftResults -> {
-          final int rightIndex = leftIndex + 1;
-          final ComposableFuture<List<R>> right = processTree(elements, rightIndex, indexes, producer);
+          final int rightNode = leftNode + 1;
+          final ComposableFuture<List<R>> right = processTree(elements, rightNode, pendingNodes, pendingNodeLowerBound, producer);
           return right.map(rightResults -> concat(rootResult, leftResults, rightResults));
         });
       });
+    } else {
+      final int prev = pendingNodeLowerBound.get();
+      int node = prev;
+      for (; node <= elements.size() && pendingNodes.get(node - 1) == 1; node++);
+
+      // We are going to process the tree rooted at i, so let's set
+      // pendingNodeLowerBound to the next highest pending node, even though it temporarily breaks its invariant.
+      // The cas may fail, but this is not an issue as it does not break the pendingNodeLowerBound invariant.
+      pendingNodeLowerBound.compareAndSet(prev, node + 1);
+      return processTree(elements, node, pendingNodes, pendingNodeLowerBound, producer);
     }
   }
 
