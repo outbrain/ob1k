@@ -279,6 +279,8 @@ public class ComposableFutures {
       int node = pendingNodeLowerBound.get();
       for (; node <= elements.size() && pendingNodes.get(node - 1) == 1; node++);
 
+      // Rarely, we may loose a race and set pendingNodeLowerBound to a lower value than
+      // the latest value, but it will only affect performance.
       pendingNodeLowerBound.set(node + 1);
       return processTree(elements, node, pendingNodes, pendingNodeLowerBound, producer);
     }
