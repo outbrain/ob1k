@@ -237,7 +237,8 @@ public class ComposableFutures {
    * @param elements
    * @param rootNode: The root of the tree currently being processed.
    * @param pendingNodes: pending node is marked with 0, processed node with 1.
-   * @param pendingNodeLowerBound: all elements with index < pendingNodeLowerBound are already processed.
+   * @param pendingNodeLowerBound: all elements with index < pendingNodeLowerBound are
+   *        either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
    * @param producer
    * @param <T>
    * @param <R>
@@ -248,7 +249,7 @@ public class ComposableFutures {
    * where each tree rooted at index i has left subtree rooted at 2 * i and right subtree rooted
    * at 2 * i + 1.
    * Given an input rootNode, the tree rooted at rootNode is traversed Pre-order serially.
-   * When an already processed element is encountered, the traversal proceeds
+   * When a processed element is encountered, the traversal proceeds
    * from the next highest node (smallest index) in the tree which is still pending computation.
    * This traversal strategy minimizes contention on the same part of the tree
    * by separate flows, and decreases the recursion depth.
@@ -275,14 +276,10 @@ public class ComposableFutures {
         });
       });
     } else {
-      final int prev = pendingNodeLowerBound.get();
-      int node = prev;
+      int node = pendingNodeLowerBound.get();
       for (; node <= elements.size() && pendingNodes.get(node - 1) == 1; node++);
 
-      // We are going to process the tree rooted at i, so let's set
-      // pendingNodeLowerBound to the next highest pending node, even though it temporarily breaks its invariant.
-      // The cas may fail, but this is not an issue as it does not break the pendingNodeLowerBound invariant.
-      pendingNodeLowerBound.compareAndSet(prev, node + 1);
+      pendingNodeLowerBound.set(node + 1);
       return processTree(elements, node, pendingNodes, pendingNodeLowerBound, producer);
     }
   }
