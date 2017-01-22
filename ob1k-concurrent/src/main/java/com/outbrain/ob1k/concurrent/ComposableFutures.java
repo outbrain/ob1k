@@ -216,10 +216,9 @@ public class ComposableFutures {
                                                                 final FutureSuccessHandler<T, R> producer) {
 
     final AtomicIntegerArray pendingNodes = new AtomicIntegerArray(elements.size());
-    final AtomicInteger pendingNodeLowerBound = new AtomicInteger(parallelism + 1);
     final List<ComposableFuture<List<R>>> futures = new ArrayList<>(parallelism);
     for (int rootNode = 1; rootNode <= parallelism; rootNode++) {
-      futures.add(processTree(elements, rootNode, pendingNodes, pendingNodeLowerBound, producer));
+      futures.add(processTree(elements, rootNode, pendingNodes, producer));
     }
 
     return all(true, futures).map(result -> {
@@ -237,8 +236,6 @@ public class ComposableFutures {
    * @param elements
    * @param rootNode: The root of the tree currently being processed.
    * @param pendingNodes: pending node is marked with 0, processed node with 1.
-   * @param pendingNodeLowerBound: all elements with index < pendingNodeLowerBound are
-   *        either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
    * @param producer
    * @param <T>
    * @param <R>
@@ -249,8 +246,8 @@ public class ComposableFutures {
    * where each tree rooted at index i has left subtree rooted at 2 * i and right subtree rooted
    * at 2 * i + 1.
    * Given an input rootNode, the tree rooted at rootNode is traversed Pre-order serially.
-   * When a processed element is encountered, the traversal proceeds
-   * from the next highest node (smallest index) in the tree which is still pending computation.
+   * When a processed node is encountered, the traversal doesn't descend to the
+   * subtree rooted at that node.
    * This traversal strategy minimizes contention on the same part of the tree
    * by separate flows, and decreases the recursion depth.
    *
@@ -258,32 +255,21 @@ public class ComposableFutures {
   private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements,
                                                               int rootNode,
                                                               final AtomicIntegerArray pendingNodes,
-                                                              final AtomicInteger pendingNodeLowerBound,
                                                               final FutureSuccessHandler<T, R> producer) {
-    if (rootNode > elements.size()) {
+    if (rootNode > elements.size() || !pendingNodes.compareAndSet(rootNode - 1, 0, 1)) {
       return ComposableFutures.fromValue(Collections.emptyList());
     }
 
-    if (pendingNodes.compareAndSet(rootNode - 1, 0, 1)) {
-      ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
-      return root.flatMap(rootResult -> {
-        int leftNode = rootNode << 1;
-        final ComposableFuture<List<R>> left = processTree(elements, leftNode, pendingNodes, pendingNodeLowerBound, producer);
-        return left.flatMap(leftResults -> {
-          final int rightNode = leftNode + 1;
-          final ComposableFuture<List<R>> right = processTree(elements, rightNode, pendingNodes, pendingNodeLowerBound, producer);
-          return right.map(rightResults -> concat(rootResult, leftResults, rightResults));
-        });
+    ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
+    return root.flatMap(rootResult -> {
+      int leftNode = rootNode << 1;
+      final ComposableFuture<List<R>> left = processTree(elements, leftNode, pendingNodes, producer);
+      return left.flatMap(leftResults -> {
+        final int rightNode = leftNode + 1;
+        final ComposableFuture<List<R>> right = processTree(elements, rightNode, pendingNodes, producer);
+        return right.map(rightResults -> concat(rootResult, leftResults, rightResults));
       });
-    } else {
-      int node = pendingNodeLowerBound.get();
-      for (; node <= elements.size() && pendingNodes.get(node - 1) == 1; node++);
-
-      // Rarely, we may loose a race and set pendingNodeLowerBound to a lower value than
-      // the latest value, but it will only affect performance.
-      pendingNodeLowerBound.set(node + 1);
-      return processTree(elements, node, pendingNodes, pendingNodeLowerBound, producer);
-    }
+    });
   }
 
   private static <R> List<R> concat(R rootResult, List<R> leftResults, List<R> rightResults) {
