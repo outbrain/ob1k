@@ -270,6 +270,7 @@ public class ComposableFutures {
     }
 
     if (!nodesState.compareAndSet(rootNode - 1, 0, 1)) {
+      // A parallel flow is working on our subtree, let's look for another subtree.
       return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer);
     }
 
@@ -278,7 +279,9 @@ public class ComposableFutures {
 
     return root.flatMap(rootResult -> {
       if (leftNode > elements.size()) {
-        return resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(elements, rootNode, nodesState, pendingNodeLowerBound, producer, originalRoot, Lists.newArrayList(rootResult));
+        return resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(elements, rootNode, nodesState, pendingNodeLowerBound, producer, originalRoot,
+                // We are going to mutate the list, so we can't use Collections.singletonList().
+                Lists.newArrayList(rootResult));
       } else {
         final ComposableFuture<List<R>> left = processTree(elements, leftNode, nodesState, pendingNodeLowerBound, producer, originalRoot);
         return left.flatMap(leftResults -> {
@@ -299,12 +302,14 @@ public class ComposableFutures {
           final AtomicInteger pendingNodeLowerBound, final FutureSuccessHandler<T, R> producer,
           final int originalRoot, final List<R> results) {
     if (rootNode == originalRoot) {
+      // We traversed an entire subtree rooted at an initial call to processTree, so let's look for more work.
       return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer).
               map(rest -> {
                 results.addAll(rest);
                 return results;
               });
     } else {
+      // We are in the middle of traversing a subtree, let's keep working on it.
       return ComposableFutures.fromValue(results);
     }
   }
@@ -312,6 +317,8 @@ public class ComposableFutures {
   private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNode(
           final List<T> elements, final AtomicIntegerArray nodesState, final AtomicInteger pendingNodeLowerBound,
           final FutureSuccessHandler<T, R> producer) {
+
+    // Look for a pending node at the top leftmost position.
     int node = pendingNodeLowerBound.get();
     for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++);
 

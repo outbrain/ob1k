@@ -175,7 +175,7 @@ public class ComposableFutureTest {
       final int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
       return batchUnordered(elements, parallelism, produce(num -> {
         if (num == elementToGetStuckAt) {
-          latch.await(1, TimeUnit.SECONDS);
+          assertTrue(latch.await(1, TimeUnit.SECONDS));
         }
         if (processed.incrementAndGet() == elements.size() - 1) {
           latch.countDown();
