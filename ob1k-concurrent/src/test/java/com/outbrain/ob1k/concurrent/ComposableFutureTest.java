@@ -161,7 +161,7 @@ public class ComposableFutureTest {
   @Test
   public void testBatchUnorderedAtMostParallelism() throws Exception {
     testBatchUnordered((elements, parallelism) -> {
-      CyclicBarrier barrier = new CyclicBarrier(parallelism + 1);
+      final CyclicBarrier barrier = new CyclicBarrier(parallelism + 1);
       return batchUnordered(elements, parallelism, produce(num -> {
         try {
           barrier.await(100, TimeUnit.MICROSECONDS);
@@ -176,9 +176,9 @@ public class ComposableFutureTest {
   @Test
   public void testBatchUnorderedAtLeastParallelism() throws Exception {
     testBatchUnordered((elements, parallelism) -> {
-      CyclicBarrier barrier = new CyclicBarrier(parallelism);
-      AtomicInteger processed = new AtomicInteger();
-      int end = elements.size() / parallelism * parallelism;
+      final CyclicBarrier barrier = new CyclicBarrier(parallelism);
+      final AtomicInteger processed = new AtomicInteger();
+      final int end = elements.size() / parallelism * parallelism;
       return batchUnordered(elements, parallelism, produce(num -> {
         if (processed.getAndIncrement() < end) {
           barrier.await(1, TimeUnit.SECONDS);
@@ -190,9 +190,9 @@ public class ComposableFutureTest {
   @Test
   public void testBatchUnorderedDoesNotWaitForSlowlyProcessedElements() throws Exception {
     testBatchUnordered((elements, parallelism) -> {
-      CountDownLatch latch = new CountDownLatch(1);
-      AtomicInteger processed = new AtomicInteger();
-      int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
+      final CountDownLatch latch = new CountDownLatch(1);
+      final AtomicInteger processed = new AtomicInteger();
+      final int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
       return batchUnordered(elements, parallelism, produce(num -> {
         if (num == elementToGetStuckAt) {
           latch.await(1, TimeUnit.SECONDS);
@@ -208,11 +208,11 @@ public class ComposableFutureTest {
     void accept(T element) throws Exception;
   }
 
-  private FutureSuccessHandler<Integer, Integer> produce(CheckedConsumer<Integer> r) {
+  private FutureSuccessHandler<Integer, Integer> produce(final CheckedConsumer<Integer> r) {
     return num -> ComposableFutures.submit(true, () -> {
       try {
         r.accept(num);
-      } catch (Throwable t) {
+      } catch (final Throwable t) {
         // Don't throw AssertionError, the thread will hang.
         throw new RuntimeException(t);
       }
@@ -220,7 +220,7 @@ public class ComposableFutureTest {
     });
   }
 
-  private void testBatchUnordered(BiFunction<List<Integer>, Integer, ComposableFuture<List<Integer>>> test) throws Exception {
+  private void testBatchUnordered(final BiFunction<List<Integer>, Integer, ComposableFuture<List<Integer>>> test) throws Exception {
     final List<Integer> nums = IntStream.range(0, 1000).boxed().collect(toList());
     for (int parallelism = 1; parallelism < 10; parallelism++) {
       final List<Integer> results = test.apply(nums, parallelism).get();
