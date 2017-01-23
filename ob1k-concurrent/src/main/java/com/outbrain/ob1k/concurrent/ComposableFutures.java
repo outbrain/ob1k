@@ -259,11 +259,11 @@ public class ComposableFutures {
    *
    */
   private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements,
-                                                              int rootNode,
+                                                              final int rootNode,
                                                               final AtomicIntegerArray nodesState,
                                                               final AtomicInteger pendingNodeLowerBound,
                                                               final FutureSuccessHandler<T, R> producer,
-                                                              int originalRoot) {
+                                                              final int originalRoot) {
     if (rootNode > elements.size()) {
       // We are going to mutate the list, so we can't use Collections.emptyList().
       return ComposableFutures.fromValue(new ArrayList<>());
@@ -273,8 +273,8 @@ public class ComposableFutures {
       return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer);
     }
 
-    ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
-    int leftNode = rootNode << 1;
+    final ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
+    final int leftNode = rootNode << 1;
 
     return root.flatMap(rootResult -> {
       if (leftNode > elements.size()) {
@@ -294,7 +294,10 @@ public class ComposableFutures {
     });
   }
 
-  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(List<T> elements, int rootNode, AtomicIntegerArray nodesState, AtomicInteger pendingNodeLowerBound, FutureSuccessHandler<T, R> producer, int originalRoot, List<R> results) {
+  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(
+          final List<T> elements, final int rootNode, final AtomicIntegerArray nodesState,
+          final AtomicInteger pendingNodeLowerBound, final FutureSuccessHandler<T, R> producer,
+          final int originalRoot, final List<R> results) {
     if (rootNode == originalRoot) {
       return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer).
               map(rest -> {
@@ -306,7 +309,9 @@ public class ComposableFutures {
     }
   }
 
-  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNode(List<T> elements, AtomicIntegerArray nodesState, AtomicInteger pendingNodeLowerBound, FutureSuccessHandler<T, R> producer) {
+  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNode(
+          final List<T> elements, final AtomicIntegerArray nodesState, final AtomicInteger pendingNodeLowerBound,
+          final FutureSuccessHandler<T, R> producer) {
     int node = pendingNodeLowerBound.get();
     for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++);
 
