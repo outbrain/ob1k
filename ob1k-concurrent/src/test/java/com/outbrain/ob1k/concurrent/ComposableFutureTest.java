@@ -133,13 +133,73 @@ public class ComposableFutureTest {
   }
 
   @Test
-  public void testBatchUnordered() throws Exception {
-    final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-    final ComposableFuture<List<String>> res = batchUnordered(nums, 2, result -> schedule(() -> "num:" + result, 1, TimeUnit.SECONDS));
+  public void testBatchUnorderedAtMostParallelism() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      CyclicBarrier barrier = new CyclicBarrier(parallelism + 1);
+      return batchUnordered(elements, parallelism, produce(num -> {
+        try {
+          barrier.await(100, TimeUnit.MICROSECONDS);
+          assertTrue("parallelism exceeded specified value", false);
+        } catch (TimeoutException | BrokenBarrierException e) {
+          barrier.reset();
+        }
+      }));
+    });
+  }
 
-    final List<String> results = res.get();
-    assertEquals(results.size(), nums.size());
+  @Test
+  public void testBatchUnorderedAtLeastParallelism() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      CyclicBarrier barrier = new CyclicBarrier(parallelism);
+      AtomicInteger processed = new AtomicInteger();
+      int end = elements.size() / parallelism * parallelism;
+      return batchUnordered(elements, parallelism, produce(num -> {
+        if (processed.getAndIncrement() < end) {
+          barrier.await(1, TimeUnit.SECONDS);
+        }
+      }));
+    });
+  }
 
+  @Test
+  public void testBatchUnorderedDoesNotWaitForSlowlyProcessedElements() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      CountDownLatch latch = new CountDownLatch(1);
+      AtomicInteger processed = new AtomicInteger();
+      int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
+      return batchUnordered(elements, parallelism, produce(num -> {
+        if (num == elementToGetStuckAt) {
+          latch.await(1, TimeUnit.SECONDS);
+        }
+        if (processed.incrementAndGet() == elements.size() - 1) {
+          latch.countDown();
+        }
+      }));
+    });
+  }
+
+  private interface CheckedConsumer<T> {
+    void accept(T element) throws Exception;
+  }
+
+  private FutureSuccessHandler<Integer, Integer> produce(CheckedConsumer<Integer> r) {
+    return num -> ComposableFutures.submit(true, () -> {
+      try {
+        r.accept(num);
+      } catch (Throwable t) {
+        // Don't throw AssertionError, the thread will hang.
+        throw new RuntimeException(t);
+      }
+      return 2 * num;
+    });
+  }
+
+  private void testBatchUnordered(BiFunction<List<Integer>, Integer, ComposableFuture<List<Integer>>> test) throws Exception {
+    final List<Integer> nums = IntStream.range(0, 1000).boxed().collect(toList());
+    for (int parallelism = 1; parallelism < 10; parallelism++) {
+      final List<Integer> results = test.apply(nums, parallelism).get();
+      assertEquals(nums.stream().map(x -> 2 * x).collect(toList()), results.stream().sorted().collect(toList()));
+    }
   }
 
   @Test
@@ -236,7 +296,7 @@ public class ComposableFutureTest {
 
 //      final ComposableFuture<Double> weight = fromError(new RuntimeException("Illegal Weight error!"));
 
-    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight, 
+    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight,
       (TriFunction<String, Integer, Double, Person>) (name1, age1, weight1) -> new Person(age1, name1, weight1));
 
     try {
@@ -265,7 +325,7 @@ public class ComposableFutureTest {
     }
 
   }
-  
+
   @Test
   public void testCatchingThrowable() throws Exception {
     final ComposableFuture<Object> failedFuture = fromValue("Success").map(__ -> {
