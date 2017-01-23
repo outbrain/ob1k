@@ -3,6 +3,7 @@ package com.outbrain.ob1k.concurrent;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.Combiner;
 import com.outbrain.ob1k.concurrent.combiners.FutureBiFunction;
@@ -215,10 +216,11 @@ public class ComposableFutures {
   public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int parallelism,
                                                                 final FutureSuccessHandler<T, R> producer) {
 
-    final AtomicIntegerArray pendingNodes = new AtomicIntegerArray(elements.size());
+    final AtomicIntegerArray nodesState = new AtomicIntegerArray(elements.size());
+    final AtomicInteger pendingNodeLowerBound = new AtomicInteger(parallelism + 1);
     final List<ComposableFuture<List<R>>> futures = new ArrayList<>(parallelism);
     for (int rootNode = 1; rootNode <= parallelism; rootNode++) {
-      futures.add(processTree(elements, rootNode, pendingNodes, producer));
+      futures.add(processTree(elements, rootNode, nodesState, pendingNodeLowerBound, producer, rootNode));
     }
 
     return all(true, futures).map(result -> {
@@ -235,8 +237,11 @@ public class ComposableFutures {
    *
    * @param elements
    * @param rootNode: The root of the tree currently being processed.
-   * @param pendingNodes: pending node is marked with 0, processed node with 1.
+   * @param nodesState: pending node is marked with 0, processed node with 1.
+   * @param pendingNodeLowerBound: all elements with index < pendingNodeLowerBound are
+   *        either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
    * @param producer
+   * @param originalRoot: Indicates whether to start the processing from the leftmost highest pending node.
    * @param <T>
    * @param <R>
    * @return a ComposableFuture that will eventually apply producer to a subset of elements.
@@ -245,39 +250,70 @@ public class ComposableFutures {
    * The list of elements is treated as a binary tree rooted at index 1 (which maps to elements index 0),
    * where each tree rooted at index i has left subtree rooted at 2 * i and right subtree rooted
    * at 2 * i + 1.
-   * Given an input rootNode, the tree rooted at rootNode is traversed Pre-order serially.
-   * When a processed node is encountered, the traversal doesn't descend to the
-   * subtree rooted at that node.
+   * Given an input rootNode, the subtree rooted at rootNode is traversed Pre-order serially.
+   * When the traversal of a complete subtree ends,
+   * or a processed element is encountered, the traversal proceeds
+   * from the leftmost highest pending node (smallest index).
    * This traversal strategy minimizes contention on the same part of the tree
    * by separate flows, and decreases the recursion depth.
    *
    */
   private static <T, R> ComposableFuture<List<R>> processTree(final List<T> elements,
                                                               int rootNode,
-                                                              final AtomicIntegerArray pendingNodes,
-                                                              final FutureSuccessHandler<T, R> producer) {
-    if (rootNode > elements.size() || !pendingNodes.compareAndSet(rootNode - 1, 0, 1)) {
-      return ComposableFutures.fromValue(Collections.emptyList());
+                                                              final AtomicIntegerArray nodesState,
+                                                              final AtomicInteger pendingNodeLowerBound,
+                                                              final FutureSuccessHandler<T, R> producer,
+                                                              int originalRoot) {
+    if (rootNode > elements.size()) {
+      // We are going to mutate the list, so we can't use Collections.emptyList().
+      return ComposableFutures.fromValue(new ArrayList<>());
+    }
+
+    if (!nodesState.compareAndSet(rootNode - 1, 0, 1)) {
+      return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer);
     }
 
     ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
+    int leftNode = rootNode << 1;
+
     return root.flatMap(rootResult -> {
-      int leftNode = rootNode << 1;
-      final ComposableFuture<List<R>> left = processTree(elements, leftNode, pendingNodes, producer);
-      return left.flatMap(leftResults -> {
-        final int rightNode = leftNode + 1;
-        final ComposableFuture<List<R>> right = processTree(elements, rightNode, pendingNodes, producer);
-        return right.map(rightResults -> concat(rootResult, leftResults, rightResults));
-      });
+      if (leftNode > elements.size()) {
+        return resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(elements, rootNode, nodesState, pendingNodeLowerBound, producer, originalRoot, Lists.newArrayList(rootResult));
+      } else {
+        final ComposableFuture<List<R>> left = processTree(elements, leftNode, nodesState, pendingNodeLowerBound, producer, originalRoot);
+        return left.flatMap(leftResults -> {
+          final int rightNode = leftNode + 1;
+          final ComposableFuture<List<R>> right = processTree(elements, rightNode, nodesState, pendingNodeLowerBound, producer, originalRoot);
+          return right.flatMap(rightResults -> {
+            leftResults.add(rootResult);
+            leftResults.addAll(rightResults);
+            return resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(elements, rootNode, nodesState, pendingNodeLowerBound, producer, originalRoot, leftResults);
+          });
+        });
+      }
     });
   }
 
-  private static <R> List<R> concat(R rootResult, List<R> leftResults, List<R> rightResults) {
-    List<R> results = new ArrayList<>(1 + leftResults.size() + rightResults.size());
-    results.add(rootResult);
-    results.addAll(leftResults);
-    results.addAll(rightResults);
-    return results;
+  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNodeIfCompletedSubtree(List<T> elements, int rootNode, AtomicIntegerArray nodesState, AtomicInteger pendingNodeLowerBound, FutureSuccessHandler<T, R> producer, int originalRoot, List<R> results) {
+    if (rootNode == originalRoot) {
+      return resumeTraversalFromLeftmostHighestNode(elements, nodesState, pendingNodeLowerBound, producer).
+              map(rest -> {
+                results.addAll(rest);
+                return results;
+              });
+    } else {
+      return ComposableFutures.fromValue(results);
+    }
+  }
+
+  private static <T, R> ComposableFuture<List<R>> resumeTraversalFromLeftmostHighestNode(List<T> elements, AtomicIntegerArray nodesState, AtomicInteger pendingNodeLowerBound, FutureSuccessHandler<T, R> producer) {
+    int node = pendingNodeLowerBound.get();
+    for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++);
+
+    // Rarely, we may loose a race and set pendingNodeLowerBound to a lower value than
+    // the latest value, but it will only affect performance.
+    pendingNodeLowerBound.set(node + 1);
+    return processTree(elements, node, nodesState, pendingNodeLowerBound, producer, node);
   }
 
   /**
