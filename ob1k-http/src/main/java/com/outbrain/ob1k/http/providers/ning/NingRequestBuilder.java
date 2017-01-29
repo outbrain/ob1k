@@ -357,7 +357,7 @@ public class NingRequestBuilder implements RequestBuilder {
     if (log.isTraceEnabled()) {
       final String body = ningRequest.getByteData() == null
         ? ningRequest.getStringData() :
-        new String(ningRequest.getByteData(), Charset.forName(charset));
+        new String(ningRequest.getByteData(), charset);
 
       log.trace("Sending HTTP call to {}: headers=[{}], body=[{}]", ningRequest.getUrl(), ningRequest.getHeaders(), body);
     }

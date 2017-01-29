@@ -1,9 +1,5 @@
 package com.outbrain.ob1k.http.providers.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import com.google.common.base.Objects;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
