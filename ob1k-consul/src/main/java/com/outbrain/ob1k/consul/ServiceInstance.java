@@ -15,6 +15,7 @@ public class ServiceInstance {
   public String Node;
   public long ServicePort;
   public String Address;
+  public String ServiceAddress;
   public String ServiceID;
   public String ServiceName;
   public Set<String> ServiceTags;
@@ -25,6 +26,7 @@ public class ServiceInstance {
     toStringBuilder.append("Node", Node);
     toStringBuilder.append("ServicePort", ServicePort);
     toStringBuilder.append("Address", Address);
+    toStringBuilder.append("ServiceAddress", ServiceAddress);
     toStringBuilder.append("ServiceID", ServiceID);
     toStringBuilder.append("ServiceName", ServiceName);
     toStringBuilder.append("ServiceTags", ServiceTags);
@@ -33,7 +35,7 @@ public class ServiceInstance {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(Node, ServicePort, Address, ServiceID, ServiceName, ServiceTags);
+    return Objects.hashCode(Node, ServicePort, Address, ServiceAddress, ServiceID, ServiceName, ServiceTags);
   }
 
   @Override
@@ -48,6 +50,7 @@ public class ServiceInstance {
     return Objects.equal(this.Node, other.Node)
             && Objects.equal(this.ServicePort, other.ServicePort)
             && Objects.equal(this.Address, other.Address)
+            && Objects.equal(this.ServiceAddress, other.ServiceAddress)
             && Objects.equal(this.ServiceID, other.ServiceID)
             && Objects.equal(this.ServiceName, other.ServiceName)
             && Objects.equal(this.ServiceTags, other.ServiceTags);
