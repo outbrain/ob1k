@@ -58,6 +58,11 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
   }
 
   @Override
+  public long transferred() {
+    return transfered;
+  }
+
+  @Override
   public long transferTo(final WritableByteChannel target, final long position) throws IOException {
     final ByteBuffer buffer;
     if (tempBuffer != null) {
@@ -82,4 +87,23 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
     return bytesWritten;
   }
 
+  @Override
+  public FileRegion retain() {
+    return (FileRegion) super.retain();
+  }
+
+  @Override
+  public FileRegion touch(final Object hint) {
+    return null;
+  }
+
+  @Override
+  public FileRegion retain(final int increment) {
+    return (FileRegion) super.retain(increment);
+  }
+
+  @Override
+  public FileRegion touch() {
+    return (FileRegion) super.touch();
+  }
 }
