@@ -94,7 +94,7 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
 
   @Override
   public FileRegion touch(final Object hint) {
-    return null;
+    return this;
   }
 
   @Override

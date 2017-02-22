@@ -18,11 +18,10 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import static io.netty.channel.ChannelHandler.Sharable;
-import static io.netty.handler.codec.http.HttpHeaders.Names.*;
-import static io.netty.handler.codec.http.HttpHeaders.*;
-import static io.netty.handler.codec.http.HttpMethod.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -95,18 +94,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
       return false;
 
     final FullHttpRequest request = (FullHttpRequest) msg;
-    final String uri = request.getUri();
+    final String uri = request.uri();
     return pathResolver.isStaticPath(uri);
   }
 
   @Override
   public void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest request) throws Exception {
-    if (!request.getDecoderResult().isSuccess()) {
+    if (!request.decoderResult().isSuccess()) {
       sendError(ctx, BAD_REQUEST);
       return;
     }
 
-    if (request.getMethod() != GET) {
+    if (request.method() != GET) {
       sendError(ctx, METHOD_NOT_ALLOWED);
       return;
     }
@@ -126,7 +125,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     }
 
     // clean uri from potential request params.
-    final String cleanUri = new QueryStringDecoder(request.getUri()).path();
+    final String cleanUri = new QueryStringDecoder(request.uri()).path();
     final URLConnection connection = getURLConnection(cleanUri);
     if (connection == null) {
       sendError(ctx, NOT_FOUND);
@@ -143,11 +142,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     final long fileLength = connection.getContentLength();
 
     final HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-    setContentLength(response, fileLength);
+    HttpUtil.setContentLength(response, fileLength);
     setContentTypeHeader(response, connection);
     setDateAndCacheHeaders(response);
-    if (isKeepAlive(request)) {
-      response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+    if (HttpUtil.isKeepAlive(request)) {
+      response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
     }
 
     // Write the initial line and the header.
@@ -161,7 +160,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     final ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
     // Decide whether to close the connection or not.
-    if (!isKeepAlive(request)) {
+    if (!HttpUtil.isKeepAlive(request)) {
       // Close the connection when the whole content is written out.
       lastContentFuture.addListener(ChannelFutureListener.CLOSE);
     }
