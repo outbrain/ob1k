@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.function.Function.identity;
+
 /**
  * A set of helpers for ComposableFuture
  *
@@ -328,7 +330,7 @@ public class ComposableFutures {
 
   public static <T> ComposableFuture<T> submitFuture(final Callable<ComposableFuture<T>> task) {
     final ComposableFuture<ComposableFuture<T>> submitRes = submit(false, task);
-    return submitRes.flatMap(result -> result);
+    return submitRes.flatMap(identity());
   }
 
   /**
@@ -377,7 +379,7 @@ public class ComposableFutures {
   public static <T> ComposableFuture<T> scheduleFuture(final Callable<ComposableFuture<T>> task, final long delay,
                                                        final TimeUnit unit) {
     final ComposableFuture<ComposableFuture<T>> schedule = schedule(task, delay, unit);
-    return schedule.flatMap(result -> result);
+    return schedule.flatMap(identity());
   }
 
   /**

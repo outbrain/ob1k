@@ -8,6 +8,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import static java.util.function.Function.identity;
+
 /**
  * Represents a computation that may either result in an exception, or return a successfully computed value.
  * Similar to Scala's Try.
@@ -67,7 +69,7 @@ public abstract class Try<T> {
       return fromError(nestedTry.getError());
     }
 
-    return nestedTry.getValue().map(__ -> __);
+    return nestedTry.getValue().map(identity());
   }
 
   /**
@@ -279,7 +281,7 @@ public abstract class Try<T> {
     @Override
     public <U> Try<U> transform(final Function<? super T, ? extends Try<? extends U>> mapper,
                                 final Function<Throwable, ? extends Try<? extends U>> recover) {
-      return mapper.apply(value).map(__ -> __);
+      return mapper.apply(value).map(identity());
     }
 
     @Override
@@ -381,7 +383,7 @@ public abstract class Try<T> {
     @Override
     public <U> Try<U> transform(final Function<? super T, ? extends Try<? extends U>> mapper,
                                 final Function<Throwable, ? extends Try<? extends U>> recover) {
-      return recover.apply(error).map(__ -> __);
+      return recover.apply(error).map(identity());
     }
 
     @Override
