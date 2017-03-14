@@ -319,10 +319,10 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
 
     if (error instanceof IllegalArgumentException) {
       // stack-trace not interesting, as the exception probably because of invocation failure
-      logger.info("The requested URI isn't supported: {}", request.uri());
+      logger.info("The requested URI isn't supported: {}; remote host={}", request.uri(), ctx.channel().remoteAddress());
       logger.debug("Invocation error: ", error);
     } else {
-      logger.info("The requested URI isn't supported: {}", request.uri(), error);
+      logger.info("The requested URI isn't supported: {}; remote host={}", request.uri(), ctx.channel().remoteAddress(), error);
     }
     handleResponse(error.toString(), HttpResponseStatus.NOT_IMPLEMENTED, request, ctx);
   }
