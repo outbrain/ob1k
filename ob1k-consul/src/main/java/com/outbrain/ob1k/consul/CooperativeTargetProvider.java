@@ -25,13 +25,14 @@ public class CooperativeTargetProvider extends ConsulBasedTargetProvider {
 
   private static final Logger log = LoggerFactory.getLogger(CooperativeTargetProvider.class);
   private static final int EXTRA_TARGETS = 10;
-  private static final int PENALTY_ROUNDS = 2;
+  private final int penalty;
   private final Multiset<String> pendingRequests = ConcurrentHashMultiset.create();
-  private final Multiset<String> remainingPenaltyRounds = ConcurrentHashMultiset.create();
+  private final Multiset<String> remainingPenalty = ConcurrentHashMultiset.create();
   private final AtomicInteger roundRobin = new AtomicInteger();
 
-  public CooperativeTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
+  public CooperativeTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight, final int penalty) {
     super(healthyTargetsList, urlSuffix, tag2weight);
+    this.penalty = penalty;
   }
 
   @Override
@@ -41,8 +42,8 @@ public class CooperativeTargetProvider extends ConsulBasedTargetProvider {
     // by only one.
     final int index = roundRobin.getAndIncrement();
 
-    // get this target one round closer to being removed from the blacklist.
-    remainingPenaltyRounds.remove(currTargets.get(Math.abs(index % currTargets.size())));
+    // get this target closer to being removed from the blacklist.
+    remainingPenalty.remove(currTargets.get(Math.abs(index % currTargets.size())));
 
     // Maintain the order of the elements so that we can tie break them
     // by the round robin order.
@@ -70,12 +71,10 @@ public class CooperativeTargetProvider extends ConsulBasedTargetProvider {
     Map<String, Integer> roundRobinPosition = Maps.newHashMapWithExpectedSize(targetsNum);
     providedTargetsSet.forEach(target -> roundRobinPosition.put(target, roundRobinPosition.size()));
 
-    Map<String, Integer> remainingPenaltyRounds = Maps.newHashMapWithExpectedSize(targetsNum);
-    providedTargetsSet.forEach(target -> remainingPenaltyRounds.put(target, this.remainingPenaltyRounds.count(target)));
+    Map<String, Integer> remainingPenalty = Maps.newHashMapWithExpectedSize(targetsNum);
+    providedTargetsSet.forEach(target -> remainingPenalty.put(target, this.remainingPenalty.count(target)));
 
-    return Ordering.from(
-            Comparator.comparing(remainingPenaltyRounds::get).
-                    thenComparing(pendingRequests::get).
+    return Ordering.from(Comparator.<String, Integer>comparing(target -> remainingPenalty.get(target) + pendingRequests.get(target)).
                     thenComparing(roundRobinPosition::get)).
             leastOf(providedTargetsSet, targetsNum);
   }
@@ -84,9 +83,9 @@ public class CooperativeTargetProvider extends ConsulBasedTargetProvider {
   public void onTargetsChanged(List<HealthInfoInstance> healthTargets) {
     super.onTargetsChanged(healthTargets);
 
-    // Clear remainingPenaltyRounds, since we may never encounter
+    // Clear remainingPenalty, since we may never encounter
     // any of these targets again.
-    remainingPenaltyRounds.clear();
+    remainingPenalty.clear();
   }
 
   public void targetDispatched(String target) {
@@ -96,9 +95,17 @@ public class CooperativeTargetProvider extends ConsulBasedTargetProvider {
   public void targetDispatchEnded(String target, boolean success) {
     pendingRequests.remove(target);
     if (success) {
-      remainingPenaltyRounds.elementSet().remove(target);
+      remainingPenalty.elementSet().remove(target);
     } else {
-      remainingPenaltyRounds.setCount(target, PENALTY_ROUNDS);
+      remainingPenalty.setCount(target, penalize(target));
     }
+  }
+
+  private int penalize(String target) {
+    final int maxPendingRequests = pendingRequests.entrySet().stream().
+            mapToInt(Multiset.Entry::getCount).
+            max().orElse(0);
+
+    return penalty + Math.max(maxPendingRequests - pendingRequests.count(target), 0);
   }
 }
