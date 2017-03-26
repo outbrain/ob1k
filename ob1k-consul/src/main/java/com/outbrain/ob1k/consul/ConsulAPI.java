@@ -64,17 +64,18 @@ public class ConsulAPI {
         private static final ConsulHealth INSTANCE = createHealth();
 
         private static ConsulHealth createHealth() {
-            final int timeoutSeconds = 30;
+            final int longPollWait = 30;
+            final long requestTimeout = longPollWait + 5;
             return new ClientBuilder<>(ConsulHealth.class)
                     .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
                     .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
                     .bindEndpoint("filterHealthyInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&passing=true&tag={filterTag}&stale=true")
-                    .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + timeoutSeconds + "s")
+                    .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + longPollWait + "s")
                     .bindEndpoint("fetchInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
                     .bindEndpoint("fetchInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
                     .bindEndpoint("fetchInstancesAtState", HttpRequestMethodType.GET, "state/{state}?dc={dc}&stale=true")
                     .setProtocol(ContentType.JSON)
-                    .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(timeoutSeconds))
+                    .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(requestTimeout))
                     .build();
         }
     }
