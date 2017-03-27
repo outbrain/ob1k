@@ -29,7 +29,7 @@
     </dependency>
 
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>com.outbrain.swinfra</groupId>
       <artifactId>ob1k-http</artifactId>
     </dependency>
 

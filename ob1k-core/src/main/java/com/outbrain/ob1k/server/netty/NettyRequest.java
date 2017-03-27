@@ -6,12 +6,12 @@ import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.Cookie;
+import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.io.InputStream;
@@ -45,19 +45,19 @@ public class NettyRequest implements Request {
     this.inner = inner;
     this.content = content;
     this.channel = channel;
-    this.getQueryDecoder = new QueryStringDecoder(inner.uri());
+    this.getQueryDecoder = new QueryStringDecoder(inner.getUri());
     this.contextPath = contextPath;
     this.pathParams = new HashMap<>();
   }
 
   @Override
   public HttpRequestMethodType getMethod() {
-    return HttpRequestMethodType.valueOf(inner.method().name().toUpperCase());
+    return HttpRequestMethodType.valueOf(inner.getMethod().name().toUpperCase());
   }
 
   @Override
   public String getUri() {
-    return inner.uri();
+    return inner.getUri();
   }
 
   @Override
@@ -202,7 +202,7 @@ public class NettyRequest implements Request {
     }
 
     final Cookie cookie = cookies.get(cookieName);
-    return cookie != null ? cookie.value() : null;
+    return cookie != null ? cookie.getValue() : null;
   }
 
   private void populateCookies() {
@@ -211,14 +211,14 @@ public class NettyRequest implements Request {
     final String cookieHeaderValue = inner.headers().get(COOKIE_HEADER);
     if (cookieHeaderValue == null) return;
 
-    final Set<Cookie> cookiesSet = ServerCookieDecoder.LAX.decode(cookieHeaderValue);
+    final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue);
     for (final Cookie cookie : cookiesSet) {
-      cookies.put(cookie.name(), cookie);
+      cookies.put(cookie.getName(), cookie);
     }
   }
 
   @Override
   public String getProtocol() {
-    return inner.protocolVersion().text();
+    return inner.getProtocolVersion().text();
   }
 }

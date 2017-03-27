@@ -1,13 +1,12 @@
 package com.outbrain.ob1k.server.netty;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
+import static io.netty.handler.codec.http.HttpHeaders.isKeepAlive;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpUtil.is100ContinueExpected;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.IOException;
@@ -102,7 +101,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     if (msg instanceof HttpRequest) {
       request = (HttpRequest) msg;
 
-      final String uri = request.uri();
+      final String uri = request.getUri();
       final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(uri);
       final String path = queryStringDecoder.path();
       if (!path.startsWith(contextPath)) {
@@ -261,7 +260,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       internalErrors.inc();
     }
 
-    logger.warn("Internal error while processing URI: " + request.uri() + " from remote address " + ctx.channel().remoteAddress(), error);
+    logger.warn("Internal error while processing URI: " + request.getUri() + " from remote address " + ctx.channel().remoteAddress(), error);
     try {
       handleResponse(error.toString(), INTERNAL_SERVER_ERROR, request, ctx);
     } catch (final IOException e) {
@@ -290,7 +289,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   }
 
   private void handleResponse(final FullHttpResponse response, final HttpRequest request, final ChannelHandlerContext ctx) {
-    final boolean keepAlive = HttpUtil.isKeepAlive(request);
+    final boolean keepAlive = isKeepAlive(request);
     if (acceptKeepAlive && keepAlive) {
       response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
       // Add keep alive header as per:
@@ -319,10 +318,10 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
 
     if (error instanceof IllegalArgumentException) {
       // stack-trace not interesting, as the exception probably because of invocation failure
-      logger.info("The requested URI isn't supported: {}; remote host={}", request.uri(), ctx.channel().remoteAddress());
+      logger.info("The requested URI isn't supported: {}", request.getUri());
       logger.debug("Invocation error: ", error);
     } else {
-      logger.info("The requested URI isn't supported: {}; remote host={}", request.uri(), ctx.channel().remoteAddress(), error);
+      logger.info("The requested URI isn't supported: {}", request.getUri(), error);
     }
     handleResponse(error.toString(), HttpResponseStatus.NOT_IMPLEMENTED, request, ctx);
   }

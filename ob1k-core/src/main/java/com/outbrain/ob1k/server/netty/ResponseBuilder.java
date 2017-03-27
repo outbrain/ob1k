@@ -5,10 +5,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultCookie;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.ServerCookieEncoder;
 import io.netty.util.CharsetUtil;
 
 import java.nio.charset.Charset;
@@ -105,7 +104,7 @@ public class ResponseBuilder {
   }
 
   public ResponseBuilder setContentType(final String contentType) {
-    addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+    addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return this;
   }
 
@@ -114,7 +113,7 @@ public class ResponseBuilder {
   }
 
   public ResponseBuilder addCookie(final String rawCookie) {
-    return addHeader(HttpHeaderNames.SET_COOKIE, rawCookie);
+    return addHeader(HttpHeaders.Names.SET_COOKIE, rawCookie);
   }
 
   public CookieBaker bakeCookie(final String name, final String value) {
@@ -140,7 +139,7 @@ public class ResponseBuilder {
     }
 
     public ResponseBuilder bake() {
-      addCookie(ServerCookieEncoder.STRICT.encode(cookie));
+      addCookie(ServerCookieEncoder.encode(cookie));
       return ResponseBuilder.this;
     }
 

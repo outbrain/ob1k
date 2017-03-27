@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.server.netty;
 
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.common.metrics.NettyQueuesGaugeBuilder;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
@@ -96,7 +95,8 @@ public class NettyServer implements Server {
 
       channel = b.bind(port).sync().channel();
       addShutdownhook();
-      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup);
+      // TEMP disable till I get an answer to https://groups.google.com/d/topic/netty/uY4n1Wjmpvs/discussion
+//      NettyQueuesGaugeBuilder.registerQueueGauges(metricFactory, nioGroup, applicationName);
 
       final InetSocketAddress address = (InetSocketAddress) channel.localAddress();
       onStarted();
@@ -109,7 +109,12 @@ public class NettyServer implements Server {
   }
 
   private void addShutdownhook() {
-    Runtime.getRuntime().addShutdownHook(new Thread(NettyServer.this::stop));
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run() {
+        NettyServer.this.stop();
+      }
+    });
   }
 
   private static String getOpeningText() {

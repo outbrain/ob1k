@@ -31,7 +31,7 @@ public class NettyRequestTest {
     httpHeaders = new DefaultHttpHeaders();
 
     final HttpRequest innerRequest = mock(HttpRequest.class);
-    when(innerRequest.uri()).thenReturn("http://localhost:8080");
+    when(innerRequest.getUri()).thenReturn("http://localhost:8080");
     when(innerRequest.headers()).thenReturn(httpHeaders);
 
     final HttpContent httpContent = mock(HttpContent.class);
