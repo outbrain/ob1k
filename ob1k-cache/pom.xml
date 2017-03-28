@@ -10,7 +10,6 @@
   <artifactId>ob1k-cache</artifactId>
   <name>ob1k-cache</name>
   <packaging>jar</packaging>
-
   <dependencies>
 
     <dependency>
@@ -78,5 +77,14 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>net.jpountz.lz4</groupId>
+      <artifactId>lz4</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.luben</groupId>
+      <artifactId>zstd-jni</artifactId>
+    </dependency>
   </dependencies>
 </project>
