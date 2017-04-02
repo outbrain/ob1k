@@ -195,10 +195,15 @@ public class HealthyTargetsList {
       Map<InstanceKey, Long> modifyIndices = Collections.emptyMap();
       if (aTry.isSuccess()) {
         try {
-          final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
-          log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
-          modifyIndices = setTargetsIfChanged(newTargets, lastInstance2modifyIndex);
           nextIndex = extractIndex(aTry);
+
+          if (nextIndex == fromIndex) {
+            log.debug("Index unchanged. Skipping processing; index={}", fromIndex);
+          } else {
+            final List<HealthInfoInstance> newTargets = nullSafeList(aTry.getValue().getTypedBody());
+            log.debug("{} healthy targets fetched; index={}", newTargets.size(), fromIndex);
+            modifyIndices = setTargetsIfChanged(newTargets, lastInstance2modifyIndex);
+          }
         } catch (final IOException | RuntimeException e) {
           handleTargetsFetchFailure(e, true);
           return;
