@@ -51,10 +51,8 @@
 
   <modules>
     <module>util-metrics</module>
-    <module>util-config</module>
     <module>ob1k-concurrent</module>
     <module>ob1k-core</module>
-    <module>ob1k-jetty</module>
     <module>ob1k-cache</module>
     <module>ob1k-db</module>
     <module>ob1k-cql</module>
