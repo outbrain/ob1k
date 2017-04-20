@@ -6,26 +6,31 @@ import com.spotify.folsom.Transcoder;
 import java.util.Objects;
 
 /**
- * Created by bshushi on 26/03/2017.
+ * Compression transcoder implementation
+ *
+ * @author bshushi
+ * @param <T>
+ * @see com.spotify.folsom.Transcoder
+ * @see Compressor
  */
 public class CompressionTranscoder<T> implements Transcoder<T> {
 
   private final Transcoder<T> delegate;
   private final Compressor compressor;
 
-  public CompressionTranscoder(final Transcoder<T> delegate, Compressor compressor) {
-    this.delegate = Objects.requireNonNull(delegate, "Delegated Transcoder cannot be null.");
+  public CompressionTranscoder(final Transcoder<T> delegate, final Compressor compressor) {
+    this.delegate = Objects.requireNonNull(delegate, "delegated transcoder may not be null");
     this.compressor = compressor;
   }
 
   @Override
-  public T decode(byte[] bytes) {
-    Objects.requireNonNull(bytes, "Decompression data target cannot be null.");
+  public T decode(final byte[] bytes) {
+    Objects.requireNonNull(bytes, "compressed data may not be null");
     return delegate.decode(compressor.decompress(bytes));
   }
 
   @Override
-  public byte[] encode(T t) {
+  public byte[] encode(final T t) {
     return compressor.compress(delegate.encode(t));
   }
 }

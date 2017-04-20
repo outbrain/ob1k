@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outbrain.ob1k.cache.memcache.compression.CompressionAlgorithm;
+import com.outbrain.ob1k.cache.memcache.compression.Compressor;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
@@ -93,13 +94,12 @@ public class MemcachedClientBuilder<T> {
     return this;
   }
 
-  public MemcachedClientBuilder<T> withCompression() {
-    compressionApplier = (transcoder) -> new CompressionTranscoder<T>(transcoder, CompressionAlgorithm.getDefault());
-    return this;
+  public MemcachedClientBuilder<T> withCompression(final CompressionAlgorithm algorithm) {
+    return withCompression(algorithm.getCompressor());
   }
 
-  public MemcachedClientBuilder<T> withCompression(CompressionAlgorithm compressionAlgorithm) {
-    compressionApplier = (transcoder) -> new CompressionTranscoder<T>(transcoder, compressionAlgorithm.getInstance());
+  public MemcachedClientBuilder<T> withCompression(final Compressor compressor) {
+    compressionApplier = (transcoder) -> new CompressionTranscoder<>(transcoder, compressor);
     return this;
   }
 
