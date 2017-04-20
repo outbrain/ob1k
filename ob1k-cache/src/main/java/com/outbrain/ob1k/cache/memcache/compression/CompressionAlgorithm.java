@@ -7,12 +7,6 @@ public enum CompressionAlgorithm {
       return new LZ4Compressor();
     }
   },
-  ZSTANDARD {
-    @Override
-    public Compressor getInstance() {
-      return new ZstandardCompressor();
-    }
-  },
   GZIP {
     @Override
     public Compressor getInstance() {

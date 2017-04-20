@@ -1,7 +1,5 @@
 package com.outbrain.ob1k.cache.memcache.compression;
 
-import com.google.common.collect.Lists;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -9,6 +7,9 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static org.junit.Assert.assertArrayEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CompressionAlgorithmsTest {
@@ -18,11 +19,12 @@ public class CompressionAlgorithmsTest {
 
   @Before
   public void setup() {
-    compressors = Lists.newArrayList(CompressionAlgorithm.ZSTANDARD.getInstance(), CompressionAlgorithm.LZ4.getInstance(), CompressionAlgorithm.GZIP.getInstance());
+    compressors = newArrayList(CompressionAlgorithm.LZ4.getInstance(), CompressionAlgorithm.GZIP.getInstance());
   }
 
   @Test
   public void testCompressors() {
-    compressors.forEach(compressor -> Assert.assertArrayEquals(TEST_BYTES, compressor.decompress(compressor.compress(TEST_BYTES))));
+    compressors.forEach(compressor -> assertArrayEquals(TEST_BYTES,
+      compressor.decompress(compressor.compress(TEST_BYTES))));
   }
 }
