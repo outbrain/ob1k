@@ -25,7 +25,6 @@ public class CompressionTranscoder<T> implements Transcoder<T> {
 
   @Override
   public T decode(final byte[] bytes) {
-    Objects.requireNonNull(bytes, "compressed data may not be null");
     return delegate.decode(compressor.decompress(bytes));
   }
 
