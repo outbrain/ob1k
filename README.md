@@ -1,7 +1,7 @@
 # Ob1k - A modern RPC Framework
 
 [![Build Status](https://travis-ci.org/outbrain/ob1k.svg?branch=master)](https://travis-ci.org/outbrain/ob1k)
-[![Download](https://api.bintray.com/packages/harel-eran/Ob1k/com.outbrain.swinfra/images/download.svg)](https://bintray.com/harel-eran/Ob1k/com.outbrain.swinfra/_latestVersion)
+[![Download](https://api.bintray.com/packages/outbrain/OutbrainOSS/OB1K/images/download.svg)](https://bintray.com/outbrain/OutbrainOSS/OB1K/_latestVersion)
 
 ## Overview 
 Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro-services.
@@ -28,26 +28,35 @@ Micro-services architecture consists of a group of different services which comm
 Ob1k supplies the infrastructure to build such microservices and the means for them to communicate.
 The communication between services is based on a RPC protocol, (HTTP with JSON or [MessagePack](http://msgpack.org/) payload), using a user provided, strongly typed interface.
 
-### Ob1k Server
-Let's start with creating an Ob1k server. Create a new maven project and add dependency to ob1k-core in your pom:
+*Ob1k* is published to [Bintray](https://bintray.com/outbrain/OutbrainOSS/OB1K).
 
-```xml
+### Setting up Maven
+To start using Ob1k, add the following dependency to your pom:
+
+```
 <dependency>
   <groupId>com.outbrain.ob1k</groupId>
   <artifactId>ob1k-core</artifactId>
-  <version>x.y</version>
+  <version>0.x</version>
 </dependency>
 ```
 
-The next step will be to create a service endpoint. A service endpoint is an interface and an implementation.
+### Ob1k Server
+Let's start with creating an Ob1k server.
+
+The first step will be creating a new Ob1k service.
+A [service](https://github.com/outbrain/ob1k/blob/master/ob1k-core/src/main/java/com/outbrain/ob1k/Service.java) (similar to [controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller#Components) in MVC) aggregates set of related endpoints into one serving context.
 Each method in the implementation will be mapped to a URL which clients as well as a simple web browsers can invoke.
 In the next example we are create a service with an endpoint named `helloWorld` which gets no arguments and returns a string.
+
 ```java
 public interface IHelloService extends Service {
    ComposableFuture<String> helloWorld();
 }
 ```
+
 The method implementation just returns a "Hello world" string which will be returned by the Ob1k framework to the client:
+
 ```java 
 public class HelloService implements IHelloService {
    @Override
@@ -61,12 +70,13 @@ Now that you have the service endpoint we can build the Ob1k server. For that, w
 In addition we need to bind our services to a URL under the context. After setting some more properties (e.g. requestTimeout) we call the build method and this creates a server.
 
 ```java 
-Server server = ServerBuilder.newBuilder().
+final Server server = ServerBuilder.newBuilder().
   contextPath("/services").
   configure(builder -> builder.usePort(8080).requestTimeout(50, TimeUnit.MILLISECONDS)).
   service(builder -> builder.register(new HelloService(), "/hello")).
   build();
 ```
+
 To start the server:
 ```java
 server.start(); 
