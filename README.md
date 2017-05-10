@@ -35,7 +35,7 @@ To start using Ob1k, add the following dependency to your pom:
 
 ```
 <dependency>
-  <groupId>com.outbrain.ob1k</groupId>
+  <groupId>com.outbrain.swinfra</groupId>
   <artifactId>ob1k-core</artifactId>
   <version>0.x</version>
 </dependency>
