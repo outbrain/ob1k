@@ -18,8 +18,7 @@ import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
 
 /**
@@ -126,6 +125,17 @@ public class ConsulBasedTargetProviderTest {
     assertEquals("onTargetsChanged should have updated targets list",
       createUrlFromTargetName(healthInfoInstances.get(0).Node.Address),
       targetProvider.provideTarget());
+  }
+
+  @Test
+  public void testNullPortAndContextBase() {
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(1, true);
+    healthInfoInstances.get(0).Service.Tags = null;
+    targetProvider.onTargetsChanged(healthInfoInstances);
+
+    for (int i = 0; i < 10; i++) {
+      assertFalse("Port and context base parsing created an invlid url", targetProvider.provideTarget().contains("null"));
+    }
   }
 
   private List<HealthInfoInstance> createHealthInfoInstances(final int numOfNodes, final boolean hasServiceAddress) {

@@ -105,8 +105,22 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
   private String createTargetUrl(final HealthInfoInstance healthInfo) {
     final String nodeAddress = healthInfo.Node.Address;
     final String serviceAddress = healthInfo.Service.Address;
+    Integer port = healthInfo.Service.port("http");
+    String contextBase = healthInfo.Service.context();
     // Take service address (IP) unless it is null/empty - then take the node address (IP)
     final String targetAddress = Optional.ofNullable(serviceAddress).filter(StringUtils::isNotBlank).orElse(nodeAddress);
-    return "http://" + targetAddress + ":" + healthInfo.Service.port("http") + healthInfo.Service.context() + urlSuffix;
+
+    // screw this, but at least it will work for nor non standard registrations
+    if (null == port) {
+      log.error("http port tag is null or missing for {}", targetAddress);
+      port = healthInfo.Service.Port;
+    }
+    if (null == contextBase) {
+      log.info("contextPath tag is null or missing for {}", targetAddress);
+      contextBase = "";
+    }
+
+    return "http://" + targetAddress + ":" + port + contextBase + urlSuffix;
   }
+
 }

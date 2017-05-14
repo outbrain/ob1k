@@ -48,7 +48,7 @@ public class HealthInfoInstance {
     public String Service;
     public Set<String> Tags;
     public String Address;
-    public long Port;
+    public int Port;
     public long ModifyIndex;
 
     public Integer port(final String portType) {
