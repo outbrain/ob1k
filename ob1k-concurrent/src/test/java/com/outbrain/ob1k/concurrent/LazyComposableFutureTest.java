@@ -1,16 +1,21 @@
 package com.outbrain.ob1k.concurrent;
 
 import com.google.common.base.Predicate;
-import com.outbrain.ob1k.concurrent.handlers.*;
+import com.outbrain.ob1k.concurrent.handlers.RecursiveFutureProvider;
 import com.outbrain.ob1k.concurrent.lazy.LazyComposableFuture;
 import org.junit.Assert;
 import org.junit.Test;
 import rx.Observable;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -122,7 +127,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testSchedule() throws ExecutionException, InterruptedException {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-schedule");
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1, "test-schedule");
     final ComposableFuture<Integer> res1 = LazyComposableFuture.schedule(scheduler, () -> 1, 100, TimeUnit.MILLISECONDS);
 
     final ComposableFuture<Integer> res2 = LazyComposableFuture.schedule(scheduler, () -> 2, 300, TimeUnit.MILLISECONDS);
@@ -141,7 +146,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testWithTimeout() throws ExecutionException, InterruptedException {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-with-timeout");
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1, "test-with-timeout");
     final LazyComposableFuture<String> fast = LazyComposableFuture.schedule(scheduler, () -> "fast", 100, TimeUnit.MILLISECONDS).withTimeout(scheduler, 200, TimeUnit.MILLISECONDS);
 
     final String res1 = fast.get();
@@ -163,7 +168,7 @@ public class LazyComposableFutureTest {
   @Test
   public void testDoubleDispatch() throws ExecutionException, InterruptedException {
     final ExecutorService executor = Executors.newFixedThreadPool(2);
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-double-dispatch");
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1, "test-double-dispatch");
 
     final AtomicBoolean state1 = new AtomicBoolean(false);
     final LazyComposableFuture<String> res1 = LazyComposableFuture.submit(executor, () -> {
@@ -225,7 +230,7 @@ public class LazyComposableFutureTest {
 
   @Test
   public void testColdStream() {
-    final Scheduler scheduler = new ThreadPoolBasedScheduler(1,"test-cold-stream");
+    final Scheduler scheduler = new ThreadPoolBasedScheduler(1, "test-cold-stream");
     final ComposableFuture<String> first = LazyComposableFuture.schedule(scheduler, () -> "first", 100, TimeUnit.MILLISECONDS);
 
     final ComposableFuture<String> second = LazyComposableFuture.schedule(scheduler, () -> "second", 200, TimeUnit.MILLISECONDS);
@@ -251,6 +256,35 @@ public class LazyComposableFutureTest {
   }
 
   @Test
+  public void testTypedErrors() throws Exception {
+    String result = ComposableFutures.<String>submitLazy(false, () -> {
+      throw new FileNotFoundException("no file...");
+    }).recover(NullPointerException.class, error -> {
+      return "failure";
+    }).recover(FileNotFoundException.class, error -> {
+      return "success";
+    }).recover(error -> {
+      return "failure";
+    }).get();
+
+    Assert.assertEquals("success", result);
+
+    String result2 = ComposableFutures.<String>submitLazy(false, () -> {
+      throw new FileNotFoundException("no file...");
+    }).recoverWith(NullPointerException.class, error -> {
+      return ComposableFutures.fromValue("failure");
+    }).recoverWith(FileNotFoundException.class, error -> {
+      return ComposableFutures.fromValue("success");
+    }).recoverWith(error -> {
+      return ComposableFutures.fromValue("failure");
+    }).get();
+
+    Assert.assertEquals("success", result2);
+
+  }
+
+
+  @Test
   public void testColdRecursiveStream() {
 
     final AtomicInteger counter = new AtomicInteger(0);
@@ -271,6 +305,7 @@ public class LazyComposableFutureTest {
       public Predicate<String> createStopCriteria() {
         return new Predicate<String>() {
           private volatile int i;
+
           @Override
           public boolean apply(final String s) {
             return ++i >= repeats;

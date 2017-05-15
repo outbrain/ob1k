@@ -175,14 +175,20 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public ComposableFuture<T> recover(final Function<Throwable, ? extends T> recover) {
+  public <E extends Throwable> ComposableFuture<T> recover(final Class<E> errorType, final Function<E, ? extends T> recover) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         consumer.consume(result);
       } else {
         try {
-          consumer.consume(Try.fromValue(recover.apply(result.getError())));
+          final Throwable error = result.getError();
+          if (errorType.isInstance(error)) {
+            final E matchedError = errorType.cast(error);
+            consumer.consume(Try.fromValue(recover.apply(matchedError)));
+          } else {
+            consumer.consume(result);
+          }
         } catch (final UncheckedExecutionException e) {
           consumer.consume(Try.fromError(e.getCause() != null ? e.getCause() : e));
         } catch (final Throwable e) {
@@ -193,18 +199,24 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   }
 
   @Override
-  public ComposableFuture<T> recoverWith(final Function<Throwable, ? extends ComposableFuture<? extends T>> recover) {
+  public <E extends Throwable> ComposableFuture<T> recoverWith(final Class<E> errorType, final Function<E, ? extends ComposableFuture<? extends T>> recover) {
     final LazyComposableFuture<T> outer = this;
     return new LazyComposableFuture<>(consumer -> outer.consume(result -> {
       if (result.isSuccess()) {
         consumer.consume(result);
       } else {
         try {
-          final ComposableFuture<? extends T> next = recover.apply(result.getError());
-          if (next == null) {
-            consumer.consume(Try.fromValue(null));
+          final Throwable error = result.getError();
+          if (errorType.isInstance(error)) {
+            final E matchedError = errorType.cast(error);
+            final ComposableFuture<? extends T> next = recover.apply(matchedError);
+            if (next == null) {
+              consumer.consume(Try.fromValue(null));
+            } else {
+              next.consume(consumer);
+            }
           } else {
-            next.consume(consumer);
+            consumer.consume(result);
           }
         } catch (final Throwable e) {
           consumer.consume(Try.fromError(e));
@@ -271,12 +283,12 @@ public final class LazyComposableFuture<T> implements ComposableFuture<T> {
   public LazyComposableFuture<T> withTimeout(final Scheduler scheduler, final long timeout, final TimeUnit unit,
                                              final String taskDescription) {
     final LazyComposableFuture<T> deadline = new LazyComposableFuture<>(consumer -> scheduler.schedule(() ->
-      consumer.consume(Try.fromError(
-        new TimeoutException("Timeout occurred on task ('" +
-                             taskDescription + "' " +
-                             timeout + " " +
-                             unit + ")"))),
-          timeout, unit));
+        consumer.consume(Try.fromError(
+          new TimeoutException("Timeout occurred on task ('" +
+            taskDescription + "' " +
+            timeout + " " +
+            unit + ")"))),
+      timeout, unit));
 
     return collectFirst(Arrays.asList(this, deadline));
   }

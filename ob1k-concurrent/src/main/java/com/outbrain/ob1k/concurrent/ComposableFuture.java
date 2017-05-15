@@ -74,11 +74,38 @@ public interface ComposableFuture<T> {
   /**
    * Recovers future with a handler that will be called only if the original future failed
    * in case of success the original result is continued forward.
+   * <p>
+   * The handler will execute only if the error type matches actual computed exception.
+   *
+   * @param recover   the continuation handler that returns a value or throws an exception.
+   * @param errorType failure's exception type
+   * @return a new future that will produce the original successful value the the result of the handler.
+   */
+  <E extends Throwable> ComposableFuture<T> recover(Class<E> errorType, Function<E, ? extends T> recover);
+
+  /**
+   * Recovers future with a handler that will be called only if the original future failed
+   * in case of success the original result is continued forward.
    *
    * @param recover the continuation handler that returns a value or throws an exception.
    * @return a new future that will produce the original successful value the the result of the handler.
    */
-  ComposableFuture<T> recover(Function<Throwable, ? extends T> recover);
+  default ComposableFuture<T> recover(final Function<Throwable, ? extends T> recover) {
+    return recover(Throwable.class, recover);
+  }
+
+  /**
+   * Recovers future with a handler that will be called only if the original future failed
+   * in case of success the original result is continued forward.
+   * <p>
+   * The handler will execute only if the error type matches actual computed exception.
+   *
+   * @param recover   the continuation handler that returns a future
+   * @param errorType failure's exception type
+   * @return a new future that will produce the original successful value the the result of the handler.
+   */
+  <E extends Throwable> ComposableFuture<T> recoverWith(Class<E> errorType,
+                                                        Function<E, ? extends ComposableFuture<? extends T>> recover);
 
   /**
    * Recovers future with a handler that will be called only if the original future failed
@@ -87,7 +114,9 @@ public interface ComposableFuture<T> {
    * @param recover the continuation handler that returns a future
    * @return a new future that will produce the original successful value the the result of the handler.
    */
-  ComposableFuture<T> recoverWith(Function<Throwable, ? extends ComposableFuture<? extends T>> recover);
+  default ComposableFuture<T> recoverWith(final Function<Throwable, ? extends ComposableFuture<? extends T>> recover) {
+    return recoverWith(Throwable.class, recover);
+  }
 
   /**
    * Continues a future with a handler that will be called whether the future has resulted
@@ -135,7 +164,7 @@ public interface ComposableFuture<T> {
    * Applied on successful result.
    *
    * @param duration duration to delay
-   * @param unit time unit
+   * @param unit     time unit
    * @return delayed future
    */
   default ComposableFuture<T> delay(final long duration, final TimeUnit unit) {

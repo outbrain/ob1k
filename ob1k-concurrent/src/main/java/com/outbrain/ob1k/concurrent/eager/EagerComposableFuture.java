@@ -221,14 +221,20 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
   }
 
   @Override
-  public ComposableFuture<T> recover(final Function<Throwable, ? extends T> handler) {
+  public <E extends Throwable> ComposableFuture<T> recover(final Class<E> errorType, final Function<E, ? extends T> handler) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
         future.set(result.getValue());
       } else {
         try {
-          future.set(handler.apply(result.getError()));
+          final Throwable error = result.getError();
+          if (errorType.isInstance(error)) {
+            final E matchingError = errorType.cast(error);
+            future.set(handler.apply(matchingError));
+          } else {
+            future.setException(error);
+          }
         } catch (final UncheckedExecutionException e) {
           future.setException(e.getCause() != null ? e.getCause() : e);
         } catch (final Throwable e) {
@@ -238,18 +244,25 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
     });
 
     return future;
+
   }
 
   @Override
-  public ComposableFuture<T> recoverWith(final Function<Throwable, ? extends ComposableFuture<? extends T>> handler) {
+  public <E extends Throwable> ComposableFuture<T> recoverWith(final Class<E> errorType, final Function<E, ? extends ComposableFuture<? extends T>> handler) {
     final EagerComposableFuture<T> future = new EagerComposableFuture<>(threadPool);
     this.consume(result -> {
       if (result.isSuccess()) {
         future.set(result.getValue());
       } else {
         try {
-          final ComposableFuture<? extends T> res = handler.apply(result.getError());
-          consumeFrom(future, res);
+          final Throwable error = result.getError();
+          if (errorType.isInstance(error)) {
+            final E matchedError = errorType.cast(error);
+            final ComposableFuture<? extends T> res = handler.apply(matchedError);
+            consumeFrom(future, res);
+          } else {
+            future.setException(error);
+          }
         } catch (final Throwable e) {
           future.setException(e);
         }

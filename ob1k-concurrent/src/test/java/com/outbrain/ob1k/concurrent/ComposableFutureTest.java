@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
+import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -12,6 +13,7 @@ import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
 import com.outbrain.ob1k.concurrent.handlers.*;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -29,7 +31,7 @@ import static org.junit.Assert.*;
  */
 public class ComposableFutureTest {
 
-  public static final int ITERATIONS = 100000;
+  private static final int ITERATIONS = 100000;
 
   private static long computeHash(final long seed) {
     long value = seed;
@@ -236,7 +238,7 @@ public class ComposableFutureTest {
 
 //      final ComposableFuture<Double> weight = fromError(new RuntimeException("Illegal Weight error!"));
 
-    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight, 
+    final ComposableFuture<Person> person = combine(futureName, futureAge, futureWeight,
       (TriFunction<String, Integer, Double, Person>) (name1, age1, weight1) -> new Person(age1, name1, weight1));
 
     try {
@@ -265,7 +267,7 @@ public class ComposableFutureTest {
     }
 
   }
-  
+
   @Test
   public void testCatchingThrowable() throws Exception {
     final ComposableFuture<Object> failedFuture = fromValue("Success").map(__ -> {
@@ -483,6 +485,34 @@ public class ComposableFutureTest {
       return "five";
     }));
     return elements;
+  }
+
+  @Test
+  public void testTypedErrors() throws Exception {
+    String result = ComposableFutures.<String>submit(() -> {
+      throw new FileNotFoundException("no file...");
+    }).recover(NullPointerException.class, error -> {
+      return "failure";
+    }).recover(FileNotFoundException.class, error -> {
+      return "success";
+    }).recover(error -> {
+      return "failure";
+    }).get();
+
+    Assert.assertEquals("success", result);
+
+    String result2 = ComposableFutures.<String>submit(() -> {
+      throw new FileNotFoundException("no file...");
+    }).recoverWith(NullPointerException.class, error -> {
+      return ComposableFutures.fromValue("failure");
+    }).recoverWith(FileNotFoundException.class, error -> {
+      return ComposableFutures.fromValue("success");
+    }).recoverWith(error -> {
+      return ComposableFutures.fromValue("failure");
+    }).get();
+
+    Assert.assertEquals("success", result2);
+
   }
 
   @Test
