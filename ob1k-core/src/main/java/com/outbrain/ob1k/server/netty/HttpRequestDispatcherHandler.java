@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.netty;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpHeaders.is100ContinueExpected;
 import static io.netty.handler.codec.http.HttpHeaders.isKeepAlive;
@@ -289,15 +290,18 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   }
 
   private void handleResponse(final FullHttpResponse response, final HttpRequest request, final ChannelHandlerContext ctx) {
+    response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+
     final boolean keepAlive = isKeepAlive(request);
     if (acceptKeepAlive && keepAlive) {
-      response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
       // Add keep alive header as per:
       // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
       response.headers().set(CONNECTION, KEEP_ALIVE);
       ctx.writeAndFlush(response);
     } else {
-      ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+      response.headers().set(CONNECTION, CLOSE);
+      ctx.writeAndFlush(response).
+        addListener(ChannelFutureListener.CLOSE);
     }
   }
 
