@@ -2,14 +2,17 @@ package com.outbrain.ob1k.cache.memcache.folsom;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.outbrain.ob1k.cache.memcache.compression.CompressionAlgorithm;
 import com.outbrain.ob1k.cache.memcache.compression.Compressor;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
-import org.apache.commons.lang3.ClassUtils;
-import org.msgpack.MessagePack;
+import org.msgpack.core.MessagePack;
+import org.msgpack.jackson.dataformat.JsonArrayFormat;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
+import org.msgpack.jackson.dataformat.MessagePackSerializerFactory;
 
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -35,15 +38,15 @@ public class MemcachedClientBuilder<T> {
    * @return The builder
    */
   public static <T> MemcachedClientBuilder<T> newJsonClient(final Class<T> valueType) {
-    return newJsonClient(DefaultObjectMapperHolder.INSTANCE, valueType);
+    return newObjectMapperClient(DefaultObjectMapperHolder.INSTANCE, valueType);
   }
 
   /**
    * Create a client builder for JSON values.
    * @return The builder
    */
-  public static <T> MemcachedClientBuilder<T> newJsonClient(final ObjectMapper objectMapper, final Class<T> valueType) {
-    return newClient(new JsonTranscoder<>(objectMapper, valueType));
+  public static <T> MemcachedClientBuilder<T> newJsonClient(final JavaType valueType) {
+    return newObjectMapperClient(DefaultObjectMapperHolder.INSTANCE, valueType);
   }
 
   /**
@@ -51,34 +54,51 @@ public class MemcachedClientBuilder<T> {
    * @return The builder
    */
   public static <T> MemcachedClientBuilder<T> newMessagePackClient(final Class<T> valueType) {
-    return newMessagePackClient(DefaultMessagePackHolder.INSTANCE, valueType);
+    return newObjectMapperClient(DefaultMessagePackHolder.INSTANCE, valueType);
   }
 
   /**
    * Create a client builder for MessagePack values.
    * @return The builder
    */
-  public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Class<T> valueType) {
-    if (!ClassUtils.isPrimitiveOrWrapper(valueType)) {
-      messagePack.register(valueType);
-    }
-    return newClient(new MessagePackTranscoder<>(messagePack, valueType));
+  public static <T> MemcachedClientBuilder<T> newMessagePackClient(final JavaType valueType) {
+    return newObjectMapperClient(DefaultMessagePackHolder.INSTANCE, valueType);
   }
 
   /**
    * Create a client builder for MessagePack values.
+   * @deprecated please use either {@link #newMessagePackClient(Class)} or {@link #newMessagePackClient(JavaType)}
    * @return The builder
    */
+  @Deprecated
   public static <T> MemcachedClientBuilder<T> newMessagePackClient(final Type valueType) {
-    return newMessagePackClient(DefaultMessagePackHolder.INSTANCE, valueType);
+    return newClient(new JacksonTranscoder<>(DefaultMessagePackHolder.INSTANCE, valueType));
   }
 
   /**
-   * Create a client builder for MessagePack values.
+   * Create a new client builder for given an ObjectMapper instance, and class of value
+   *
+   * @param objectMapper object mapper for serialization values
+   * @param valueType values type
+   * @param <T> values type parameter
    * @return The builder
    */
-  public static <T> MemcachedClientBuilder<T> newMessagePackClient(final MessagePack messagePack, final Type valueType) {
-    return newClient(new MessagePackTranscoder<>(messagePack, valueType));
+  public static <T> MemcachedClientBuilder<T> newObjectMapperClient(final ObjectMapper objectMapper,
+                                                                    final Class<T> valueType) {
+    return newClient(new JacksonTranscoder<>(objectMapper, valueType));
+  }
+
+  /**
+   * Create a new client builder for given an ObjectMapper instance, and {@link JavaType} of value
+   *
+   * @param objectMapper object mapper for serialization values
+   * @param valueType values type
+   * @param <T> values type parameter
+   * @return The builder
+   */
+  public static <T> MemcachedClientBuilder<T> newObjectMapperClient(final ObjectMapper objectMapper,
+                                                                    final JavaType valueType) {
+    return newClient(new JacksonTranscoder<>(objectMapper, valueType));
   }
 
   /**
@@ -107,8 +127,8 @@ public class MemcachedClientBuilder<T> {
     return new MemcacheClientBuilder<>(objectSizeMonitoringApplier.compose(compressionApplier).apply(transcoder));
   }
 
-  private static class DefaultObjectMapperHolder {
-    private static final ObjectMapper INSTANCE = createObjectMapper();
+  static class DefaultObjectMapperHolder {
+    static final ObjectMapper INSTANCE = createObjectMapper();
 
     private static ObjectMapper createObjectMapper() {
       final ObjectMapper objectMapper = new ObjectMapper();
@@ -119,7 +139,19 @@ public class MemcachedClientBuilder<T> {
     }
   }
 
-  private static class DefaultMessagePackHolder {
-    private static final MessagePack INSTANCE = new MessagePack();
+  static class DefaultMessagePackHolder {
+    static final ObjectMapper INSTANCE = createObjectMapper();
+
+    private static ObjectMapper createObjectMapper() {
+      final MessagePack.PackerConfig config = new MessagePack.PackerConfig().withStr8FormatSupport(false);
+      final ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory(config));
+
+      objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+      objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+      objectMapper.setAnnotationIntrospector(new JsonArrayFormat());
+      objectMapper.setSerializerFactory(new MessagePackSerializerFactory());
+
+      return objectMapper;
+    }
   }
 }

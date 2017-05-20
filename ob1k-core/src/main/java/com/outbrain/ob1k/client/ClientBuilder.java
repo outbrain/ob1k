@@ -14,10 +14,10 @@ import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
-import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+
 import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
 
 /**
@@ -177,24 +178,7 @@ public class ClientBuilder<T extends Service> {
     return proxy;
   }
 
-  private static RequestMarshallerRegistry createRegistry(final Class type) {
-    final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
-
-    final Method[] methods = type.getDeclaredMethods();
-    for (final Method method : methods) {
-      try {
-        registry.registerTypes(TypeHelper.extractTypes(method));
-      } catch (final IllegalArgumentException e) {
-        throw new RuntimeException("Failed registering method '" + method.getName() +
-          "' of service interface '" + type.getName() + "': " + e.getMessage());
-      }
-    }
-
-    return registry;
-  }
-
   private Map<Method, AbstractClientEndpoint> extractEndpointsFromType(final HttpClient httpClient) {
-
     final Map<Method, AbstractClientEndpoint> endpoints = new HashMap<>();
     final Method[] methods = type.getDeclaredMethods();
 
@@ -202,17 +186,18 @@ public class ClientBuilder<T extends Service> {
       if (isEndpoint(method)) {
         final String methodName = method.getName();
         final EndpointDescriptor endpointDescriptor = getEndpointDescriptor(methodName);
-        final RequestMarshallerRegistry registry = createRegistry(type);
         final EndpointDescription endpoint = new EndpointDescription(method, type, clientType,
           endpointDescriptor.path, endpointDescriptor.requestMethodType);
         final AbstractClientEndpoint clientEndpoint;
 
         if (isAsyncMethod(method)) {
           final List<AsyncFilter> filters = mergeFilters(AsyncFilter.class, asyncFilters, endpointDescriptor.filters);
-          clientEndpoint = new AsyncClientEndpoint(httpClient, registry, endpoint, filters.toArray(new AsyncFilter[filters.size()]));
+          clientEndpoint = new AsyncClientEndpoint(httpClient, RequestMarshallerRegistry.INSTANCE, endpoint,
+            filters.toArray(new AsyncFilter[filters.size()]));
         } else if (isStreamingMethod(method)) {
           final List<StreamFilter> filters = mergeFilters(StreamFilter.class, streamFilters, endpointDescriptor.filters);
-          clientEndpoint = new StreamClientEndpoint(httpClient, registry, endpoint, filters.toArray(new StreamFilter[filters.size()]));
+          clientEndpoint = new StreamClientEndpoint(httpClient, RequestMarshallerRegistry.INSTANCE, endpoint,
+            filters.toArray(new StreamFilter[filters.size()]));
         } else {
           throw new IllegalArgumentException("Interface method " + type.getSimpleName() + "::" + methodName +
             " has illegal signature. All public methods must return ComposableFuture or Observable.");

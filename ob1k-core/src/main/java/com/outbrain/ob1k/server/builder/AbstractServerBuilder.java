@@ -61,20 +61,20 @@ public abstract class AbstractServerBuilder {
   private final Map<String, String> staticMappings = new HashMap<>();
 
   private final ServiceRegistry registry;
-  private final RequestMarshallerRegistry marshallerRegistry;
 
   protected AbstractServerBuilder() {
-    this.marshallerRegistry = new RequestMarshallerRegistry();
-    this.registry = new ServiceRegistry(marshallerRegistry);
+    this.registry = new ServiceRegistry();
   }
 
   public final Server build() {
     final ChannelGroup activeChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     registerAllServices();
-    final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
-            appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+    final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
+    final NettyServer server = new NettyServer(port, registry, RequestMarshallerRegistry.INSTANCE, staticResolver,
+      activeChannels, contextPath, appName, acceptKeepAlive,
+      supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+
     server.addListeners(listeners);
     return server;
   }
@@ -85,10 +85,6 @@ public abstract class AbstractServerBuilder {
 
   protected ServiceRegistry getServiceRegistry() {
     return registry;
-  }
-
-  protected RequestMarshallerRegistry getMarshallerRegistry() {
-    return marshallerRegistry;
   }
 
   protected ServerBuilderState innerState() {
