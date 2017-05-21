@@ -62,6 +62,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private final Counter requestTimeoutErrors;
   private final Counter notFoundErrors;
   private final Counter unexpectedErrors;
+  private final Counter ioErrors;
   private final long requestTimeoutMs;
 
   private io.netty.handler.codec.http.HttpRequest request;
@@ -88,12 +89,14 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       this.requestTimeoutErrors = metricFactory.createCounter("Ob1kDispatcher", "requestTimeoutErrors");
       this.notFoundErrors = metricFactory.createCounter("Ob1kDispatcher", "notFoundErrors");
       this.unexpectedErrors = metricFactory.createCounter("Ob1kDispatcher", "unexpectedErrors");
+      this.ioErrors = metricFactory.createCounter("Ob1kDispatcher", "ioErrors");
       metricFactory.registerGauge("Ob1kDispatcher", "currentConnections", activeChannels::size);
     } else {
       internalErrors = null;
       requestTimeoutErrors = null;
       notFoundErrors = null;
       unexpectedErrors = null;
+      ioErrors = null;
     }
   }
 
@@ -261,7 +264,17 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
       unexpectedErrors.inc();
     }
 
-    logger.warn("caught exception in handler; remote host=" + ctx.channel().remoteAddress(), cause);
+    // suppressing IO exceptions - as mostly they're only creating noise
+    if (cause instanceof IOException) {
+      if (ioErrors != null) {
+        ioErrors.inc();
+      }
+
+      logger.debug("caught IO exception in handler; remote host={}", ctx.channel().remoteAddress(), cause);
+    } else {
+      logger.warn("caught exception in handler; remote host={}", ctx.channel().remoteAddress(), cause);
+    }
+
     ctx.close();
   }
 
