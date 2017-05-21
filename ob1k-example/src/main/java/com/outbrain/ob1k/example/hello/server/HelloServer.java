@@ -11,10 +11,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Hello Server
- *
+ * <p>
  * This class is our main, which initializing a new server,
  * registering our services and binding on port 8080
- *
+ * <p>
  * Here we're basically describing which services do we want to register,
  * how to configure the server and set define the routing
  *
@@ -28,7 +28,7 @@ public class HelloServer {
   public static final String CTX_PATH = "/services";
   public static final String HELLO_SERVICE_PATH = "/hello";
 
-  Server server;
+  private Server server;
 
   public static void main(final String[] args) {
     new HelloServer().start(PORT);
@@ -48,9 +48,14 @@ public class HelloServer {
 
   private Server buildServer(final int port) {
     return ServerBuilder.newBuilder().
-            contextPath(CTX_PATH).
-            configure(builder -> builder.usePort(port).requestTimeout(50, TimeUnit.MILLISECONDS)).
-            service(builder -> builder.register(new HelloServiceImpl(0), HELLO_SERVICE_PATH)).
-            build();
+      contextPath(CTX_PATH).
+      configure(builder -> builder.
+        usePort(port).
+        requestTimeout(50, TimeUnit.MILLISECONDS).
+        acceptKeepAlive(true).
+        idleTimeout(1, TimeUnit.SECONDS)
+      ).
+      service(builder -> builder.register(new HelloServiceImpl(0), HELLO_SERVICE_PATH)).
+      build();
   }
 }
