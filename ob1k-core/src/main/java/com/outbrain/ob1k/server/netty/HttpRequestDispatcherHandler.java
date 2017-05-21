@@ -65,10 +65,14 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   private io.netty.handler.codec.http.HttpRequest request;
   private Subscription subscription;
 
-  public HttpRequestDispatcherHandler(final String contextPath, final ServiceDispatcher dispatcher,
-                                      final StaticPathResolver staticResolver, final RequestMarshallerRegistry marshallerRegistry,
-                                      final ChannelGroup activeChannels,
-                                      final boolean acceptKeepAlive, final MetricFactory metricFactory, final long requestTimeoutMs) {
+  HttpRequestDispatcherHandler(final String contextPath,
+                               final ServiceDispatcher dispatcher,
+                               final StaticPathResolver staticResolver,
+                               final RequestMarshallerRegistry marshallerRegistry,
+                               final ChannelGroup activeChannels,
+                               final boolean acceptKeepAlive,
+                               final MetricFactory metricFactory,
+                               final long requestTimeoutMs) {
     this.dispatcher = dispatcher;
     this.staticResolver = staticResolver;
     this.contextPath = contextPath;
@@ -143,11 +147,10 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     }
   }
 
-  public void handleAsyncResponse(final ChannelHandlerContext ctx, final ComposableFuture<Object> response) {
+  private void handleAsyncResponse(final ChannelHandlerContext ctx, final ComposableFuture<Object> response) {
     final ComposableFuture<Object> finalResponse;
     if (requestTimeoutMs > 0) {
-      final ComposableFuture<Object> timeout = ComposableFutures.build(consumer -> ctx.channel().eventLoop().schedule((Runnable) () -> consumer.consume(Try.fromError(new RequestTimeoutException("calculating response took too long."))), requestTimeoutMs, TimeUnit.MILLISECONDS));
-
+      final ComposableFuture<Object> timeout = scheduleRequestTimeout(ctx);
       finalResponse = ComposableFutures.any(response, timeout);
     } else {
       finalResponse = response;
@@ -174,7 +177,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
 
   }
 
-  public void handleStreamResponse(final ChannelHandlerContext ctx, final Observable<Object> response, final boolean rawStream) {
+  private void handleStreamResponse(final ChannelHandlerContext ctx, final Observable<Object> response, final boolean rawStream) {
     // first send the packet containing the headers.
     sendStreamHeaders(ctx, rawStream);
     subscription = response.subscribe(new Subscriber<Object>() {
@@ -222,6 +225,16 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     final HttpResponse res = marshaller.marshallResponseHeaders(rawStream);
 
     return ctx.writeAndFlush(res);
+  }
+
+  private ComposableFuture<Object> scheduleRequestTimeout(final ChannelHandlerContext ctx) {
+    return ComposableFutures.build(consumer -> ctx.channel()
+      .eventLoop().schedule(
+        () -> consumer.consume(Try.fromError(new RequestTimeoutException("calculating response took too long."))),
+        requestTimeoutMs,
+        TimeUnit.MILLISECONDS
+      )
+    );
   }
 
   @Override

@@ -18,35 +18,35 @@ import java.util.Set;
  */
 public interface ServerBuilderState {
 
-  void setPort(final int port);
+  void setPort(int port);
 
-  void setContextPath(final String contextPath);
+  void setContextPath(String contextPath);
 
-  void setAppName(final String appName);
+  void setAppName(String appName);
 
-  void setAcceptKeepAlive(final boolean acceptKeepAlive);
+  void setAcceptKeepAlive(boolean acceptKeepAlive);
 
-  void setSupportZip(final boolean supportZip);
+  void setSupportZip(boolean supportZip);
 
-  void setMaxContentLength(final int maxContentLength);
+  void setMaxContentLength(int maxContentLength);
 
-  void setRequestTimeoutMs(final long requestTimeoutMs);
+  void setRequestTimeoutMs(long requestTimeoutMs);
 
-  void setThreadPoolMinSize(final int threadPoolMinSize);
+  void setThreadPoolMinSize(int threadPoolMinSize);
 
-  void setThreadPoolMaxSize(final int threadPoolMaxSize);
+  void setThreadPoolMaxSize(int threadPoolMaxSize);
 
-  void setMetricFactory(final MetricFactory metricFactory);
+  void setMetricFactory(MetricFactory metricFactory);
 
-  void addListener(final Server.Listener listener);
+  void addListener(Server.Listener listener);
 
-  void addStaticFolder(final String folder);
+  void addStaticFolder(String folder);
 
-  void addStaticMapping(final String virtualPath, final String realPath);
+  void addStaticMapping(String virtualPath, String realPath);
 
-  void addStaticResource(final String mapping, final String location);
+  void addStaticResource(String mapping, String location);
 
-  void addServiceDescriptor(final Service service, final String path, final ServiceFilter... filters);
+  void addServiceDescriptor(Service service, String path, ServiceFilter... filters);
 
   void removeFiltersFromLastServiceDescriptor(Class<? extends ServiceFilter> filter);
 
@@ -54,7 +54,7 @@ public interface ServerBuilderState {
 
   void setFiltersToLastDescriptor(ServiceFilter... filters);
 
-  void setEndpointBinding(final HttpRequestMethodType methodType, final String methodName, final String path, final ServiceFilter[] filters);
+  void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
 
   ServiceRegistryView getRegistry();
 
