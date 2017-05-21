@@ -47,6 +47,11 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
     return self();
   }
 
+  public B idleTimeout(final long timeout, final TimeUnit unit) {
+    state.setIdleTimeoutMs(unit.toMillis(timeout));
+    return self();
+  }
+
   public B useMetricFactory(final MetricFactory metricFactory) {
     state.setMetricFactory(metricFactory);
     return self();

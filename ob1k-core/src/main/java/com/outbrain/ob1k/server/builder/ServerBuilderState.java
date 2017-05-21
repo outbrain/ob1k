@@ -30,6 +30,8 @@ public interface ServerBuilderState {
 
   void setMaxContentLength(int maxContentLength);
 
+  void setIdleTimeoutMs(long idleTimeoutMs);
+
   void setRequestTimeoutMs(long requestTimeoutMs);
 
   void setThreadPoolMinSize(int threadPoolMinSize);
@@ -73,6 +75,8 @@ public interface ServerBuilderState {
   int getMaxContentLength();
 
   long getRequestTimeoutMs();
+
+  long getIdleTimeoutMs();
 
   int getThreadPoolMinSize();
 

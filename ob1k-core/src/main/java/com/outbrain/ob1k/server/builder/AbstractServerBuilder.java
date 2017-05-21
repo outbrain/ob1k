@@ -51,6 +51,7 @@ public abstract class AbstractServerBuilder {
   private boolean supportZip = true;
   private int maxContentLength = DEFAULT_MAX_CONTENT_LENGTH;
   private long requestTimeoutMs = -1;
+  private long idleTimeoutMs = 60_000;
   private int threadPoolMinSize;
   private int threadPoolMaxSize;
   private MetricFactory metricFactory;
@@ -74,7 +75,7 @@ public abstract class AbstractServerBuilder {
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
-            appName, acceptKeepAlive, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+            appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
   }
@@ -116,6 +117,11 @@ public abstract class AbstractServerBuilder {
     @Override
     public void setAcceptKeepAlive(final boolean acceptKeepAliveToUse) {
       acceptKeepAlive = acceptKeepAliveToUse;
+    }
+
+    @Override
+    public void setIdleTimeoutMs(final long idleTimeout) {
+      idleTimeoutMs = idleTimeout;
     }
 
     @Override
@@ -287,6 +293,11 @@ public abstract class AbstractServerBuilder {
     @Override
     public long getRequestTimeoutMs() {
       return requestTimeoutMs;
+    }
+
+    @Override
+    public long getIdleTimeoutMs() {
+      return idleTimeoutMs;
     }
 
     @Override

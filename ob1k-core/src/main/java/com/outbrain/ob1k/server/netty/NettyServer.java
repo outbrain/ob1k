@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 /**
  * User: aronen
@@ -45,6 +47,7 @@ public class NettyServer implements Server {
   private final RequestMarshallerRegistry marshallerRegistry;
   private final ChannelGroup activeChannels;
   private final long requestTimeoutMs;
+  private final long idleTimeoutMs;
   private volatile Channel channel;
   private final StaticPathResolver staticResolver;
   private final ServiceDispatcher dispatcher;
@@ -59,7 +62,7 @@ public class NettyServer implements Server {
   public NettyServer(final int port, final ServiceRegistry registry, final RequestMarshallerRegistry marshallerRegistry,
                      final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
-                     final boolean acceptKeepAlive, final boolean supportZip, final MetricFactory metricFactory,
+                     final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
                      final int maxContentLength, final long requestTimeoutMs) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
@@ -75,6 +78,7 @@ public class NettyServer implements Server {
     this.metricFactory = metricFactory;
     this.maxContentLength = maxContentLength;
     this.requestTimeoutMs = requestTimeoutMs;
+    this.idleTimeoutMs = idleTimeoutMs;
     registry.logRegisteredEndpoints();
   }
 
@@ -109,12 +113,7 @@ public class NettyServer implements Server {
   }
 
   private void addShutdownhook() {
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
-      public void run() {
-        NettyServer.this.stop();
-      }
-    });
+    Runtime.getRuntime().addShutdownHook(new Thread(NettyServer.this::stop));
   }
 
   private static String getOpeningText() {
@@ -216,6 +215,7 @@ public class NettyServer implements Server {
         p.addLast("compressor", new HttpContentCompressor());
       }
 
+      p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
           marshallerRegistry, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
     }

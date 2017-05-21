@@ -20,6 +20,8 @@ import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,6 +102,18 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     ctx.flush();
   }
 
+  @Override
+  public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+    // if connection is idle for more than X millis, close it
+    if (evt instanceof IdleStateEvent) {
+      final IdleStateEvent e = (IdleStateEvent) evt;
+      if (IdleState.ALL_IDLE == e.state()) {
+        ctx.close();
+      }
+    }
+
+    super.userEventTriggered(ctx, evt);
+  }
 
   @Override
   protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws IOException {
