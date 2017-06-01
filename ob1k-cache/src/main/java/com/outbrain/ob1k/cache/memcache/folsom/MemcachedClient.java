@@ -79,29 +79,17 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
-    return setAsync(key, value, expirationSeconds);
-  }
-
-  public ComposableFuture<Boolean> setAsync(final K key, final V value, final int expirationSeconds) {
     return fromListenableFuture(() -> folsomClient.set(key(key), value, expirationSeconds), this::isOK);
   }
 
   @Override
   public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
-    return putIfAbsentAsync(key, value, expirationSeconds);
-  }
-
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value, final int expirationSeconds) {
     return fromListenableFuture(() -> folsomClient.add(key(key), value, expirationSeconds), this::isOK);
   }
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    return setAsync(key, mapper, maxIterations, expirationSeconds);
-  }
-
-  public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations, final int expirationSeconds) {
-    return casUpdate(key, mapper, expirationSeconds).flatMap(result -> {
+    return casUpdate(key, mapper).flatMap(result -> {
       if (result == MemcacheStatus.OK) {
         return ComposableFutures.fromValue(true);
       }
@@ -114,7 +102,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
     });
   }
 
-  private ComposableFuture<MemcacheStatus> casUpdate(final K key, final EntryMapper<K, V> mapper, final int expirationSeconds) {
+  private ComposableFuture<MemcacheStatus> casUpdate(final K key, final EntryMapper<K, V> mapper) {
     try {
       final String stringKey = key(key);
 
