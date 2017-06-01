@@ -9,9 +9,9 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import com.spotify.folsom.MemcacheClient;
-import com.spotify.folsom.MemcacheClosedException;
-import com.spotify.folsom.MemcacheOverloadedException;
 import com.spotify.folsom.MemcacheStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +36,8 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  * @author Eran Harel
  */
 public class MemcachedClient<K, V> implements TypedCache<K, V> {
+
+  private static final Logger log = LoggerFactory.getLogger(MemcachedClient.class);
 
   private final MemcacheClient<V> folsomClient;
   private final CacheKeyTranslator<K> keyTranslator;
@@ -171,12 +173,8 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
           } catch (final InterruptedException | RuntimeException e) {
             consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
-            Throwable error = e.getCause() != null ? e.getCause() : e;
-            if (error instanceof MemcacheClosedException) {
-              error = new MemcacheClosedException(cacheName + " " + error.getMessage());
-            } else if (error instanceof MemcacheOverloadedException) {
-              error = new MemcacheOverloadedException(cacheName + " " + error.getMessage());
-            }
+            final Throwable error = e.getCause() != null ? e.getCause() : e;
+            log.error(cacheName + " " + error.getMessage(), error);
             consumer.consume(Try.fromError(error));
           }
         }, executor);
