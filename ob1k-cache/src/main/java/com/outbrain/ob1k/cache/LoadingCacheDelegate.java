@@ -294,8 +294,8 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
-    return cache.putIfAbsentAsync(key, value);
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
+    return cache.setIfAbsentAsync(key, value);
   }
 
   @Override

@@ -24,7 +24,7 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   private final AsyncOperationMetrics<V> getAsyncMetrics;
   private final AsyncOperationMetrics<Map<K, V>> getBulkAsyncMetrics;
   private final AsyncOperationMetrics<Boolean> setAsyncMetrics;
-  private final AsyncOperationMetrics<Boolean> putIfAbsentAsyncMetrics;
+  private final AsyncOperationMetrics<Boolean> setIfAbsentAsyncMetrics;
   private final AsyncOperationMetrics<Map<K, Boolean>> setBulkAsyncMetrics;
   private final AsyncOperationMetrics<Boolean> deleteAsyncMetrics;
 
@@ -51,7 +51,7 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
     getAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".getAsync");
     getBulkAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".getBulkAsync");
     setAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".setAsync");
-    putIfAbsentAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".putIfAbsentAsync");
+    setIfAbsentAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".setIfAbsentAsync");
     setBulkAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".setBulkAsync");
     deleteAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".deleteAsync");
 
@@ -82,8 +82,8 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
-    return putIfAbsentAsyncMetrics.update(delegate.putIfAbsentAsync(key, value));
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
+    return setIfAbsentAsyncMetrics.update(delegate.setIfAbsentAsync(key, value));
   }
 
   @Override

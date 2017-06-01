@@ -94,7 +94,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
     throw new UnsupportedOperationException("Not supported for spy");
   }
 

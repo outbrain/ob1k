@@ -87,7 +87,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
     return putIfAbsentAsync(key, value, expirationSeconds);
   }
 

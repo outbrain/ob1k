@@ -16,7 +16,7 @@ public interface TypedCache<K, V> {
 
   ComposableFuture<Boolean> setAsync(final K key, final V value);
 
-  ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value);
+  ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value);
 
   ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations);
 
