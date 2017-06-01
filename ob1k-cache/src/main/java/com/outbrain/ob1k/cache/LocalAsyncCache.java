@@ -219,7 +219,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   }
 
   @Override
-  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
     if (loadingCache != null) {
       loadingCache.asMap().putIfAbsent(key, fromValue(value));
     } else {
