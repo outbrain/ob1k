@@ -1,14 +1,14 @@
 package com.outbrain.ob1k.cache.metrics;
 
-import java.util.Map;
-import java.util.function.Function;
-
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.cache.EntryMapper;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+
+import java.util.Map;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -24,6 +24,7 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   private final AsyncOperationMetrics<V> getAsyncMetrics;
   private final AsyncOperationMetrics<Map<K, V>> getBulkAsyncMetrics;
   private final AsyncOperationMetrics<Boolean> setAsyncMetrics;
+  private final AsyncOperationMetrics<Boolean> putIfAbsentAsyncMetrics;
   private final AsyncOperationMetrics<Map<K, Boolean>> setBulkAsyncMetrics;
   private final AsyncOperationMetrics<Boolean> deleteAsyncMetrics;
 
@@ -50,6 +51,7 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
     getAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".getAsync");
     getBulkAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".getBulkAsync");
     setAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".setAsync");
+    putIfAbsentAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".putIfAbsentAsync");
     setBulkAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".setBulkAsync");
     deleteAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".deleteAsync");
 
@@ -77,6 +79,11 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
     return setAsyncMetrics.update(delegate.setAsync(key, value));
+  }
+
+  @Override
+  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+    return putIfAbsentAsyncMetrics.update(delegate.putIfAbsentAsync(key, value));
   }
 
   @Override
