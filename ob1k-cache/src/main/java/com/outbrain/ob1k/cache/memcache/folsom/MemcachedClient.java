@@ -9,6 +9,8 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import com.spotify.folsom.MemcacheClient;
+import com.spotify.folsom.MemcacheClosedException;
+import com.spotify.folsom.MemcacheOverloadedException;
 import com.spotify.folsom.MemcacheStatus;
 
 import java.util.ArrayList;
@@ -40,12 +42,22 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   private final int expirationSeconds;
   // TODO should we create a dedicated executor?
   private final Executor executor = ComposableFutures.getExecutor();
+  private final String cacheName;
 
   // TODO add docs (especially about the expiration rules)
   public MemcachedClient(final MemcacheClient<V> folsomClient, final CacheKeyTranslator<K> keyTranslator, final long expiration, final TimeUnit timeUnit) {
+    this(folsomClient, keyTranslator, expiration, timeUnit, "UNKNOWN");
+  }
+
+  public MemcachedClient(final MemcacheClient<V> folsomClient,
+                         final CacheKeyTranslator<K> keyTranslator,
+                         final long expiration,
+                         final TimeUnit timeUnit,
+                         final String cacheName) {
     this.folsomClient = Objects.requireNonNull(folsomClient, "folsomClient must not be null");
     this.keyTranslator = Objects.requireNonNull(keyTranslator, "keyTranslator must not be null");
     this.expirationSeconds = (int) timeUnit.toSeconds(expiration);
+    this.cacheName = Objects.requireNonNull(cacheName, "cacheName must not be null");
   }
 
   @Override
@@ -159,7 +171,12 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
           } catch (final InterruptedException | RuntimeException e) {
             consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
-            final Throwable error = e.getCause() != null ? e.getCause() : e;
+            Throwable error = e.getCause() != null ? e.getCause() : e;
+            if (error instanceof MemcacheClosedException) {
+              error = new MemcacheClosedException(cacheName + " " + error.getMessage());
+            } else if (error instanceof MemcacheOverloadedException) {
+              error = new MemcacheOverloadedException(cacheName + " " + error.getMessage());
+            }
             consumer.consume(Try.fromError(error));
           }
         }, executor);
