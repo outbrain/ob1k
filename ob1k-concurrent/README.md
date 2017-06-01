@@ -42,7 +42,7 @@ mappedValue.consume(resultTry -> {
 
 And that was our first composition!
 
-Take a look at our [code examples](https://github.com/outbrain/ob1k/tree/cf_new_api/ob1k-concurrent/src/test/java/com/outbrain/ob1k/concurrent/examples) to see which helpers and best practices should be used with ComposableFuture.
+Take a look at our [code examples](https://github.com/outbrain/ob1k/tree/master/ob1k-concurrent/src/test/java/com/outbrain/ob1k/concurrent/examples) to see which helpers and best practices should be used with ComposableFuture.
 
 ## Helpers
 Besides ComposableFuture, you can find an implementation of [Try](https://github.com/outbrain/ob1k/blob/master/ob1k-concurrent/src/main/java/com/outbrain/ob1k/concurrent/Try.java) also in this package.  
