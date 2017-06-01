@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ExecutionError;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -16,7 +17,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromNull;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
 
 /**
@@ -114,7 +118,8 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       return fromValue(res);
     } else {
       if (failOnMissingEntries) {
-        return fromError(new RuntimeException("result is missing from loader response."));
+        final String prefix = cacheName == null ? "" : cacheName + ": ";
+        return fromError(new RuntimeException(prefix + "result for " + key + " is missing from loader response."));
       } else {
         return fromNull();
       }
