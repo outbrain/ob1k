@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ExecutionError;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -16,7 +17,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromNull;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 
 
 /**
@@ -209,6 +213,17 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       loadingCache.put(key, fromValue(value));
     } else {
       localCache.put(key, fromValue(value));
+    }
+
+    return fromValue(true);
+  }
+
+  @Override
+  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+    if (loadingCache != null) {
+      loadingCache.asMap().putIfAbsent(key, fromValue(value));
+    } else {
+      localCache.asMap().putIfAbsent(key, fromValue(value));
     }
 
     return fromValue(true);

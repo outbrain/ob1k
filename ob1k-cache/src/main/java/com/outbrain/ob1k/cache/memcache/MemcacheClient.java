@@ -94,6 +94,11 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
   }
 
   @Override
+  public ComposableFuture<Boolean> putIfAbsentAsync(final K key, final V value) {
+    throw new UnsupportedOperationException("Not supported for spy");
+  }
+
+  @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
     return casUpdate(key, mapper).flatMap(result -> {
       if (result == CASResponse.OK || result == CASResponse.OBSERVE_MODIFIED) {
