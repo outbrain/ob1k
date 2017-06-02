@@ -1,11 +1,7 @@
 package com.outbrain.ob1k.consul;
 
-import com.google.common.base.Preconditions;
-import com.outbrain.ob1k.client.targets.TargetProvider;
-import io.netty.util.internal.ThreadLocalRandom;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,8 +11,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
+import com.outbrain.ob1k.client.targets.TargetProvider;
+
+import io.netty.util.internal.ThreadLocalRandom;
 
 /**
  * A {@link TargetProvider} that provides targets registered in consul.
@@ -73,6 +75,10 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     checkState(!currTargets.isEmpty(), "No targets are currently registered for module " + healthyTargetsList.getModule());
     checkArgument(targetsNum > 0, "targets number must be more than zero");
 
+    return provideTargetsImpl(targetsNum, currTargets);
+  }
+
+  protected List<String> provideTargetsImpl(int targetsNum, List<String> currTargets) {
     final int targetsSize = currTargets.size();
     final int index = currIndex.get();
 
