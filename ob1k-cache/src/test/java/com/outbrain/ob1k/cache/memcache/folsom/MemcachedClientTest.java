@@ -9,6 +9,7 @@ import com.spotify.folsom.ConnectFuture;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
+import com.spotify.folsom.transcoder.SerializableObjectTranscoder;
 import org.apache.commons.lang.SerializationException;
 import org.apache.commons.lang.SerializationUtils;
 import org.junit.AfterClass;
@@ -16,9 +17,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.Serializable;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Eran Harel
@@ -49,25 +54,38 @@ public class MemcachedClientTest extends AbstractMemcachedClientTest {
 
   @Test(expected = ExecutionException.class)
   public void testMultiget_TranscoderExecption() throws ExecutionException, InterruptedException, TimeoutException {
-    Transcoder<Serializable> transcoder = new Transcoder<Serializable>() {
+    final Transcoder<Serializable> transcoder = new Transcoder<Serializable>() {
       @Override
-      public Serializable decode(byte[] b) {
+      public Serializable decode(final byte[] b) {
         throw new SerializationException("QQQQQ YYYYY");
       }
 
       @Override
-      public byte[] encode(Serializable t) {
+      public byte[] encode(final Serializable t) {
         return SerializationUtils.serialize(t);
       }
     };
 
-    final AsciiMemcacheClient<Serializable> rawClient = new MemcacheClientBuilder<Serializable>(transcoder).withAddress(HostAndPort.fromParts("localhost", MEMCACHED_PORT))
-      .withRequestTimeoutMillis(1000)
-      .connectAscii();
-    ConnectFuture.connectFuture(rawClient).get();
-    final MemcachedClient<Object, Serializable> client = new MemcachedClient<>(rawClient, k -> "K", 1, TimeUnit.MINUTES);
+    final MemcachedClient<Object, Serializable> client = createClient(transcoder);
 
     client.setAsync("meh", "its here").get();
     client.getBulkAsync(Lists.newArrayList("meh", "bah")).get(1, TimeUnit.MINUTES);
+  }
+
+  @Test
+  public void testSetIfAbsentAsync() throws ExecutionException, InterruptedException, TimeoutException {
+    final MemcachedClient<Object, Serializable> client = createClient(SerializableObjectTranscoder.INSTANCE);
+    final String key = UUID.randomUUID().toString();
+
+    assertTrue(client.setIfAbsentAsync(key, "value").get());
+    assertFalse(client.setIfAbsentAsync(key, "value").get());
+  }
+
+  private MemcachedClient<Object, Serializable> createClient(final Transcoder<Serializable> transcoder) throws InterruptedException, ExecutionException {
+    final AsciiMemcacheClient<Serializable> rawClient = new MemcacheClientBuilder<>(transcoder).withAddress(HostAndPort.fromParts("localhost", MEMCACHED_PORT))
+      .withRequestTimeoutMillis(1000)
+      .connectAscii();
+    ConnectFuture.connectFuture(rawClient).get();
+    return new MemcachedClient<>(rawClient, Object::toString, 1, TimeUnit.MINUTES);
   }
 }
