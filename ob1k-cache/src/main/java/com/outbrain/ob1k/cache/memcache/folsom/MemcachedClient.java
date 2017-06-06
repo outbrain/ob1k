@@ -174,7 +174,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
             consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
             final Throwable error = e.getCause() != null ? e.getCause() : e;
-            log.error("Failed to run operation for " + cacheName + ", error: " + error.getMessage(), error);
+            log.error("Failed to run operation for " + cacheName, error);
             consumer.consume(Try.fromError(error));
           }
         }, executor);
