@@ -95,7 +95,7 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
-    throw new UnsupportedOperationException("Not supported for spy");
+    return SpyFutureHelper.fromOperation(() -> spyClient.add(keyTranslator.translateKey(key), expirationSpyUnits, value));
   }
 
   @Override
