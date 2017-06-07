@@ -97,6 +97,11 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
   }
 
   @Override
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
+    return fromListenableFuture(() -> folsomClient.add(key(key), value, expirationSeconds), this::isOK);
+  }
+
+  @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
     return casUpdate(key, mapper).flatMap(result -> {
       if (result == MemcacheStatus.OK) {

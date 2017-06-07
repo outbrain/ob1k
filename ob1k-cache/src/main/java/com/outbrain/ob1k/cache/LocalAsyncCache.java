@@ -219,6 +219,12 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
   }
 
   @Override
+  public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
+    final Cache<K, ComposableFuture<V>> cache = loadingCache == null ? localCache : loadingCache;
+    return fromValue(cache.asMap().putIfAbsent(key, fromValue(value)) == null);
+  }
+
+  @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
     final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
     try {
