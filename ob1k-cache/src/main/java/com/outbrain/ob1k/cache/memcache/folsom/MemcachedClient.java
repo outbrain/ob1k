@@ -10,6 +10,8 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,17 +37,29 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  */
 public class MemcachedClient<K, V> implements TypedCache<K, V> {
 
+  private static final Logger log = LoggerFactory.getLogger(MemcachedClient.class);
+
   private final MemcacheClient<V> folsomClient;
   private final CacheKeyTranslator<K> keyTranslator;
   private final int expirationSeconds;
   // TODO should we create a dedicated executor?
   private final Executor executor = ComposableFutures.getExecutor();
+  private final String cacheName;
 
   // TODO add docs (especially about the expiration rules)
   public MemcachedClient(final MemcacheClient<V> folsomClient, final CacheKeyTranslator<K> keyTranslator, final long expiration, final TimeUnit timeUnit) {
+    this(folsomClient, keyTranslator, expiration, timeUnit, "UNKNOWN");
+  }
+
+  public MemcachedClient(final MemcacheClient<V> folsomClient,
+                         final CacheKeyTranslator<K> keyTranslator,
+                         final long expiration,
+                         final TimeUnit timeUnit,
+                         final String cacheName) {
     this.folsomClient = Objects.requireNonNull(folsomClient, "folsomClient must not be null");
     this.keyTranslator = Objects.requireNonNull(keyTranslator, "keyTranslator must not be null");
     this.expirationSeconds = (int) timeUnit.toSeconds(expiration);
+    this.cacheName = Objects.requireNonNull(cacheName, "cacheName must not be null");
   }
 
   @Override
@@ -160,6 +174,7 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
             consumer.consume(Try.fromError(e));
           } catch (final ExecutionException e) {
             final Throwable error = e.getCause() != null ? e.getCause() : e;
+            log.error("Failed to run operation for " + cacheName, error);
             consumer.consume(Try.fromError(error));
           }
         }, executor);
