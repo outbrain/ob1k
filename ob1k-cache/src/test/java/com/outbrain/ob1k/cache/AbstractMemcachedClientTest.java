@@ -6,7 +6,6 @@ import com.thimbleware.jmemcached.LocalCacheElement;
 import com.thimbleware.jmemcached.MemCacheDaemon;
 import com.thimbleware.jmemcached.storage.hash.ConcurrentLinkedHashMap;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -16,8 +15,11 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
 
 /**
  * Base test class for memcached client wrappers
@@ -25,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class AbstractMemcachedClientTest {
 
-  public static final int MEMCACHED_PORT = 11311;
+  protected static final int MEMCACHED_PORT = 11311;
   private static MemCacheDaemon<LocalCacheElement> cacheDaemon;
 
   private TypedCache<String, Serializable> client;
@@ -67,14 +69,14 @@ public abstract class AbstractMemcachedClientTest {
       .flatMap(result -> client.getAsync(key));
 
     final Serializable result = res.get();
-    Assert.assertEquals("unexpected result returned from getAsync()", expectedValue, result);
+    assertEquals("unexpected result returned from getAsync()", expectedValue, result);
   }
 
   @Test
   public void testGetMiss() throws IOException, ExecutionException, InterruptedException {
     final ComposableFuture<Serializable> res = client.getAsync("keyMiss1");
     final Serializable result = res.get();
-    Assert.assertNull("getAsync for unset key should have returned null", result);
+    assertNull("getAsync for unset key should have returned null", result);
   }
 
   @Test
@@ -88,7 +90,7 @@ public abstract class AbstractMemcachedClientTest {
       .flatMap(result -> client.getBulkAsync(expected.keySet()));
 
     final Map<String, Serializable> getResults = res.get();
-    Assert.assertEquals("unexpected result returned from getBulkAsync()", expected, getResults);
+    assertEquals("unexpected result returned from getBulkAsync()", expected, getResults);
   }
 
   @Test
@@ -100,7 +102,7 @@ public abstract class AbstractMemcachedClientTest {
 
     final ComposableFuture<Map<String, Serializable>> res = client.getBulkAsync(entries.keySet());
     final Map<String, Serializable> results = res.get();
-    Assert.assertTrue("getBulkAsync for unset keys should have returned empty map", results.isEmpty());
+    assertTrue("getBulkAsync for unset keys should have returned empty map", results.isEmpty());
   }
 
   @Test
@@ -111,8 +113,8 @@ public abstract class AbstractMemcachedClientTest {
       .flatMap(result -> client.deleteAsync(key));
 
     final Boolean result = res.get();
-    Assert.assertTrue("unexpected result returned from getAsync()", result);
-    Assert.assertNull("value was not deleted", client.getAsync(key).get());
+    assertTrue("unexpected result returned from getAsync()", result);
+    assertNull("value was not deleted", client.getAsync(key).get());
   }
 
 
@@ -126,8 +128,8 @@ public abstract class AbstractMemcachedClientTest {
     final int successCount = runMultiThreadedCas(counterKey, iterations, threadCount);
 
     final int expectedSetCount = iterations * threadCount;
-    Assert.assertEquals("Successful sets", expectedSetCount, successCount);
-    Assert.assertEquals(expectedSetCount, client.getAsync(counterKey).get());
+    assertEquals("Successful sets", expectedSetCount, successCount);
+    assertEquals(expectedSetCount, client.getAsync(counterKey).get());
   }
 
   private int runMultiThreadedCas(final String counterKey, final int iterations, final int threadCount) throws InterruptedException {
@@ -154,5 +156,13 @@ public abstract class AbstractMemcachedClientTest {
     }
     return successCount.get();
   }
+
+//  @Test
+//  public void testSetIfAbsentAsync() throws ExecutionException, InterruptedException {
+//    final String key = UUID.randomUUID().toString();
+//
+//    assertTrue(client.setIfAbsentAsync(key, "value").get());
+//    assertFalse(client.setIfAbsentAsync(key, "value").get());
+//  }
 
 }

@@ -9,7 +9,6 @@ import com.spotify.folsom.ConnectFuture;
 import com.spotify.folsom.MemcacheClient;
 import com.spotify.folsom.MemcacheClientBuilder;
 import com.spotify.folsom.Transcoder;
-import com.spotify.folsom.transcoder.SerializableObjectTranscoder;
 import org.apache.commons.lang.SerializationException;
 import org.apache.commons.lang.SerializationUtils;
 import org.junit.AfterClass;
@@ -17,13 +16,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.Serializable;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Eran Harel
@@ -70,15 +65,6 @@ public class MemcachedClientTest extends AbstractMemcachedClientTest {
 
     client.setAsync("meh", "its here").get();
     client.getBulkAsync(Lists.newArrayList("meh", "bah")).get(1, TimeUnit.MINUTES);
-  }
-
-  @Test
-  public void testSetIfAbsentAsync() throws ExecutionException, InterruptedException, TimeoutException {
-    final MemcachedClient<Object, Serializable> client = createClient(SerializableObjectTranscoder.INSTANCE);
-    final String key = UUID.randomUUID().toString();
-
-    assertTrue(client.setIfAbsentAsync(key, "value").get());
-    assertFalse(client.setIfAbsentAsync(key, "value").get());
   }
 
   private MemcachedClient<Object, Serializable> createClient(final Transcoder<Serializable> transcoder) throws InterruptedException, ExecutionException {
