@@ -157,12 +157,12 @@ public abstract class AbstractMemcachedClientTest {
     return successCount.get();
   }
 
-//  @Test
-//  public void testSetIfAbsentAsync() throws ExecutionException, InterruptedException {
-//    final String key = UUID.randomUUID().toString();
-//
-//    assertTrue(client.setIfAbsentAsync(key, "value").get());
-//    assertFalse(client.setIfAbsentAsync(key, "value").get());
-//  }
+  @Test
+  public void testSetIfAbsentAsync() throws ExecutionException, InterruptedException {
+    final String key = UUID.randomUUID().toString();
+
+    assertTrue(client.setIfAbsentAsync(key, "value").get());
+    assertFalse(client.setIfAbsentAsync(key, "value").get());
+  }
 
 }
