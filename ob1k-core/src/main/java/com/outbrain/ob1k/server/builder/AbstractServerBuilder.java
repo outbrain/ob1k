@@ -81,7 +81,7 @@ public abstract class AbstractServerBuilder {
   }
 
   protected void registerAllServices() {
-    registerServices(serviceDescriptors, registry);
+    registerServices(serviceDescriptors, getServiceRegistry());
   }
 
   protected ServiceRegistry getServiceRegistry() {
@@ -223,8 +223,8 @@ public abstract class AbstractServerBuilder {
       final Method[] methods = service.getClass().getDeclaredMethods();
       Method method = null;
       for (final Method m : methods) {
-        if (isEndpoint(m)) {
           if (m.getName().equals(methodName)) {
+        if (isEndpoint(m)) {
             if (! isAsyncMethod(m) && ! isStreamingMethod(m)) {
               throw new IllegalArgumentException("Method: " + methodName + " does not return ComposableFuture or Observable");
             }
