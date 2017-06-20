@@ -74,7 +74,7 @@ public abstract class AbstractServerBuilder {
     registerAllServices();
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
+    final NettyServer server = new NettyServer(port, getServiceRegistry(), getMarshallerRegistry(), staticResolver,  activeChannels, contextPath,
             appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
@@ -252,7 +252,7 @@ public abstract class AbstractServerBuilder {
 
     @Override
     public ServiceRegistryView getRegistry() {
-      return registry;
+      return getServiceRegistry();
     }
 
     @Override
