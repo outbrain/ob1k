@@ -74,14 +74,14 @@ public abstract class AbstractServerBuilder {
     registerAllServices();
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
+    final NettyServer server = new NettyServer(port, getServiceRegistry(), getMarshallerRegistry(), staticResolver,  activeChannels, contextPath,
             appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
   }
 
   protected void registerAllServices() {
-    registerServices(serviceDescriptors, registry);
+    registerServices(serviceDescriptors, getServiceRegistry());
   }
 
   protected ServiceRegistry getServiceRegistry() {
@@ -223,8 +223,8 @@ public abstract class AbstractServerBuilder {
       final Method[] methods = service.getClass().getDeclaredMethods();
       Method method = null;
       for (final Method m : methods) {
-        if (isEndpoint(m)) {
           if (m.getName().equals(methodName)) {
+        if (isEndpoint(m)) {
             if (! isAsyncMethod(m) && ! isStreamingMethod(m)) {
               throw new IllegalArgumentException("Method: " + methodName + " does not return ComposableFuture or Observable");
             }
@@ -252,7 +252,7 @@ public abstract class AbstractServerBuilder {
 
     @Override
     public ServiceRegistryView getRegistry() {
-      return registry;
+      return getServiceRegistry();
     }
 
     @Override
