@@ -5,22 +5,76 @@ import com.outbrain.ob1k.concurrent.ComposableFuture;
 import java.util.Map;
 
 /**
- * Created by aronen on 8/27/14.
+ * Ob1k's typed interface for async cache implementations.
+ * All implementations are async using ComposableFuture to represent the result.
  *
- * an interface for local async cache with loader.
+ * @author aronen
  */
 public interface TypedCache<K, V> {
-  ComposableFuture<V> getAsync(final K key);
 
-  ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys);
+  /**
+   * Retrieves a value for a given key.
+   *
+   * @param key cache key
+   * @return future with cache result
+   */
+  ComposableFuture<V> getAsync(K key);
 
-  ComposableFuture<Boolean> setAsync(final K key, final V value);
+  /**
+   * Retrieves multiple values for a given collection of keys.
+   *
+   * @param keys collection of keys
+   * @return future with map of cache results
+   */
+  ComposableFuture<Map<K, V>> getBulkAsync(Iterable<? extends K> keys);
 
-  ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value);
+  /**
+   * Sets a new value for a given key.
+   * Overrides in case the key were already existing.
+   *
+   * @param key   cache key
+   * @param value cache value
+   * @return future with boolean represents operation result
+   */
+  ComposableFuture<Boolean> setAsync(K key, V value);
 
-  ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations);
+  /**
+   * Atomically sets a new value by transforming the current value into a new one.
+   * In case the CAS operation failed, the mapper will be called again and again with the new read value,
+   * until max iterations reach its limit.
+   *
+   * @param key           cache key
+   * @param mapper        cache value mapper
+   * @param maxIterations max iterations
+   * @return future with boolean represents operation result
+   */
+  ComposableFuture<Boolean> setAsync(K key, EntryMapper<K, V> mapper, int maxIterations);
 
-  ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries);
+  /**
+   * Sets new values in bulk operation for a given map of (k, v) pairs.
+   * Overrides in case the key were already existing.
+   * <p>
+   * NOTE: This operation is not guaranteed to be atomic, and depends on the implementation.
+   *
+   * @param entries cache entries
+   * @return future with boolean represents operation result per each key
+   */
+  ComposableFuture<Map<K, Boolean>> setBulkAsync(Map<? extends K, ? extends V> entries);
 
-  ComposableFuture<Boolean> deleteAsync(final K key);
+  /**
+   * Sets a new value for a given key, only if no previous value is set for the key.
+   *
+   * @param key   cache key
+   * @param value cache value
+   * @return future with true in case the set operation succeed, or false if the key's already exists
+   */
+  ComposableFuture<Boolean> setIfAbsentAsync(K key, V value);
+
+  /**
+   * Delete (invalidate) key from cache by key.
+   *
+   * @param key cache key
+   * @return future with boolean represents operation result
+   */
+  ComposableFuture<Boolean> deleteAsync(K key);
 }
