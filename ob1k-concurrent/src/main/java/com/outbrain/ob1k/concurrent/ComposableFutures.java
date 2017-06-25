@@ -487,35 +487,6 @@ public class ComposableFutures {
   }
 
   /**
-   * retries a lazy future on failure "retries" times.
-   *
-   * @param future  the lazy future
-   * @param retries max amount of reties
-   * @param <T>     the future type
-   * @return the composed result.
-   */
-  public static <T> ComposableFuture<T> retryLazy(final ComposableFuture<T> future, final int retries) {
-    return future.recoverWith(error -> {
-      if (retries < 1) {
-        return ComposableFutures.fromError(error);
-      }
-
-      return retryLazy(future, retries - 1);
-    });
-  }
-
-  public static <T> ComposableFuture<T> retryLazy(final ComposableFuture<T> future, final int retries,
-                                                  final long duration, final TimeUnit unit) {
-    return future.withTimeout(duration, unit).recoverWith(error -> {
-      if (retries < 1) {
-        return ComposableFutures.fromError(error);
-      }
-
-      return retryLazy(future, retries - 1, duration, unit);
-    });
-  }
-
-  /**
    * creates a future that fires the first future immediately and a second one after a specified time period
    * if result hasn't arrived yet.
    * should be used with eager futures.
