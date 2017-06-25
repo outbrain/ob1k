@@ -101,7 +101,7 @@ public abstract class Try<T> {
   public abstract <U> Try<U> flatMap(Function<? super T, ? extends Try<? extends U>> function);
 
   /**
-   * Recovers a {@link Failure} Try into a {@link Success} pne
+   * Recovers a {@link Failure} Try into a {@link Success} one.
    *
    * @param recover a function to apply the exception
    * @return a new Success
@@ -109,12 +109,33 @@ public abstract class Try<T> {
   public abstract Try<T> recover(Function<Throwable, ? extends T> recover);
 
   /**
-   * Recovers a {@link Failure} Try into a new supplied Try
+   * Recovers a {@link Failure} Try into a {@link Success} one, applying only for matching
+   * error type.
+   *
+   * @param type    error type to match
+   * @param recover a function to apply the exception
+   * @return a new Success
+   */
+  public abstract <E extends Throwable> Try<T> recover(Class<E> type, Function<E, ? extends T> recover);
+
+  /**
+   * Recovers a {@link Failure} Try into a new supplied Try.
    *
    * @param recover a function to apply the exception
    * @return a new Try
    */
   public abstract Try<T> recoverWith(Function<Throwable, ? extends Try<? extends T>> recover);
+
+  /**
+   * Recovers a {@link Failure} Try into a new supplied Try, applying only for matching
+   * error type.
+   *
+   * @param type    error type to match
+   * @param recover a function to apply the exception
+   * @return a new Try
+   */
+  public abstract <E extends Throwable> Try<T> recoverWith(Class<E> type,
+                                                           Function<E, ? extends Try<? extends T>> recover);
 
   /**
    * Applies mapper function in case of Success, or recover function in case of Failure.
@@ -274,7 +295,18 @@ public abstract class Try<T> {
     }
 
     @Override
+    public <E extends Throwable> Try<T> recover(final Class<E> type, final Function<E, ? extends T> recover) {
+      return this;
+    }
+
+    @Override
     public Try<T> recoverWith(final Function<Throwable, ? extends Try<? extends T>> function) {
+      return this;
+    }
+
+    @Override
+    public <E extends Throwable> Try<T> recoverWith(final Class<E> type,
+                                                    final Function<E, ? extends Try<? extends T>> recover) {
       return this;
     }
 
@@ -371,13 +403,34 @@ public abstract class Try<T> {
     }
 
     @Override
-    public Try<T> recover(final Function<Throwable, ? extends T> function) {
-      return apply(() -> function.apply(error));
+    public Try<T> recover(final Function<Throwable, ? extends T> recover) {
+      return apply(() -> recover.apply(error));
+    }
+
+    @Override
+    public <E extends Throwable> Try<T> recover(final Class<E> type, final Function<E, ? extends T> recover) {
+      if (type.isInstance(error)) {
+        final E matchedError = type.cast(error);
+        return apply(() -> recover.apply(matchedError));
+      }
+
+      return this;
     }
 
     @Override
     public Try<T> recoverWith(final Function<Throwable, ? extends Try<? extends T>> function) {
       return flatten(apply(() -> function.apply(error)));
+    }
+
+    @Override
+    public <E extends Throwable> Try<T> recoverWith(final Class<E> type,
+                                                    final Function<E, ? extends Try<? extends T>> recover) {
+      if (type.isInstance(error)) {
+        final E matchedError = type.cast(error);
+        return flatten(apply(() -> recover.apply(matchedError)));
+      }
+
+      return this;
     }
 
     @Override
