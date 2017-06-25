@@ -1,9 +1,7 @@
 package com.outbrain.ob1k.concurrent;
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.Combiner;
 import com.outbrain.ob1k.concurrent.combiners.FutureBiFunction;
 import com.outbrain.ob1k.concurrent.combiners.FutureTriFunction;
@@ -35,6 +33,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static java.util.function.Function.identity;
 
@@ -99,7 +99,7 @@ public class ComposableFutures {
 
   public static <T1, T2, R> ComposableFuture<R> combine(final ComposableFuture<T1> left,
                                                         final ComposableFuture<T2> right,
-                                                        final BiFunction<T1, T2, R> combiner) {
+                                                        final com.outbrain.ob1k.concurrent.combiners.BiFunction<T1, T2, R> combiner) {
     return Combiner.combine(left, right, combiner);
   }
 
@@ -360,7 +360,8 @@ public class ComposableFutures {
     return LazyComposableFuture.submit(ExecutorServiceHolder.INSTANCE, task, delegateHandler);
   }
 
-  public static <T, S> ComposableFuture<S> from(final T value,final Function<? super T, ? extends S> function) {
+  public static <T, S> ComposableFuture<S> from(final T value,
+                                                final com.google.common.base.Function<? super T, ? extends S> function) {
     return submit(() -> function.apply(value));
   }
 
@@ -448,7 +449,7 @@ public class ComposableFutures {
   }
 
   /**
-   * reties an eager future on failure "retries" times.
+   * retries a given operation N times for each computed Failed future.
    *
    * @param retries max amount of retries
    * @param action  the eager future provider
@@ -456,13 +457,31 @@ public class ComposableFutures {
    * @return the composed result.
    */
   public static <T> ComposableFuture<T> retry(final int retries, final FutureAction<T> action) {
-    return action.execute().recoverWith(error -> {
-      if (retries < 1) {
-        return ComposableFutures.fromError(error);
-      }
+    return retry(retries, __ -> action.execute());
+  }
 
-      return retry(retries - 1, action);
-    });
+  /**
+   * retries a given operation N times for each computed Failed future.
+   *
+   * @param retries  attempts amount
+   * @param producer future producer
+   * @param <T>      result value type
+   * @return future containing retry result value
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> ComposableFuture<T> retry(final int retries, final Function<Integer, ComposableFuture<T>> producer) {
+    final BiFunction<BiFunction, Integer, ComposableFuture<T>> retriable = (f, attempt) ->
+      Try.apply(() -> producer.apply(attempt).recoverWith(error -> {
+          if (attempt >= retries - 1) {
+            return fromError(error);
+          }
+
+          // we can't safely use generics here since we'll get into infinite nested generics
+          return (ComposableFuture<T>) f.apply(f, attempt + 1);
+        })
+      ).recover(ComposableFutures::fromError).getValue();
+
+    return retriable.apply(retriable, 0);
   }
 
   /**
@@ -474,7 +493,9 @@ public class ComposableFutures {
    * @param action   the eager future provider
    * @param <T>      the future type
    * @return the composed result.
+   * @deprecated please define execution cap outside of retry context
    */
+  @Deprecated
   public static <T> ComposableFuture<T> retry(final int retries, final long duration, final TimeUnit unit,
                                               final FutureAction<T> action) {
     return action.execute().withTimeout(duration, unit).recoverWith(error -> {

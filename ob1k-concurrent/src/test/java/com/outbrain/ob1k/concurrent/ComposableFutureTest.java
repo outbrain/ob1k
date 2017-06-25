@@ -135,6 +135,41 @@ public class ComposableFutureTest {
   }
 
   @Test
+  public void testRetry() throws Exception {
+    final int retries = 3;
+    final ComposableFuture<Integer> retryOperation = retry(retries, (attempt) -> {
+      if (attempt < 2) {
+        return fromError(new RuntimeException());
+      }
+
+      return fromValue(attempt);
+    });
+
+    final int result = retryOperation.get();
+
+    assertEquals("successful attempt should be last one", retries - 1, result);
+  }
+
+  @Test
+  public void testRetryCatchesUnhandledException() throws Throwable {
+    final String exceptionMessage = "very bad exception";
+    final AtomicReference<Integer> lastAttempt = new AtomicReference<>();
+    final ComposableFuture<String> failedOperation = retry(5, (attempt) -> {
+      lastAttempt.set(attempt);
+      throw new RuntimeException(exceptionMessage);
+    });
+
+    // error unboxing
+    final String resultedExceptionMessage = Try.apply(failedOperation::get).
+      recoverWith(ExecutionException.class, error -> Try.fromError(error.getCause())).
+      recover(RuntimeException.class, Throwable::getMessage).
+      getValue();
+
+    assertEquals("resulted error is our unhandled exception", exceptionMessage, resultedExceptionMessage);
+    assertEquals("only one attempt should have occur", 0, (int) lastAttempt.get());
+  }
+
+  @Test
   public void testBatchUnordered() throws Exception {
     final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     final ComposableFuture<List<String>> res = batchUnordered(nums, 2, result -> schedule(() -> "num:" + result, 1, TimeUnit.SECONDS));
