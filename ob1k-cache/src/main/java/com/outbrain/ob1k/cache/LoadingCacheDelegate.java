@@ -37,6 +37,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private final CacheLoader<K, V> loader;
   private final String cacheName;
   private final ConcurrentMap<K, ComposablePromise<V>> futureValues;
+  private final boolean failOnError;
 
   private final long duration;
   private final TimeUnit timeUnit;
@@ -59,10 +60,18 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
   public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName,
                               final MetricFactory metricFactory, final long duration, final TimeUnit timeUnit) {
+    // fail on error will be changed to true - but for now, I'll keep behavior compatibility
+    this(cache, loader, cacheName, metricFactory, duration, timeUnit, false);
+  }
+
+  public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName,
+                              final MetricFactory metricFactory, final long duration, final TimeUnit timeUnit,
+                              final boolean failOnError) {
     this.cache = cache;
     this.loader = loader;
     this.cacheName = cacheName;
     this.futureValues = new ConcurrentHashMap<>();
+    this.failOnError = failOnError;
 
     this.duration = duration;
     this.timeUnit = timeUnit;
@@ -188,7 +197,9 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         }
       }
 
-      final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache named: " + cacheName);
+      final ComposableFuture<Map<K, V>> cachedResults = cache.getBulkAsync(processedKeys).
+        withTimeout(duration, timeUnit, "LoadingCacheDelegate fetch bulk from cache named: " + cacheName);
+
       cachedResults.consume(tryGet -> {
         if (tryGet.isSuccess()) {
           final Map<K, V> result = tryGet.getValue();
@@ -226,7 +237,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
         }
       });
 
-      consumeFrom(ComposableFutures.all(false, mapToFutures(res)), consumer);
+      consumeFrom(ComposableFutures.all(failOnError, mapToFutures(res)), consumer);
     });
   }
 
@@ -280,7 +291,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   }
 
   private static <K, V> Map<K, ComposableFuture<V>> mapToFutures(final Map<K, ComposablePromise<V>> promises) {
-    final HashMap<K, ComposableFuture<V>> result = Maps.newHashMapWithExpectedSize(promises.size());
+    final Map<K, ComposableFuture<V>> result = Maps.newHashMapWithExpectedSize(promises.size());
     for (final Map.Entry<K, ComposablePromise<V>> promiseEntry : promises.entrySet()) {
       result.put(promiseEntry.getKey(), promiseEntry.getValue().future());
     }
