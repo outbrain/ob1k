@@ -471,7 +471,9 @@ public class ComposableFutures {
   @SuppressWarnings("unchecked")
   public static <T> ComposableFuture<T> retry(final int retries, final Function<Integer, ComposableFuture<T>> producer) {
     final BiFunction<BiFunction, Integer, ComposableFuture<T>> retriable = (f, attempt) ->
-      Try.apply(() -> producer.apply(attempt).recoverWith(error -> {
+      Try.apply(() -> producer.apply(attempt)).
+        recover(ComposableFutures::fromError).
+        map(action -> action.recoverWith(error -> {
           if (attempt >= retries - 1) {
             return fromError(error);
           }
@@ -479,7 +481,7 @@ public class ComposableFutures {
           // we can't safely use generics here since we'll get into infinite nested generics
           return (ComposableFuture<T>) f.apply(f, attempt + 1);
         })
-      ).recover(ComposableFutures::fromError).getValue();
+      ).getValue();
 
     return retriable.apply(retriable, 0);
   }

@@ -153,9 +153,7 @@ public class ComposableFutureTest {
   @Test
   public void testRetryCatchesUnhandledException() throws Throwable {
     final String exceptionMessage = "very bad exception";
-    final AtomicReference<Integer> lastAttempt = new AtomicReference<>();
     final ComposableFuture<String> failedOperation = retry(5, (attempt) -> {
-      lastAttempt.set(attempt);
       throw new RuntimeException(exceptionMessage);
     });
 
@@ -166,7 +164,6 @@ public class ComposableFutureTest {
       getValue();
 
     assertEquals("resulted error is our unhandled exception", exceptionMessage, resultedExceptionMessage);
-    assertEquals("only one attempt should have occur", 0, (int) lastAttempt.get());
   }
 
   @Test
