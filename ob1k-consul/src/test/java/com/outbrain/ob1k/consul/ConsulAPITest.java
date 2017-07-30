@@ -1,9 +1,11 @@
 package com.outbrain.ob1k.consul;
 
 import com.google.common.collect.Sets;
+import com.pszymczyk.consul.junit.ConsulResource;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -16,8 +18,16 @@ import java.util.concurrent.ExecutionException;
 /**
  * @author Eran Harel
  */
-@Ignore("Randomly failing on TC :(")
 public class ConsulAPITest {
+
+  public static final int CONSUL_HTTP_PORT = 18500;
+  @ClassRule
+  public static final ConsulResource consul = new ConsulResource(CONSUL_HTTP_PORT);
+
+  static {
+    System.setProperty("com.outbrain.ob1k.consul.agent.address", "localhost:" + CONSUL_HTTP_PORT);
+  }
+
   private static final String SERVICE1_NAME = "MockService1";
   private static final String SERVICE2_NAME = "MockService2";
   private static final String TAG1 = "tag1";
@@ -34,8 +44,7 @@ public class ConsulAPITest {
 
   @After
   public void teardown() throws ExecutionException, InterruptedException {
-    ConsulAPI.getServiceRegistry().deregister(SERVICE1_REGISTRATION.getID()).get();
-    ConsulAPI.getServiceRegistry().deregister(SERVICE2_REGISTRATION.getID()).get();
+    consul.reset();
   }
 
   @Ignore // TODO fix
