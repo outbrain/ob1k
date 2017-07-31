@@ -5,6 +5,7 @@ import com.pszymczyk.consul.junit.ConsulResource;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,13 +21,8 @@ import java.util.concurrent.ExecutionException;
  */
 public class ConsulAPITest {
 
-  public static final int CONSUL_HTTP_PORT = 18500;
   @ClassRule
-  public static final ConsulResource consul = new ConsulResource(CONSUL_HTTP_PORT);
-
-  static {
-    System.setProperty("com.outbrain.ob1k.consul.agent.address", "localhost:" + CONSUL_HTTP_PORT);
-  }
+  public static final ConsulResource consul = new ConsulResource();
 
   private static final String SERVICE1_NAME = "MockService1";
   private static final String SERVICE2_NAME = "MockService2";
@@ -35,6 +31,11 @@ public class ConsulAPITest {
   private static final ServiceRegistration.Check passingCheck = new PassingCheck();
   private static final ServiceRegistration SERVICE1_REGISTRATION = new ServiceRegistration(SERVICE1_NAME, null, 8080, Sets.newHashSet(TAG1, TAG2), passingCheck, 0);
   private static final ServiceRegistration SERVICE2_REGISTRATION = new ServiceRegistration(SERVICE2_NAME, null, 8080,  Sets.newHashSet(TAG1), passingCheck, 0);
+
+  @BeforeClass
+  public static void setupBeforeClass() {
+    System.setProperty("com.outbrain.ob1k.consul.agent.address", "localhost:" + consul.getHttpPort());
+  }
 
   @Before
   public void setup() throws ExecutionException, InterruptedException {
