@@ -46,4 +46,9 @@ public class RequestsTestServiceImpl implements RequestsTestService {
   public ComposableFuture<String> printDetails(final String firstName, final String lastName, final int age) {
     return fromValue(firstName + " " + lastName + " (" + age + ")");
   }
+
+  @Override
+  public ComposableFuture<String> optionsUser(int id) {
+    return fromValue(id + " is optional");
+  }
 }

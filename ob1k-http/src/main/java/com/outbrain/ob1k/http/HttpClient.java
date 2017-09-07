@@ -124,6 +124,19 @@ public class HttpClient implements Closeable {
   }
 
   /**
+   * Http options request
+   *
+   * @param url url for the request
+   * @return request builder
+   */
+  public RequestBuilder options(final String url) {
+
+    checkNotNull(url, "url may not be null");
+    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareOptions(url);
+    return createNewRequestBuilder(url, ningRequestBuilder);
+  }
+
+  /**
    * Closing the http client
    *
    * @throws IOException

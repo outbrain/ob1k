@@ -43,6 +43,7 @@ public class BasicServerRpcTest {
             endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
             endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
             endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
+            endpoint(HttpRequestMethodType.OPTIONS, "optionsUser", "/{id}").
             endpoint(HttpRequestMethodType.PUT, "createUser", "/").
             endpoint("printDetails", "/print/{firstName}/{lastName}"))).build();
   }
@@ -127,6 +128,7 @@ public class BasicServerRpcTest {
               bindEndpoint("fetchUser", HttpRequestMethodType.GET, "/{id}").
               bindEndpoint("deleteUser", HttpRequestMethodType.DELETE, "/{id}").
               bindEndpoint("updateUser", HttpRequestMethodType.POST, "/{id}").
+              bindEndpoint("optionsUser", HttpRequestMethodType.OPTIONS, "/{id}").
               setRequestTimeout(100000).
               setProtocol(contentType).
               build();
@@ -164,6 +166,14 @@ public class BasicServerRpcTest {
         final String deleteUser = client.deleteUser(1).get();
         Assert.assertTrue("response should be great success",
                 Objects.equals(deleteUser, RequestsTestServiceImpl.GREAT_SUCCESS));
+      } catch (final Exception e) {
+        Assert.fail("Shouldn't have fail: " + e.getMessage());
+      }
+
+      try {
+        final String optionUser = client.optionsUser(1).get();
+        Assert.assertTrue("response should be optional (pun intended)",
+                Objects.equals(optionUser, "1 is optional"));
       } catch (final Exception e) {
         Assert.fail("Shouldn't have fail: " + e.getMessage());
       }
