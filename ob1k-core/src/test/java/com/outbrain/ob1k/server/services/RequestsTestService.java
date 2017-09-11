@@ -53,6 +53,7 @@ public interface RequestsTestService extends Service {
   ComposableFuture<Person> fetchUser(int id);
   ComposableFuture<String> updateUser(int id, String name, String profession);
   ComposableFuture<String> deleteUser(int id);
+  ComposableFuture<String> optionsUser(int id);
   ComposableFuture<Person> createUser(String name, String profession);
   ComposableFuture<String> printDetails(String firstName, String lastName, int age);
 }

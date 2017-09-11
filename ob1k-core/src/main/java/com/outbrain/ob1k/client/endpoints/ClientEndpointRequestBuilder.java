@@ -67,6 +67,9 @@ class ClientEndpointRequestBuilder {
       case DELETE:
         requestBuilder = httpClient.delete(ctx.getUrl());
         break;
+      case OPTIONS:
+        requestBuilder = httpClient.options(ctx.getUrl());
+        break;
       default:
         requestBuilder = httpClient.post(ctx.getUrl());
     }

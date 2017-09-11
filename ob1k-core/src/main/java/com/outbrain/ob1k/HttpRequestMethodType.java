@@ -11,5 +11,6 @@ public enum HttpRequestMethodType {
   POST,
   PUT,
   DELETE,
-  ANY
+  ANY,
+  OPTIONS
 }

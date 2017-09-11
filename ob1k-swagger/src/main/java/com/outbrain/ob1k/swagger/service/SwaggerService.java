@@ -78,6 +78,9 @@ public class SwaggerService implements Service {
             case DELETE:
               path.delete(buildOperation(endpoint, tag, methodType));
               break;
+            case OPTIONS:
+              path.options(buildOperation(endpoint, tag, methodType));
+              break;
             default:
               throw new UnsupportedOperationException("Unsupported method type " + methodType);
           }
