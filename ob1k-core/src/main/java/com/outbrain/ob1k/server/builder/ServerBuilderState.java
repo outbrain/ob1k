@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.netty.channel.ChannelHandler;
+
 /**
  * state of the Server Builder.
  * This interface is used to expose the inner state of the builder to specific section builders
@@ -57,6 +59,8 @@ public interface ServerBuilderState {
   void setFiltersToLastDescriptor(ServiceFilter... filters);
 
   void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
+
+  void addChannelHandler(final ChannelHandler channelHandler);
 
   ServiceRegistryView getRegistry();
 

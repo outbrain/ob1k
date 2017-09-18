@@ -2,6 +2,8 @@ package com.outbrain.ob1k.server;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Response;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
@@ -23,6 +25,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsHandler;
 
 /**
  * @author aronen
@@ -295,6 +301,33 @@ public class BasicServerRpcTest {
       if (server != null)
         server.stop();
     }
+  }
+
+  @Test
+  public void testCorsChannelHandler() throws Exception {
+    CorsConfig corsConfig = CorsConfig.withAnyOrigin()
+                                              .allowCredentials()
+                                              .maxAge(10)
+                                              .allowNullOrigin()
+                                              .allowedRequestHeaders("Content-Type,Accept,Origin")
+                                              .allowedRequestMethods(HttpMethod.GET, HttpMethod.POST, HttpMethod.OPTIONS)
+                                              .build();
+
+    final Server server = ServerBuilder
+             .newBuilder().contextPath("/test")
+             .configure(b -> b.addChannelHandler(new CorsHandler(corsConfig)))
+             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple")).build();
+     final int port = server.start().getPort();
+    AsyncHttpClient c = new AsyncHttpClient();
+    Response r = c.prepareOptions("http://localhost:" + port + "/test/simple/method1")
+                  .addHeader("Origin", "http://blah.com")
+                  .addHeader("Access-Control-Request-Method", "POST")
+                  .execute().get();
+    Assert.assertEquals(200, r.getStatusCode());
+    Assert.assertEquals("POST", r.getHeader("Access-Control-Allow-Methods"));
+    Assert.assertEquals("Content-Type,Accept,Origin", r.getHeader("Access-Control-Allow-Headers"));
+    Assert.assertEquals("0", r.getHeader("Content-Length"));
+    Assert.assertEquals("http://blah.com", r.getHeader("Access-Control-Allow-Origin"));
   }
 
   @Test

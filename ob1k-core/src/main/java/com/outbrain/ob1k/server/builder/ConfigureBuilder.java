@@ -5,6 +5,8 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.concurrent.TimeUnit;
 
+import io.netty.channel.ChannelHandler;
+
 /**
  * portion of the ServerBuilder methods used for configuration.
  *
@@ -78,6 +80,10 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
     return self();
   }
 
+  public B addChannelHandler(final ChannelHandler channelHandler) {
+    state.addChannelHandler(channelHandler);
+    return self();
+  }
   @SuppressWarnings("unchecked")
   private B self() {
     return (B) this;
