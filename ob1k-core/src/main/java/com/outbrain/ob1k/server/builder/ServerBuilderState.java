@@ -4,14 +4,13 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import io.netty.channel.ChannelHandler;
 
 /**
  * state of the Server Builder.
@@ -60,7 +59,7 @@ public interface ServerBuilderState {
 
   void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
 
-  void addChannelHandler(final ChannelHandler channelHandler);
+  void setCors(CorsConfig corsConfig);
 
   ServiceRegistryView getRegistry();
 

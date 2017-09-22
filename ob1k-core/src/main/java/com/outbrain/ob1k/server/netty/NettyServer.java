@@ -3,11 +3,11 @@ package com.outbrain.ob1k.server.netty;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -17,9 +17,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.cors.CorsHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
@@ -31,9 +33,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -61,13 +65,13 @@ public class NettyServer implements Server {
   private final MetricFactory metricFactory;
   private final int maxContentLength;
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
-  private final List<ChannelHandler> channelHandlers = new ArrayList<>();
+  private final CorsConfig corsConfig;
 
   public NettyServer(final int port, final ServiceRegistry registry, final RequestMarshallerRegistry marshallerRegistry,
                      final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
-                     final int maxContentLength, final long requestTimeoutMs, final List<ChannelHandler> channelHandlers) {
+                     final int maxContentLength, final long requestTimeoutMs, final CorsConfig corsConfig) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
     this.staticResolver = staticResolver;
@@ -83,7 +87,7 @@ public class NettyServer implements Server {
     this.maxContentLength = maxContentLength;
     this.requestTimeoutMs = requestTimeoutMs;
     this.idleTimeoutMs = idleTimeoutMs;
-    this.channelHandlers.addAll(channelHandlers);
+    this.corsConfig = corsConfig;
     registry.logRegisteredEndpoints();
   }
 
@@ -188,6 +192,44 @@ public class NettyServer implements Server {
     }
   }
 
+  private static CorsHandler getCorsHandler(CorsConfig corsConfig) {
+    io.netty.handler.codec.http.cors.CorsConfig.Builder nettyBuilder =
+      new io.netty.handler.codec.http.cors.CorsConfig.Builder();
+
+    nettyBuilder.allowedRequestHeaders(corsConfig.allowedRequestHeaders().toArray(new String[]{}));
+    nettyBuilder.exposeHeaders(corsConfig.exposedHeaders().toArray(new String[]{}));
+    nettyBuilder.allowedRequestMethods(convertHeaders(corsConfig.allowedRequestMethods()));
+    nettyBuilder.maxAge(corsConfig.maxAge());
+
+    if (corsConfig.isCredentialsAllowed()) {
+      nettyBuilder.allowCredentials();
+    }
+    if (corsConfig.isShortCircuit()) {
+      nettyBuilder.shortCurcuit();
+    }
+    if (!corsConfig.isCorsSupportEnabled()) {
+      nettyBuilder.disable();
+    }
+    if (corsConfig.isNullOriginAllowed()) {
+      nettyBuilder.allowNullOrigin();
+    }
+    if (corsConfig.noPreflightHeaders()) {
+      nettyBuilder.noPreflightResponseHeaders();
+    }
+    return new CorsHandler(nettyBuilder.build());
+  }
+
+  private static HttpMethod[] convertHeaders(Set<String> sMethods) {
+    HttpMethod[] methods = new HttpMethod[sMethods.size()];
+    Iterator<String> iterator = sMethods.iterator();
+    int i = 0;
+    while (iterator.hasNext()) {
+      //TODO Handle Invalid Method?
+      methods[i++] =  HttpMethod.valueOf(iterator.next());
+    }
+    return methods;
+  }
+
   private class RPCServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final int maxContentLength;
@@ -221,13 +263,13 @@ public class NettyServer implements Server {
       }
 
       p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
+
+      if (corsConfig.isCorsSupportEnabled()) {
+        p.addLast("cors", getCorsHandler(corsConfig));
+      }
+
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
           marshallerRegistry, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
-      
-      for (int i = 0; i < channelHandlers.size(); i++) {
-        ChannelHandler channelHandler = channelHandlers.get(i);
-        p.addBefore("handler", channelHandler.getClass().getSimpleName(), channelHandler);
-      }
     }
   }
 

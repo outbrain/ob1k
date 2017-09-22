@@ -8,11 +8,11 @@ import com.outbrain.ob1k.common.filters.StreamFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -61,10 +61,9 @@ public abstract class AbstractServerBuilder {
   private final Set<String> staticFolders = new HashSet<>();
   private final Map<String, String> staticResources = new HashMap<>();
   private final Map<String, String> staticMappings = new HashMap<>();
-  private final List<ChannelHandler> channelHandlers = new ArrayList<>();
-
   private final ServiceRegistry registry;
   private final RequestMarshallerRegistry marshallerRegistry;
+  private CorsConfig corsConfig = new CorsConfig.Builder().disable().build();
 
   protected AbstractServerBuilder() {
     this.marshallerRegistry = new RequestMarshallerRegistry();
@@ -77,7 +76,7 @@ public abstract class AbstractServerBuilder {
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
-            appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs, channelHandlers);
+            appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs, corsConfig);
     server.addListeners(listeners);
     return server;
   }
@@ -157,8 +156,8 @@ public abstract class AbstractServerBuilder {
     }
 
     @Override
-    public void addChannelHandler(ChannelHandler channelHandler) {
-      channelHandlers.add(channelHandler);
+    public void setCors(CorsConfig corsConfigToUse) {
+      corsConfig = corsConfigToUse;
     }
 
     @Override

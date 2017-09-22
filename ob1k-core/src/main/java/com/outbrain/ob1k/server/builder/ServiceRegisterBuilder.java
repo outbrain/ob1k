@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.builder;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.server.builder.ServiceBindBuilder.ServiceBindBuilderSection;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 
 /**
  * portion of the ServerBuilder methods used for service registration.
@@ -44,6 +45,11 @@ public class ServiceRegisterBuilder<B extends ServiceRegisterBuilder<B>> {
 
   public B withFilters(final ServiceFilter... filters) {
     state.setFiltersToLastDescriptor(filters);
+    return self();
+  }
+
+  public B withCors(final CorsConfig corsConfig) {
+    state.setCors(corsConfig);
     return self();
   }
 
