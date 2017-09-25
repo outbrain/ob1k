@@ -203,8 +203,8 @@ public class NettyServer implements Server {
       //p.addLast("ssl", new SslHandler(engine));
 
       p.addLast("decoder", new HttpRequestDecoder(16384, 8192, 16384));
-      p.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
       p.addLast("encoder", new HttpResponseEncoder());
+      p.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
 
       p.addLast("chunkedWriter", new ChunkedWriteHandler());
       p.addLast("static", staticFileServerHandler);
