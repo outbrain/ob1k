@@ -312,7 +312,6 @@ public class BasicServerRpcTest {
     CorsConfig corsConfig = CorsConfig.withAnyOrigin()
                                       .allowCredentials()
                                       .maxAge(10)
-                                      .allowNullOrigin()
                                       .allowedRequestHeaders("Content-Type,Accept,Origin")
                                       .allowedRequestMethods("GET", "POST", "OPTIONS")
                                       .exposeHeaders("X-Exposed")
@@ -323,9 +322,10 @@ public class BasicServerRpcTest {
              .configure(b -> b.withCors(corsConfig))
              .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
              .build();
-     final int port = server.start().getPort();
+    final int port = server.start().getPort();
+    final String uri = String.format("http://localhost:%s/test/simple/method1", port);
     AsyncHttpClient c = new AsyncHttpClient();
-    Response r = c.prepareOptions("http://localhost:" + port + "/test/simple/method1")
+    Response r = c.prepareOptions(uri)
                   .addHeader("Origin", "http://blah.com")
                   .addHeader("Access-Control-Request-Method", "POST")
                   .execute().get();
@@ -337,20 +337,13 @@ public class BasicServerRpcTest {
     Assert.assertEquals("Origin", r.getHeader(HttpHeaders.Names.VARY));
     Assert.assertEquals("10", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE));
     Assert.assertTrue(r.getHeader(HttpHeaders.Names.DATE) != null);
-
-    r = c.prepareOptions("http://localhost:" + port + "/test/simple/method1")
-         .addHeader("Access-Control-Request-Method", "POST")
-         .execute().get();
-    Assert.assertEquals(200, r.getStatusCode());
-    Assert.assertEquals("http://blah.com", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN));
   }
 
   @Test
   public void testCorsOrigin() throws Exception {
     CorsConfig corsConfig = CorsConfig.withAnyOrigin()
-                                      .allowCredentials()
-                                      .maxAge(10)
                                       .allowNullOrigin()
+                                      .maxAge(10)
                                       .allowedRequestHeaders("Content-Type,Accept,Origin")
                                       .allowedRequestMethods("GET", "POST", "OPTIONS")
                                       .exposeHeaders("X-Exposed")
@@ -362,25 +355,20 @@ public class BasicServerRpcTest {
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
     final int port = server.start().getPort();
+    final String uri = String.format("http://localhost:%s/test/simple/method1", port);
     AsyncHttpClient c = new AsyncHttpClient();
-    Response r = c.prepareOptions("http://localhost:" + port + "/test/simple/method1")
-                  .addHeader("Origin", "http://blah.com")
+    Response r = c.prepareOptions(uri)
+                  .addHeader("Origin", "null")
                   .addHeader("Access-Control-Request-Method", "POST")
                   .execute().get();
     Assert.assertEquals(200, r.getStatusCode());
     Assert.assertEquals("POST", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS));
     Assert.assertEquals("Content-Type,Accept,Origin", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS));
     Assert.assertEquals("0", r.getHeader(HttpHeaders.Names.CONTENT_LENGTH));
-    Assert.assertEquals("http://blah.com", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN));
-    Assert.assertEquals("Origin", r.getHeader(HttpHeaders.Names.VARY));
+    Assert.assertEquals("*", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN));
+    Assert.assertNull(r.getHeader(HttpHeaders.Names.VARY));
     Assert.assertEquals("10", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE));
     Assert.assertTrue(r.getHeader(HttpHeaders.Names.DATE) != null);
-
-    r = c.prepareOptions("http://localhost:" + port + "/test/simple/method1")
-         .addHeader("Access-Control-Request-Method", "POST")
-         .execute().get();
-    Assert.assertEquals(200, r.getStatusCode());
-    Assert.assertEquals("http://blah.com", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN));
   }
 
 
