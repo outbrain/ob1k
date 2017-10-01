@@ -387,6 +387,7 @@ public class BasicServerRpcTest {
                   .execute().get();
     //Origin request will produce 501 because OPTIONS method is not supported
     Assert.assertEquals(501, r.getStatusCode());
+    Assert.assertEquals("\"java.lang.IllegalArgumentException: Unsupported http method type\"", r.getResponseBody());
   }
 
     @Test
@@ -403,6 +404,7 @@ public class BasicServerRpcTest {
                   .execute().get();
     //Origin request will produce 501 because OPTIONS method is not supported
     Assert.assertEquals(501, r.getStatusCode());
+    Assert.assertEquals("\"java.lang.IllegalArgumentException: Unsupported http method type\"", r.getResponseBody());
   }
     @Test
   public void testNoCors() throws Exception {
@@ -419,6 +421,7 @@ public class BasicServerRpcTest {
                   .execute().get();
     //Origin request will produce 501 because OPTIONS method is not supported
     Assert.assertEquals(501, r.getStatusCode());
+    Assert.assertEquals("\"java.lang.IllegalArgumentException: Unsupported http method type\"", r.getResponseBody());
   }
 
   @Test
