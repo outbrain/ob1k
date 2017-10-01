@@ -390,7 +390,7 @@ public class BasicServerRpcTest {
   }
 
     @Test
-  public void testNoCors() throws Exception {
+  public void testNoCorsDefault() throws Exception {
     final Server server = ServerBuilder
                             .newBuilder().contextPath("/test")
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
@@ -404,7 +404,22 @@ public class BasicServerRpcTest {
     //Origin request will produce 501 because OPTIONS method is not supported
     Assert.assertEquals(501, r.getStatusCode());
   }
-
+    @Test
+  public void testNoCors() throws Exception {
+    final Server server = ServerBuilder
+                            .newBuilder().contextPath("/test")
+                            .configure(c -> new CorsConfig.Builder().disable().build())
+                            .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
+                            .build();
+    final int port = server.start().getPort();
+    final String uri = String.format("http://localhost:%s/test/simple/method1", port);
+    AsyncHttpClient c = new AsyncHttpClient();
+    Response r = c.prepareOptions(uri)
+                  .addHeader("Access-Control-Request-Method", "POST")
+                  .execute().get();
+    //Origin request will produce 501 because OPTIONS method is not supported
+    Assert.assertEquals(501, r.getStatusCode());
+  }
 
   @Test
   public void testNoParamMethod() throws Exception {
