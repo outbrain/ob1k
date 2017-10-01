@@ -340,8 +340,8 @@ public class BasicServerRpcTest {
   }
 
   @Test
-  public void testCorsOrigin() throws Exception {
-    CorsConfig corsConfig = CorsConfig.withAnyOrigin()
+  public void testCorsNullOrigin() throws Exception {
+    final CorsConfig corsConfig = CorsConfig.withAnyOrigin()
                                       .allowNullOrigin()
                                       .maxAge(10)
                                       .allowedRequestHeaders("Content-Type,Accept,Origin")
@@ -369,6 +369,40 @@ public class BasicServerRpcTest {
     Assert.assertNull(r.getHeader(HttpHeaders.Names.VARY));
     Assert.assertEquals("10", r.getHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE));
     Assert.assertTrue(r.getHeader(HttpHeaders.Names.DATE) != null);
+  }
+
+  @Test
+  public void testCorsOrigin() throws Exception {
+    final CorsConfig corsConfig = CorsConfig.withOrigin("http://cors.com").build();
+    final Server server = ServerBuilder
+                            .newBuilder().contextPath("/test")
+                            .configure(b -> b.withCors(corsConfig))
+                            .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
+                            .build();
+    final int port = server.start().getPort();
+    final String uri = String.format("http://localhost:%s/test/simple/method1", port);
+    AsyncHttpClient c = new AsyncHttpClient();
+    Response r = c.prepareOptions(uri)
+                  .addHeader("Access-Control-Request-Method", "POST")
+                  .execute().get();
+    //Origin request will produce 501 because OPTIONS method is not supported
+    Assert.assertEquals(501, r.getStatusCode());
+  }
+
+    @Test
+  public void testNoCors() throws Exception {
+    final Server server = ServerBuilder
+                            .newBuilder().contextPath("/test")
+                            .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
+                            .build();
+    final int port = server.start().getPort();
+    final String uri = String.format("http://localhost:%s/test/simple/method1", port);
+    AsyncHttpClient c = new AsyncHttpClient();
+    Response r = c.prepareOptions(uri)
+                  .addHeader("Access-Control-Request-Method", "POST")
+                  .execute().get();
+    //Origin request will produce 501 because OPTIONS method is not supported
+    Assert.assertEquals(501, r.getStatusCode());
   }
 
 
