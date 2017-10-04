@@ -2,19 +2,13 @@ package com.outbrain.ob1k.server;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.client.ClientBuilder;
 import com.outbrain.ob1k.client.Clients;
 import com.outbrain.ob1k.client.targets.SimpleTargetProvider;
-import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
-import com.outbrain.ob1k.server.cors.CorsConfig;
-import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext;
 import com.outbrain.ob1k.server.entities.OtherEntity;
 import com.outbrain.ob1k.server.entities.TestEntity;
 import com.outbrain.ob1k.server.services.RequestsTestService;
@@ -29,10 +23,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-
 
 /**
  * @author aronen
@@ -307,6 +297,7 @@ public class BasicServerRpcTest {
     }
   }
 
+  @Test
   public void testNoParamMethod() throws Exception {
     Server server = null;
     SimpleTestService client = null;

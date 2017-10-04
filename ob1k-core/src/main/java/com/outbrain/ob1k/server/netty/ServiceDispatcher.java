@@ -30,7 +30,6 @@ public class ServiceDispatcher {
   public void callServiceRequest(final Request request, final ResponseHandler handler)
       throws InvocationTargetException, IllegalAccessException, IOException {
 
-
     final String path = request.getPath();
     final HttpRequestMethodType methodType;
 

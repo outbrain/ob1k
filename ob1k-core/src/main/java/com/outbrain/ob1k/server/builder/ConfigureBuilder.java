@@ -6,8 +6,6 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import io.netty.channel.ChannelHandler;
-
 /**
  * portion of the ServerBuilder methods used for configuration.
  *
