@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.server.netty;
 
+import static com.outbrain.ob1k.server.cors.CorsConverter.convertHandler;
+
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
@@ -192,44 +194,6 @@ public class NettyServer implements Server {
     }
   }
 
-  private static CorsHandler getCorsHandler(CorsConfig corsConfig) {
-    io.netty.handler.codec.http.cors.CorsConfig.Builder nettyBuilder =
-      new io.netty.handler.codec.http.cors.CorsConfig.Builder();
-
-    nettyBuilder.allowedRequestHeaders(corsConfig.allowedRequestHeaders().toArray(new String[]{}));
-    nettyBuilder.exposeHeaders(corsConfig.exposedHeaders().toArray(new String[]{}));
-    nettyBuilder.allowedRequestMethods(convertHeaders(corsConfig.allowedRequestMethods()));
-    nettyBuilder.maxAge(corsConfig.maxAge());
-
-    if (corsConfig.isCredentialsAllowed()) {
-      nettyBuilder.allowCredentials();
-    }
-    if (corsConfig.isShortCircuit()) {
-      nettyBuilder.shortCurcuit();
-    }
-    if (!corsConfig.isCorsSupportEnabled()) {
-      nettyBuilder.disable();
-    }
-    if (corsConfig.isNullOriginAllowed()) {
-      nettyBuilder.allowNullOrigin();
-    }
-    if (corsConfig.noPreflightHeaders()) {
-      nettyBuilder.noPreflightResponseHeaders();
-    }
-    return new CorsHandler(nettyBuilder.build());
-  }
-
-  private static HttpMethod[] convertHeaders(Set<String> sMethods) {
-    HttpMethod[] methods = new HttpMethod[sMethods.size()];
-    Iterator<String> iterator = sMethods.iterator();
-    int i = 0;
-    while (iterator.hasNext()) {
-      //TODO Handle Invalid Method?
-      methods[i++] =  HttpMethod.valueOf(iterator.next());
-    }
-    return methods;
-  }
-
   private class RPCServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final int maxContentLength;
@@ -265,7 +229,7 @@ public class NettyServer implements Server {
       p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
 
       if (corsConfig.isCorsSupportEnabled()) {
-        p.addLast("cors", getCorsHandler(corsConfig));
+        p.addLast("cors", convertHandler(corsConfig));
       }
 
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,

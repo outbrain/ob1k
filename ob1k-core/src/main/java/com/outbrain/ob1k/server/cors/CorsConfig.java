@@ -1,18 +1,3 @@
-/*
- * Copyright 2013 The Netty Project
- *
- * The Netty Project licenses this file to you under the Apache License, version
- * 2.0 (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.outbrain.ob1k.server.cors;
 
 import java.util.Arrays;
@@ -60,7 +45,7 @@ public final class CorsConfig {
     allowedRequestHeaders = builder.requestHeaders;
     allowNullOrigin = builder.allowNullOrigin;
     preflightHeaders = builder.preflightHeaders;
-    shortCircuit = builder.shortCurcuit;
+    shortCircuit = builder.shortCircuit;
     noPreflightHeaders = builder.noPreflightHeaders;
   }
 
@@ -208,7 +193,7 @@ public final class CorsConfig {
    * and this setting will check that the Origin is valid and if it is not valid no
    * further processing will take place, and a error will be returned to the calling client.
    *
-   * @return {@code true} if a CORS request should short-curcuit upon receiving an invalid Origin header.
+   * @return {@code true} if a CORS request should short-circuit upon receiving an invalid Origin header.
    */
   public boolean isShortCircuit() {
     return shortCircuit;
@@ -281,7 +266,7 @@ public final class CorsConfig {
     private final Set<String> requestHeaders = new HashSet<>();
     private final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<>();
     private boolean noPreflightHeaders;
-    private boolean shortCurcuit;
+    private boolean shortCircuit;
 
     /**
      * Creates a new Builder instance with the origin passed in.
@@ -509,8 +494,8 @@ public final class CorsConfig {
      *
      * @return {@link Builder} to support method chaining.
      */
-    public Builder shortCurcuit() {
-      shortCurcuit = true;
+    public Builder shortCircuit() {
+      shortCircuit = true;
       return this;
     }
   }

@@ -47,6 +47,11 @@
       <url>https://linkedin.com/in/arenzon</url>
       <email>marenzon@outbrain.com</email>
     </developer>
+    <developer>
+      <name>Douglas Chimento</name>
+      <url>https://github.com/dougEfresh</url>
+      <email>dchimento@outbrain.com</email>
+    </developer>
   </developers>
 
   <modules>

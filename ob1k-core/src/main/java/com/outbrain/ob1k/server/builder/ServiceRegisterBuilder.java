@@ -48,11 +48,6 @@ public class ServiceRegisterBuilder<B extends ServiceRegisterBuilder<B>> {
     return self();
   }
 
-  public B withCors(final CorsConfig corsConfig) {
-    state.setCors(corsConfig);
-    return self();
-  }
-
   @SuppressWarnings("unchecked")
   protected B self() {
     return (B) this;
