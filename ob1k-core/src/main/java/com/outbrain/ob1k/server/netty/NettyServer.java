@@ -1,11 +1,10 @@
 package com.outbrain.ob1k.server.netty;
 
-import static com.outbrain.ob1k.server.cors.CorsConverter.convertHandler;
-
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.cors.CorsConfig;
+import com.outbrain.ob1k.server.cors.ObCorsHandler;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.bootstrap.ServerBootstrap;
@@ -223,7 +222,7 @@ public class NettyServer implements Server {
       p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
 
       if (corsConfig.isCorsSupportEnabled()) {
-        p.addLast("cors", convertHandler(corsConfig));
+        p.addLast("cors", new ObCorsHandler(corsConfig));
       }
 
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
