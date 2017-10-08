@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.cors.CorsHandler;
 
 /**
  * Convert Outbrain Cors to {@link CorsHandler}.
