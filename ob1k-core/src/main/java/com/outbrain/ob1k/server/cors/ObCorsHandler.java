@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cors.CorsHandler;
 
 
 /**
@@ -16,7 +17,7 @@ import io.netty.handler.codec.http.HttpMethod;
  *
  * @author Doug Chimento &lt;dchimento@outbrain.com&gt;
  */
-public final class ObCorsHandler extends io.netty.handler.codec.http.cors.CorsHandler {
+public final class ObCorsHandler extends CorsHandler {
   private static final Logger logger = LoggerFactory.getLogger(ObCorsHandler.class);
 
   public ObCorsHandler(final CorsConfig config) {
