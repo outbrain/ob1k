@@ -6,6 +6,7 @@ import com.github.mauricio.async.db.exceptions.ConnectionNotConnectedException;
 import com.github.mauricio.async.db.exceptions.ConnectionStillRunningQueryException;
 import com.github.mauricio.async.db.mysql.MySQLConnection;
 import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
 import scala.Option;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -43,8 +44,13 @@ public class BasicTestingDao extends BasicDao implements AutoCloseable {
   }
 
   @Override
+  public <T> ComposableFuture<T> withTransaction(final TransactionHandler<T> handler) {
+    return withConnection(handler);
+  }
+
+  @Override
   public void close() throws Exception {
-    execute("ROLLBACK;").alwaysWith(result -> shutdown()).get();
+    execute("rollback;").alwaysWith(result -> shutdown()).get();
   }
 
   private static class NonCommittingSingleConnectionFactory extends MySQLConnectionFactory {
@@ -63,7 +69,7 @@ public class BasicTestingDao extends BasicDao implements AutoCloseable {
       }
 
       final MySQLConnection conn = super.create();
-      final Future<QueryResult> futureRes = conn.sendQuery("SET autocommit=0;");
+      final Future<QueryResult> futureRes = conn.sendQuery("start transaction;");
       try {
         Await.result(futureRes, configuration.connectTimeout());
         return conn;
