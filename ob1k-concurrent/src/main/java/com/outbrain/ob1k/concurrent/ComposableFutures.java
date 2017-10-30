@@ -474,7 +474,7 @@ public class ComposableFutures {
       Try.apply(() -> producer.apply(attempt)).
         recover(ComposableFutures::fromError).
         map(action -> action.recoverWith(error -> {
-          if (attempt >= retries - 1) {
+          if (attempt >= retries) {
             return fromError(error);
           }
 

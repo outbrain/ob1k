@@ -136,9 +136,10 @@ public class ComposableFutureTest {
 
   @Test
   public void testRetry() throws Exception {
-    final int retries = 3;
+    final int retries = 1;
+
     final ComposableFuture<Integer> retryOperation = retry(retries, (attempt) -> {
-      if (attempt < 2) {
+      if (attempt < retries) {
         return fromError(new RuntimeException());
       }
 
@@ -146,14 +147,17 @@ public class ComposableFutureTest {
     });
 
     final int result = retryOperation.get();
-
-    assertEquals("successful attempt should be last one", retries - 1, result);
+    assertEquals("successful attempt should be last one", retries, result);
   }
 
   @Test
   public void testRetryCatchesUnhandledException() throws Throwable {
     final String exceptionMessage = "very bad exception";
-    final ComposableFuture<String> failedOperation = retry(5, (attempt) -> {
+    final AtomicInteger attempts = new AtomicInteger(0);
+    final int retries = 5;
+
+    final ComposableFuture<String> failedOperation = retry(retries, (attempt) -> {
+      attempts.incrementAndGet();
       throw new RuntimeException(exceptionMessage);
     });
 
@@ -163,6 +167,7 @@ public class ComposableFutureTest {
       recover(RuntimeException.class, Throwable::getMessage).
       getValue();
 
+    assertEquals("attempts number should be equal to retries plus first run", retries + 1, attempts.get());
     assertEquals("resulted error is our unhandled exception", exceptionMessage, resultedExceptionMessage);
   }
 
