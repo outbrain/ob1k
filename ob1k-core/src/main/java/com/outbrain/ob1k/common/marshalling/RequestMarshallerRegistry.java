@@ -6,6 +6,8 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * @author aronen
  */
@@ -13,11 +15,14 @@ public class RequestMarshallerRegistry {
 
   private final Map<String, RequestMarshaller> marshallers;
 
+  public RequestMarshallerRegistry(final Map<String, RequestMarshaller> marshallers) {
+    this.marshallers = requireNonNull(marshallers);
+  }
+
   public RequestMarshallerRegistry() {
-    marshallers = new HashMap<>();
-    marshallers.put(ContentType.JSON.requestEncoding(), new JsonRequestMarshaller());
-    final MessagePackRequestMarshaller messagePackRequestMarshaller = new MessagePackRequestMarshaller();
-    marshallers.put(ContentType.MESSAGE_PACK.requestEncoding(), messagePackRequestMarshaller);
+    this.marshallers = new HashMap<>();
+    this.marshallers.put(ContentType.JSON.requestEncoding(), new JsonRequestMarshaller());
+    this.marshallers.put(ContentType.MESSAGE_PACK.requestEncoding(), new MessagePackRequestMarshaller());
   }
 
   public RequestMarshaller getMarshaller(final String contentType) {

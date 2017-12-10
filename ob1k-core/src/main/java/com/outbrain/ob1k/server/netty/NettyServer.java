@@ -59,7 +59,7 @@ public class NettyServer implements Server {
   private final int maxContentLength;
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
 
-  public NettyServer(final int port, final ServiceRegistry registry, final RequestMarshallerRegistry marshallerRegistry,
+  public NettyServer(final int port, final ServiceRegistry registry,
                      final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
@@ -70,7 +70,7 @@ public class NettyServer implements Server {
     this.activeChannels = activeChannels;
     this.contextPath = contextPath;
     this.applicationName = applicationName;
-    this.marshallerRegistry = marshallerRegistry;
+    this.marshallerRegistry = registry.getMarshallerRegistry();
     this.dispatcher = new ServiceDispatcher(registry, marshallerRegistry);
     this.nioGroup = new NioEventLoopGroup();
     this.acceptKeepAlive = acceptKeepAlive;

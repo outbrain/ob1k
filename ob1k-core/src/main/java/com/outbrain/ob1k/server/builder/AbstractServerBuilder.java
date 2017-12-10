@@ -5,6 +5,7 @@ import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.filters.StreamFilter;
+import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
@@ -26,7 +27,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
+
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isAsyncMethod;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isEndpoint;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isStreamingMethod;
 import static java.util.Collections.unmodifiableList;
 
 /**
@@ -62,11 +66,9 @@ public abstract class AbstractServerBuilder {
   private final Map<String, String> staticMappings = new HashMap<>();
 
   private final ServiceRegistry registry;
-  private final RequestMarshallerRegistry marshallerRegistry;
 
   protected AbstractServerBuilder() {
-    this.marshallerRegistry = new RequestMarshallerRegistry();
-    this.registry = new ServiceRegistry(marshallerRegistry);
+    this.registry = new ServiceRegistry();
   }
 
   public final Server build() {
@@ -74,7 +76,7 @@ public abstract class AbstractServerBuilder {
     registerAllServices();
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
-    final NettyServer server = new NettyServer(port, registry, marshallerRegistry, staticResolver,  activeChannels, contextPath,
+    final NettyServer server = new NettyServer(port, registry, staticResolver,  activeChannels, contextPath,
             appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
     server.addListeners(listeners);
     return server;
@@ -89,7 +91,7 @@ public abstract class AbstractServerBuilder {
   }
 
   protected RequestMarshallerRegistry getMarshallerRegistry() {
-    return marshallerRegistry;
+    return registry.getMarshallerRegistry();
   }
 
   protected ServerBuilderState innerState() {
@@ -225,7 +227,7 @@ public abstract class AbstractServerBuilder {
       for (final Method m : methods) {
         if (isEndpoint(m)) {
           if (m.getName().equals(methodName)) {
-            if (! isAsyncMethod(m) && ! isStreamingMethod(m)) {
+            if (!isAsyncMethod(m) && !isStreamingMethod(m)) {
               throw new IllegalArgumentException("Method: " + methodName + " does not return ComposableFuture or Observable");
             }
             method = m;
@@ -248,6 +250,11 @@ public abstract class AbstractServerBuilder {
       }
 
       endpointDescriptors.put(methodType, new ServiceRegistry.EndpointDescriptor(method, Arrays.asList(filters), methodType));
+    }
+
+    @Override
+    public void setMarshallers(final Map<String, RequestMarshaller> marshallers) {
+      registry.setMarshallerRegistry(new RequestMarshallerRegistry(marshallers));
     }
 
     @Override
@@ -375,7 +382,7 @@ public abstract class AbstractServerBuilder {
       this.bindPrefix = bindPrefix;
     }
 
-    public void setEndpointBinding(final Map<String,Map<HttpRequestMethodType,ServiceRegistry.EndpointDescriptor>> endpointBinding) {
+    public void setEndpointBinding(final Map<String, Map<HttpRequestMethodType, ServiceRegistry.EndpointDescriptor>> endpointBinding) {
       this.endpointBinding = endpointBinding;
     }
 
