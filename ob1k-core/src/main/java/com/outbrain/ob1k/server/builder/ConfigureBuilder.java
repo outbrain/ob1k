@@ -1,8 +1,11 @@
 package com.outbrain.ob1k.server.builder;
 
+import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -75,6 +78,11 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
 
   public B addListener(final Server.Listener listener) {
     state.addListener(listener);
+    return self();
+  }
+
+  public B setMarshallers(final Map<String, RequestMarshaller> marshallers) {
+    state.setMarshallers(marshallers);
     return self();
   }
 
