@@ -70,7 +70,9 @@ public class ServiceRegistryTest {
   public void testServiceRegistryWithCustomMarshaller(){
     final RequestMarshaller mockMarshaller = mock(RequestMarshaller.class);
     final Map<String, RequestMarshaller> marshallers = singletonMap(JSON.requestEncoding(), mockMarshaller);
-    final RequestMarshallerRegistry customMarshallerRegistry = new RequestMarshallerRegistry(marshallers);
+    final RequestMarshallerRegistry customMarshallerRegistry = new RequestMarshallerRegistry.Builder()
+      .withCustoms(marshallers)
+      .build();
 
     registry.setMarshallerRegistry(customMarshallerRegistry);
     registry.register("name", new MyService(), null, null, false);

@@ -46,7 +46,7 @@ public class ServiceRegistry implements ServiceRegistryView {
 
   public ServiceRegistry() {
     this.endpoints = new PathTrie<>();
-    this.marshallerRegistry = new RequestMarshallerRegistry();
+    this.marshallerRegistry = RequestMarshallerRegistry.createDefault();
   }
 
   public void setContextPath(final String contextPath) {

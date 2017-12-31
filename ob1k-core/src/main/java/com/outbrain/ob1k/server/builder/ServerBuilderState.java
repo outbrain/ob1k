@@ -4,6 +4,7 @@ import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
+import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
@@ -60,7 +61,7 @@ public interface ServerBuilderState {
 
   void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
 
-  void setMarshallers(Map<String, RequestMarshaller> marshallers);
+  void setMarshallerRegistry(RequestMarshallerRegistry marshallers);
 
   ServiceRegistryView getRegistry();
 

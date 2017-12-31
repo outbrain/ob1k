@@ -253,8 +253,8 @@ public abstract class AbstractServerBuilder {
     }
 
     @Override
-    public void setMarshallers(final Map<String, RequestMarshaller> marshallers) {
-      registry.setMarshallerRegistry(new RequestMarshallerRegistry(marshallers));
+    public void setMarshallerRegistry(final RequestMarshallerRegistry marshallerRegistry) {
+      registry.setMarshallerRegistry(marshallerRegistry);
     }
 
     @Override

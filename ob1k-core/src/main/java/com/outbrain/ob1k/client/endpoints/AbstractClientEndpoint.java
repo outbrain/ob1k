@@ -1,13 +1,14 @@
 package com.outbrain.ob1k.client.endpoints;
 
-import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.ctx.ClientRequestContext;
+import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
+import com.outbrain.ob1k.http.Response;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import org.apache.commons.codec.EncoderException;
@@ -52,6 +53,17 @@ public abstract class AbstractClientEndpoint {
   protected byte[] marshallObject(final Object value) throws IOException {
     final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(endpointDescription.getContentType().requestEncoding());
     return marshaller.marshallRequestParams((Object[]) value);
+  }
+
+  protected RequestMarshaller getMarshaller(final Response response) throws IOException {
+    final String contentType = response.getContentType();
+    final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(contentType);
+
+    if (marshaller == null) {
+      throw new IOException("No available marshaller for content type '" + contentType + "'");
+    }
+
+    return marshaller;
   }
 
   public EndpointDescription getEndpointDescription() {

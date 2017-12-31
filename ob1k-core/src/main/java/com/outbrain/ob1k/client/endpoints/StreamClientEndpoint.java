@@ -30,9 +30,10 @@ public class StreamClientEndpoint extends AbstractClientEndpoint {
   private final MarshallingStrategy marshallingStrategy = new MarshallingStrategy() {
     @Override
     public <T> T unmarshall(final Type type, final Response response) throws IOException {
-      final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(response.getContentType());
+      final RequestMarshaller marshaller = getMarshaller(response);
       return marshaller.unmarshallStreamResponse(response, type);
     }
+
     @Override
     public byte[] marshall(final Object value) throws IOException {
       return marshallObject(value);

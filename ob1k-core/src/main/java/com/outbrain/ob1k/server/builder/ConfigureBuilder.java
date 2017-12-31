@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.builder;
 
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
+import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -81,8 +82,8 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
     return self();
   }
 
-  public B setMarshallers(final Map<String, RequestMarshaller> marshallers) {
-    state.setMarshallers(marshallers);
+  public B setMarshallerRegistry(final RequestMarshallerRegistry marshallerRegistry) {
+    state.setMarshallerRegistry(marshallerRegistry);
     return self();
   }
 
