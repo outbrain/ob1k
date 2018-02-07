@@ -1,28 +1,56 @@
 package com.outbrain.ob1k.concurrent;
 
-import java.io.FileNotFoundException;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
-import com.outbrain.ob1k.concurrent.handlers.*;
-
+import com.outbrain.ob1k.concurrent.handlers.FutureProvider;
+import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-
 import rx.Observable;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
+
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.retry;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.*;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * User: aronen
@@ -172,13 +200,84 @@ public class ComposableFutureTest {
   }
 
   @Test
-  public void testBatchUnordered() throws Exception {
-    final List<Integer> nums = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-    final ComposableFuture<List<String>> res = batchUnordered(nums, 2, result -> schedule(() -> "num:" + result, 1, TimeUnit.SECONDS));
+  public void testBatchUnorderedAtMostParallelism() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      final CyclicBarrier barrier = new CyclicBarrier(parallelism + 1);
+      final CyclicBarrier resettingBarrier = new CyclicBarrier(parallelism, barrier::reset);
+      final AtomicInteger processed = new AtomicInteger();
+      final int end = elements.size() / parallelism * parallelism;
 
-    final List<String> results = res.get();
-    assertEquals(results.size(), nums.size());
+      return batchUnordered(elements, parallelism, produce(num -> {
+        try {
+          barrier.await(100, TimeUnit.MICROSECONDS);
+          fail("parallelism exceeded " + parallelism);
+        } catch (TimeoutException | BrokenBarrierException e) {
+          if (processed.getAndIncrement() < end) {
+            resettingBarrier.await();
+          }
+        }
+      }));
+    });
+  }
 
+  @Test
+  public void testBatchUnorderedAtLeastParallelism() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      final CyclicBarrier barrier = new CyclicBarrier(parallelism);
+      final AtomicInteger processed = new AtomicInteger();
+      final int end = elements.size() / parallelism * parallelism;
+      return batchUnordered(elements, parallelism, produce(num -> {
+        if (processed.getAndIncrement() < end) {
+          barrier.await(1, TimeUnit.SECONDS);
+        }
+      }));
+    });
+  }
+
+  @Test
+  public void testBatchUnorderedDoesNotWaitForSlowlyProcessedElements() throws Exception {
+    testBatchUnordered((elements, parallelism) -> {
+      final CountDownLatch latch = new CountDownLatch(1);
+      final AtomicInteger processed = new AtomicInteger();
+      final int elementToGetStuckAt = ThreadLocalRandom.current().nextInt(elements.size());
+      return batchUnordered(elements, parallelism, produce(num -> {
+        if (parallelism > 1 && num == elementToGetStuckAt) {
+          assertTrue(latch.await(1, TimeUnit.SECONDS));
+        }
+        if (processed.incrementAndGet() == elements.size() - 1) {
+          latch.countDown();
+        }
+      }));
+    });
+  }
+
+  @Test
+  public void testBatchUnorderedDoesNotCauseStackOverflowErrorSync() throws Exception {
+    batchUnordered(Collections.nCopies(100_000, 1), 1, result -> ComposableFutures.fromNull()).get();
+  }
+
+  @Test
+  public void testBatchUnorderedDoesNotCauseStackOverflowErrorAsync() throws Exception {
+    batchUnordered(Collections.nCopies(100_000, 1), 2, result -> ComposableFutures.submit(() -> 0)).get();
+  }
+
+  private interface CheckedConsumer<T> {
+    void accept(T element) throws Exception;
+  }
+
+  private FutureSuccessHandler<Integer, Integer> produce(final CheckedConsumer<Integer> r) {
+    return num -> ComposableFutures.submit(() -> {
+      r.accept(num);
+      return 2 * num;
+    });
+  }
+
+  private void testBatchUnordered(final BiFunction<List<Integer>, Integer, ComposableFuture<List<Integer>>> test) throws Exception {
+    final List<Integer> nums = IntStream.range(0, 1000).boxed().collect(toList());
+    for (int parallelism = 1; parallelism < 10; parallelism++) {
+      final List<Integer> results = test.apply(nums, parallelism).get();
+      assertEquals(nums.stream().map(x -> 2 * x).collect(toList()), results.stream().sorted().collect(toList()));
+    }
   }
 
   @Test
