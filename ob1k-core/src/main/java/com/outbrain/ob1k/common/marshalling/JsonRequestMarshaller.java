@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.outbrain.ob1k.HttpRequestMethodType;
@@ -52,12 +53,15 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   private final JsonFactory factory;
   private final MarshallingStrategy marshallingStrategy;
 
-  public JsonRequestMarshaller() {
+  public JsonRequestMarshaller(Module... module) {
     factory = new JsonFactory();
     mapper = new ObjectMapper(factory);
     mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    for (Module m : module) {
+      mapper.registerModule(m);
+    }
     marshallingStrategy = new JacksonMarshallingStrategy(mapper);
   }
 
@@ -169,7 +173,7 @@ public class JsonRequestMarshaller implements RequestMarshaller {
 
     } else if (Arrays.equals(ChunkHeader.ERROR_HEADER.getBytes(CharsetUtil.UTF_8), header)) {
 
-      throw new RuntimeException(new String(body,CharsetUtil.UTF_8));
+      throw new RuntimeException(new String(body, CharsetUtil.UTF_8));
     }
 
     throw new IOException("invalid chunk header - unsupported " + new String(header, CharsetUtil.UTF_8));
@@ -242,8 +246,9 @@ public class JsonRequestMarshaller implements RequestMarshaller {
       if (token == JsonToken.START_ARRAY) {
         token = jp.nextToken();
         while (true) {
-          if (token == JsonToken.END_ARRAY)
+          if (token == JsonToken.END_ARRAY) {
             break;
+          }
 
           final Object res = mapper.readValue(jp, getJacksonType(types[index]));
           results.add(res);
@@ -269,4 +274,12 @@ public class JsonRequestMarshaller implements RequestMarshaller {
   private boolean isBodyEmpty(final Request request) {
     return request.getContentLength() == 0;
   }
+
+  public JsonRequestMarshaller withModules(Module ... modules) {
+    for (Module module : modules) {
+      mapper.registerModule(module);
+    }
+    return this;
+  }
+
 }
