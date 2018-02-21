@@ -151,7 +151,7 @@ public interface ComposableFuture<T> {
    * computation status (failure/success).
    * ComposableFuture[T](success/failure) to ComposableFuture[Try[T]](success)
    *
-   * @return a new future of {@link Try[T]}, either Success or Failure depends on computation result.
+   * @return a new future of {@link Try}, either Success or Failure depends on computation result.
    */
   default ComposableFuture<Try<T>> successful() {
     return always(__ -> __);
