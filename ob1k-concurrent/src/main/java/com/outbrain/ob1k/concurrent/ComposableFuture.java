@@ -32,7 +32,6 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
  * </p>
  * Eager futures activate the producer immediately and stores the result(or error) internally.
  * Lazy futures stores the producer and activate it upon consumption
- * </p>
  * <p>
  * Futures can be "continued" to create a flow of computations, each next step is activated upon the arrival of
  * the result on the previous future.
@@ -151,7 +150,7 @@ public interface ComposableFuture<T> {
    * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
    * computation status (failure/success).
    * <p>
-   * ComposableFuture[T](success/failure) => ComposableFuture[Try[T]](success)
+   * ComposableFuture[T](success/failure) to ComposableFuture[Try[T]](success)
    *
    * @return a new future of {@link Try[T]}, either Success or Failure depends on computation result.
    */
