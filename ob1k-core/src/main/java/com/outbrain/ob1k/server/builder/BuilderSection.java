@@ -8,14 +8,14 @@ package com.outbrain.ob1k.server.builder;
  *
  * For example, a builder can implement the method
  *
- *    resourceMapping(final BuilderSection<ResourceMappingBuilder>)
+ *    resourceMapping(final BuilderSection[ResourceMappingBuilder])
  *
  * and specify a ResourceMappingBuilder that will only contain the portion of the builder methods specific
  * for resource mapping.
  *
  * The caller will use this by calling:
  *
- *   builder.resourceMapping(resource -> resource.staticPath("css").virtualMap("foo", "bar"))...
+ *   builder.resourceMapping(resource -&gt; resource.staticPath("css").virtualMap("foo", "bar"))...
  *
  *   etc.
  *
