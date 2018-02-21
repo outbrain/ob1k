@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.213-SNAPSHOT</version>
+    <version>0.213</version>
   </parent>
 
   <artifactId>ob1k-swagger</artifactId>
