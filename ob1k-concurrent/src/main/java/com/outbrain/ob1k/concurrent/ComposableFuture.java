@@ -149,7 +149,6 @@ public interface ComposableFuture<T> {
   /**
    * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
    * computation status (failure/success).
-   * <p>
    * ComposableFuture[T](success/failure) to ComposableFuture[Try[T]](success)
    *
    * @return a new future of {@link Try[T]}, either Success or Failure depends on computation result.
