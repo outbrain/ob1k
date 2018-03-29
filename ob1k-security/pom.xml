@@ -3,7 +3,7 @@
   <parent>
     <artifactId>ob1k</artifactId>
     <groupId>com.outbrain.swinfra</groupId>
-    <version>0.216</version>
+    <version>0.217-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
