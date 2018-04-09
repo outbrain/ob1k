@@ -34,10 +34,8 @@ import static java.util.function.Function.identity;
 /**
  * a future that contains a producer. each time the future is consumed the producer is activated
  * to deliver a value or an error to the consumer.
- * <p/>
  * the final result is never stored so the future is actually stateless as opposed to the eager future
  * that eventually holds the final result.
- * <p/>
  * the lazy future represent a computation that eventually creates a new value. that value can be consumed many times
  * by calling consume and supplying a consumer.
  *

@@ -30,18 +30,20 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
  * Time: 12:02 PM
  */
 public class NettyRequest implements Request {
-  public static final String COOKIE_HEADER = "Cookie";
+
   private final HttpRequest inner;
   private final Channel channel;
   private final QueryStringDecoder getQueryDecoder;
   private final HttpContent content;
   private final String contextPath;
   private final Map<String, String> pathParams;
-  private QueryStringDecoder postQueryDecoder;
-  private Map<String, Cookie> cookies;
+  private volatile QueryStringDecoder postQueryDecoder;
+  private volatile Map<String, Cookie> cookies;
 
-
-  public NettyRequest(final HttpRequest inner, final HttpContent content, final Channel channel, final String contextPath) {
+  NettyRequest(final HttpRequest inner,
+               final HttpContent content,
+               final Channel channel,
+               final String contextPath) {
     this.inner = inner;
     this.content = content;
     this.channel = channel;
@@ -70,6 +72,7 @@ public class NettyRequest implements Request {
     return inner.headers().getAll(name);
   }
 
+  @Override
   public Map<String, String> getHeaders() {
     final HttpHeaders headers = inner.headers();
     final List<Map.Entry<String, String>> entries = headers.entries();
@@ -86,13 +89,9 @@ public class NettyRequest implements Request {
     final HttpHeaders headers = inner.headers();
     final List<Map.Entry<String, String>> entries = headers.entries();
     final Map<String, List<String>> result = new HashMap<>();
-    for (final Map.Entry<String, String> entry : entries) {
-      List<String> list = result.get(entry.getKey());
-      if (list == null) {
-        list = new ArrayList<>();
-        result.put(entry.getKey(), list);
-      }
 
+    for (final Map.Entry<String, String> entry : entries) {
+      final List<String> list = result.computeIfAbsent(entry.getKey(), __ -> new ArrayList<>());
       list.add(entry.getValue());
     }
 
@@ -104,6 +103,7 @@ public class NettyRequest implements Request {
     return content.content().readableBytes();
   }
 
+  @Override
   public String getContentType() {
     return inner.headers().get(CONTENT_TYPE);
   }
@@ -163,6 +163,7 @@ public class NettyRequest implements Request {
     return res != null ? res : defaultValue;
   }
 
+  @Override
   public String getQueryParam(final String key, final String defaultValue) {
     final String res = getQueryParam(key);
     return res != null ? res : defaultValue;
@@ -208,10 +209,11 @@ public class NettyRequest implements Request {
   private void populateCookies() {
     cookies = Maps.newHashMap();
 
-    final String cookieHeaderValue = inner.headers().get(COOKIE_HEADER);
+    final String cookieHeaderValue = inner.headers().get("Cookie");
     if (cookieHeaderValue == null) return;
 
-    final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue);
+    final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue, false);
+
     for (final Cookie cookie : cookiesSet) {
       cookies.put(cookie.getName(), cookie);
     }

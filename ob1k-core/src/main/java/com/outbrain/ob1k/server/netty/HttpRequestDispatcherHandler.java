@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.netty;
 
+import static com.outbrain.ob1k.http.common.ContentType.JSON;
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
@@ -25,7 +26,6 @@ import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.StaticPathResolver;
@@ -123,6 +123,12 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     if (msg instanceof HttpRequest) {
       request = (HttpRequest) msg;
 
+      // if there's no available marshaller for this request, throw it
+      if (getMarshaller() == null) {
+        handleInvalidMediaType(ctx);
+        return;
+      }
+
       final String uri = request.getUri();
       final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(uri);
       final String path = queryStringDecoder.path();
@@ -157,9 +163,9 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
           }
         });
       } catch (final IOException error) {
-        handleInternalError(error, request, ctx);
+        handleInternalError(error, ctx);
       } catch (final Exception error) {
-        handleUnexpectedRequest(error, request, ctx);
+        handleUnexpectedRequest(error, ctx);
       }
     }
   }
@@ -176,7 +182,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     finalResponse.consume(result -> {
       try {
         if (result.isSuccess()) {
-          handleOK(result.getValue(), request, ctx);
+          handleOK(result.getValue(), ctx);
         } else {
           final Throwable error = result.getError();
           if (error instanceof RequestTimeoutException) {
@@ -184,10 +190,10 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
               requestTimeoutErrors.inc();
             }
           }
-          handleInternalError(error, request, ctx);
+          handleInternalError(error, ctx);
         }
       } catch (final IOException error) {
-        handleInternalError(error, request, ctx);
+        handleInternalError(error, ctx);
       }
     });
 
@@ -231,14 +237,14 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
   }
 
   private ChannelFuture sendStreamChunk(final Object message, final ChannelHandlerContext ctx, final boolean rawStream) throws IOException {
-    final RequestMarshaller marshaller = getMarshaller(request);
+    final RequestMarshaller marshaller = getMarshaller();
     final HttpContent chunk = marshaller.marshallResponsePart(message, OK, rawStream);
 
     return ctx.writeAndFlush(chunk);
   }
 
   private ChannelFuture sendStreamHeaders(final ChannelHandlerContext ctx, final boolean rawStream) {
-    final RequestMarshaller marshaller = getMarshaller(request);
+    final RequestMarshaller marshaller = getMarshaller();
     final HttpResponse res = marshaller.marshallResponseHeaders(rawStream);
 
     return ctx.writeAndFlush(res);
@@ -296,40 +302,41 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     super.channelUnregistered(ctx);
   }
 
-  private void handleInternalError(final Throwable error, final HttpRequest request, final ChannelHandlerContext ctx) {
+  private void handleInternalError(final Throwable error, final ChannelHandlerContext ctx) {
     if (internalErrors != null) {
       internalErrors.inc();
     }
 
     logger.warn("Internal error while processing URI: " + request.getUri() + " from remote address " + ctx.channel().remoteAddress(), error);
+
     try {
-      handleResponse(error.toString(), INTERNAL_SERVER_ERROR, request, ctx);
+      handleResponse(error.toString(), getMarshaller(), INTERNAL_SERVER_ERROR, ctx);
     } catch (final IOException e) {
       logger.warn("cant create a proper error message", e);
 
       final ByteBuf buf = Unpooled.copiedBuffer(error.toString(), CharsetUtil.UTF_8);
       final FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, buf);
-      response.headers().set(CONTENT_TYPE, ContentType.JSON.responseEncoding());
+      response.headers().set(CONTENT_TYPE, JSON.responseEncoding());
 
-      handleResponse(response, request, ctx);
+      handleResponse(response, ctx);
     }
   }
 
-  private void handleOK(final Object res, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
+  private void handleOK(final Object res, final ChannelHandlerContext ctx) throws IOException {
     if (res instanceof NettyResponse) {
-      handleResponse((NettyResponse) res, request, ctx);
+      handleResponse((NettyResponse) res, ctx);
     } else {
-      handleResponse(res, OK, request, ctx);
+      handleResponse(res, getMarshaller(), OK, ctx);
     }
   }
 
-  private void handleResponse(final NettyResponse nettyResponse, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
-    final RequestMarshaller marshaller = getMarshaller(request);
+  private void handleResponse(final NettyResponse nettyResponse, final ChannelHandlerContext ctx) throws IOException {
+    final RequestMarshaller marshaller = getMarshaller();
     final FullHttpResponse response = nettyResponse.toFullHttpResponse(marshaller);
-    handleResponse(response, request, ctx);
+    handleResponse(response, ctx);
   }
 
-  private void handleResponse(final FullHttpResponse response, final HttpRequest request, final ChannelHandlerContext ctx) {
+  private void handleResponse(final FullHttpResponse response, final ChannelHandlerContext ctx) {
     response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
 
     final boolean keepAlive = isKeepAlive(request);
@@ -345,17 +352,23 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     }
   }
 
-  private void handleResponse(final Object message, final HttpResponseStatus status, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
-    final RequestMarshaller marshaller = getMarshaller(request);
+  private void handleResponse(final Object message,
+                              final RequestMarshaller marshaller,
+                              final HttpResponseStatus status,
+                              final ChannelHandlerContext ctx) throws IOException {
     final FullHttpResponse response = marshaller.marshallResponse(message, status);
-    handleResponse(response, request, ctx);
+    handleResponse(response, ctx);
   }
 
-  private RequestMarshaller getMarshaller(final HttpRequest request) {
-    return marshallerRegistry.getMarshaller(request.headers().get(CONTENT_TYPE));
+  private RequestMarshaller getMarshaller() {
+    return marshallerRegistry.getMarshaller(getContentType());
   }
 
-  private void handleUnexpectedRequest(final Exception error, final HttpRequest request, final ChannelHandlerContext ctx) throws IOException {
+  private String getContentType() {
+    return request.headers().get(CONTENT_TYPE);
+  }
+
+  private void handleUnexpectedRequest(final Exception error, final ChannelHandlerContext ctx) throws IOException {
     if (unexpectedErrors != null) {
       unexpectedErrors.inc();
     }
@@ -367,7 +380,13 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     } else {
       logger.info("The requested URI isn't supported: {}", request.getUri(), error);
     }
-    handleResponse(error.toString(), HttpResponseStatus.NOT_IMPLEMENTED, request, ctx);
+
+    handleResponse(error.toString(), getMarshaller(), HttpResponseStatus.NOT_IMPLEMENTED, ctx);
+  }
+
+  private void handleInvalidMediaType(final ChannelHandlerContext ctx) throws IOException {
+    final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(JSON.requestEncoding());
+    handleResponse("Unsupported media type: " + getContentType(), marshaller, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE, ctx);
   }
 
   private void handleNotFound(final String uri, final ChannelHandlerContext ctx) throws IOException {
@@ -376,7 +395,7 @@ public class HttpRequestDispatcherHandler extends SimpleChannelInboundHandler<Ob
     }
 
     logger.info("Requested URI was not found: {}", uri);
-    handleResponse(uri + " is not a valid request path", HttpResponseStatus.NOT_FOUND, request, ctx);
+    handleResponse(uri + " is not a valid request path", getMarshaller(), HttpResponseStatus.NOT_FOUND, ctx);
   }
 
   @Override

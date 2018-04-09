@@ -3,6 +3,9 @@ package com.outbrain.ob1k.server.builder;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
+import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
+import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
@@ -58,6 +61,8 @@ public interface ServerBuilderState {
   void setFiltersToLastDescriptor(ServiceFilter... filters);
 
   void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
+
+  void setMarshallerRegistry(RequestMarshallerRegistry marshallers);
 
   void setCors(CorsConfig corsConfig);
 

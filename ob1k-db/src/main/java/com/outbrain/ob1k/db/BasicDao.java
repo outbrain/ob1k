@@ -272,7 +272,7 @@ public class BasicDao {
   }
 
   /**
-   * Updates entry/entries of table by provided values & conditions
+   * Updates entry/entries of table by provided values &amp; conditions
    *
    * @param tableName table name to update values of
    * @param entry entry to update by
@@ -287,7 +287,7 @@ public class BasicDao {
   }
 
   /**
-   * Updates entry/entries of table by provided values & conditions
+   * Updates entry/entries of table by provided values &amp; conditions
    *
    * @param conn connection to be used to execute the query
    * @param tableName table name to update values of

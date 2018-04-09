@@ -22,7 +22,7 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  * Created by aronen on 10/12/14.
  * a thin wrapper around spy memcache client.
  * it creates a typed "view" over the content of the cache with predefined expiration for all entries in it.
- * <p/>
+ *
  * all operations are async and return ComposableFuture.
  */
 public class MemcacheClient<K, V> implements TypedCache<K, V> {

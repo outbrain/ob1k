@@ -26,7 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
+
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isAsyncMethod;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isEndpoint;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isStreamingMethod;
 import static java.util.Collections.unmodifiableSortedMap;
 
 /**
@@ -39,11 +42,11 @@ public class ServiceRegistry implements ServiceRegistryView {
 
   private final PathTrie<Map<HttpRequestMethodType, ServerEndpoint>> endpoints;
   private String contextPath;
-  private final RequestMarshallerRegistry marshallerRegistry;
+  private RequestMarshallerRegistry marshallerRegistry;
 
-  public ServiceRegistry(final RequestMarshallerRegistry marshallerRegistry) {
+  public ServiceRegistry() {
     this.endpoints = new PathTrie<>();
-    this.marshallerRegistry = marshallerRegistry;
+    this.marshallerRegistry = RequestMarshallerRegistry.createDefault();
   }
 
   public void setContextPath(final String contextPath) {
@@ -52,6 +55,14 @@ public class ServiceRegistry implements ServiceRegistryView {
 
   public String getContextPath() {
     return contextPath;
+  }
+
+  public void setMarshallerRegistry(final RequestMarshallerRegistry marshallerRegistry) {
+    this.marshallerRegistry = marshallerRegistry;
+  }
+
+  public RequestMarshallerRegistry getMarshallerRegistry() {
+    return marshallerRegistry;
   }
 
   public ServerEndpoint findEndpoint(final String path, final HttpRequestMethodType requestMethodType, final Map<String, String> pathParams) {
@@ -65,16 +76,14 @@ public class ServiceRegistry implements ServiceRegistryView {
     return serviceEndpoints.get(requestMethodType);
   }
 
-  public void register(final String name, final Service service, final boolean bindPrefix) {
-    register(name, service, null, null, bindPrefix);
-  }
-
   public static class EndpointDescriptor {
     public final Method method;
     public final List<? extends ServiceFilter> filters;
     public final HttpRequestMethodType requestMethodType;
 
-    public EndpointDescriptor(final Method method, final List<? extends ServiceFilter> filters, final HttpRequestMethodType requestMethodType) {
+    public EndpointDescriptor(final Method method,
+                              final List<? extends ServiceFilter> filters,
+                              final HttpRequestMethodType requestMethodType) {
       this.method = method;
       this.filters = filters;
       this.requestMethodType = requestMethodType;
@@ -83,7 +92,8 @@ public class ServiceRegistry implements ServiceRegistryView {
 
   public void registerEndpoints(final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> descriptors,
                                 final String name, final Service service,
-                                final List<AsyncFilter> asyncFilters,  final List<StreamFilter> streamFilters,
+                                final List<AsyncFilter> asyncFilters,
+                                final List<StreamFilter> streamFilters,
                                 final boolean bindPrefix) {
 
     if (contextPath == null) {
@@ -131,14 +141,14 @@ public class ServiceRegistry implements ServiceRegistryView {
         if (isAsyncMethod(method)) {
           endpointsMap.put(endpointDescriptorEntry.getKey(),
             new AsyncServerEndpoint(service, getFilters(endpointDesc.filters, asyncFilters, methodBind,
-              AsyncFilter.class), method, endpointDesc.requestMethodType, params) );
+              AsyncFilter.class), method, endpointDesc.requestMethodType, params));
         } else if (isStreamingMethod(method)) {
           endpointsMap.put(endpointDescriptorEntry.getKey(),
             new StreamServerEndpoint(service, getFilters(endpointDesc.filters, streamFilters, methodBind,
-              StreamFilter.class), method, endpointDesc.requestMethodType, params) );
+              StreamFilter.class), method, endpointDesc.requestMethodType, params));
         } else {
-          logger.warn("Will not register service endpoint {}::{}"+
-            ". Method must return ComposableFuture or Observable!",name,method);
+          logger.warn("Will not register service endpoint {}::{}" +
+            ". Method must return ComposableFuture or Observable!", name, method);
 
         }
 
@@ -255,7 +265,9 @@ public class ServiceRegistry implements ServiceRegistryView {
     return (T[]) result;
   }
 
-  public void register(final String name, final Service service, final List<AsyncFilter> asyncFilters,
+  public void register(final String name,
+                       final Service service,
+                       final List<AsyncFilter> asyncFilters,
                        final List<StreamFilter> streamFilters,
                        final boolean bindPrefix) {
 
@@ -265,8 +277,8 @@ public class ServiceRegistry implements ServiceRegistryView {
   }
 
   private Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> getEndpointsDescriptor(final Service service,
-                                                                final List<AsyncFilter> asyncFilters,
-                                                                final List<StreamFilter> streamFilters) {
+                                                                                             final List<AsyncFilter> asyncFilters,
+                                                                                             final List<StreamFilter> streamFilters) {
 
     final Method[] methods = service.getClass().getDeclaredMethods();
     final Map<String, Map<HttpRequestMethodType, EndpointDescriptor>> result = new HashMap<>();
@@ -278,8 +290,8 @@ public class ServiceRegistry implements ServiceRegistryView {
         } else if (isStreamingMethod(m)) {
           result.put(m.getName(), singleEndpointDescToMap(new EndpointDescriptor(m, streamFilters, HttpRequestMethodType.ANY)));
         }  else {
-          logger.warn("Will not to register service endpoint {}::{}"+
-            ". Method must return ComposableFuture or Observable!",service.getClass().getSimpleName(),m.getName());
+          logger.warn("Will not to register service endpoint {}::{}" +
+            ". Method must return ComposableFuture or Observable!", service.getClass().getSimpleName(), m.getName());
         }
       }
     }

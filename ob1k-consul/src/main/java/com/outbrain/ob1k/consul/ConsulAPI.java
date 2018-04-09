@@ -12,72 +12,90 @@ import java.util.concurrent.TimeUnit;
  */
 public class ConsulAPI {
 
-    private static final String AGENT_ADDRESS = System.getProperty("com.outbrain.ob1k.consul.agent.address", "localhost:8500");
-    static final String AGENT_BASE_URL = "http://" + AGENT_ADDRESS + "/v1/";
+  private static final String AGENT_ADDRESS = System.getProperty("com.outbrain.ob1k.consul.agent.address", "localhost:8500");
+  static final String AGENT_BASE_URL = "http://" + AGENT_ADDRESS + "/v1/";
 
-    public static ConsulServiceRegistry getServiceRegistry() {
-        return ConsulServiceRegistryHolder.INSTANCE;
+  public static ConsulServiceRegistry getServiceRegistry() {
+    return ConsulServiceRegistryHolder.INSTANCE;
+  }
+
+  public static ConsulServiceRegistry getServiceRegistryV1() {
+    return ConsulServiceRegistryHolder.INSTANCE_V1;
+  }
+
+  public static ConsulCatalog getCatalog() {
+    return ConsulCatalogHolder.INSTANCE;
+  }
+
+  public static ConsulHealth getHealth() {
+    return ConsulHealthHolder.INSTANCE;
+  }
+
+  private static class ConsulServiceRegistryHolder {
+    private static final ConsulServiceRegistry INSTANCE = createServiceRegistry();
+    private static final ConsulServiceRegistry INSTANCE_V1 = createServiceRegistryV1();
+
+    private static ConsulServiceRegistry createServiceRegistryV1() {
+      return new ClientBuilder<>(ConsulServiceRegistry.class)
+              .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "agent/service/"))
+              .bindEndpoint("register", HttpRequestMethodType.PUT, "register")
+              .bindEndpoint("deregister", HttpRequestMethodType.PUT, "deregister/{serviceId}")
+              .bindEndpoint("enableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=true&reason={reason}")
+              .bindEndpoint("disableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=false")
+              .setProtocol(ContentType.JSON)
+              .setRequestTimeout(1000)
+              .build();
     }
 
-    public static ConsulCatalog getCatalog() {
-        return ConsulCatalogHolder.INSTANCE;
+    private static ConsulServiceRegistry createServiceRegistry() {
+      return new ClientBuilder<>(ConsulServiceRegistry.class)
+              .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "agent/service/"))
+              .bindEndpoint("deregister", HttpRequestMethodType.GET, "deregister/{serviceId}")
+              .bindEndpoint("enableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=true&reason={reason}")
+              .bindEndpoint("disableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=false")
+              .setProtocol(ContentType.JSON)
+              .setRequestTimeout(1000)
+              .build();
     }
+  }
 
-    public static ConsulHealth getHealth() {
-        return ConsulHealthHolder.INSTANCE;
+  private static class ConsulCatalogHolder {
+    private static final ConsulCatalog INSTANCE = createCatalog();
+
+    private static ConsulCatalog createCatalog() {
+      return new ClientBuilder<>(ConsulCatalog.class)
+              .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "catalog"))
+              .bindEndpoint("datacenters", HttpRequestMethodType.GET, "datacenters")
+              .bindEndpoint("findInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
+              .bindEndpoint("findDcLocalInstances", HttpRequestMethodType.GET, "service/{service}&stale=true")
+              .bindEndpoint("filterDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&stale=true")
+              .bindEndpoint("pollDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&index={index}&wait={maxWaitSec}s&stale=true")
+              .bindEndpoint("findDcLocalServices", HttpRequestMethodType.GET, "services?stale=true")
+              .bindEndpoint("services", HttpRequestMethodType.GET, "services?dc={dc}&stale=true")
+              .setProtocol(ContentType.JSON)
+              .setRequestTimeout(10000)
+              .build();
     }
+  }
 
-    private static class ConsulServiceRegistryHolder {
-        private static final ConsulServiceRegistry INSTANCE = createServiceRegistry();
+  private static class ConsulHealthHolder {
+    private static final ConsulHealth INSTANCE = createHealth();
 
-        private static ConsulServiceRegistry createServiceRegistry() {
-            return new ClientBuilder<>(ConsulServiceRegistry.class)
-                    .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "agent/service/"))
-                    .bindEndpoint("deregister", HttpRequestMethodType.GET, "deregister/{serviceId}")
-                    .bindEndpoint("enableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=true&reason={reason}")
-                    .bindEndpoint("disableMaintenance", HttpRequestMethodType.PUT, "maintenance/{service}?enable=false")
-                    .setProtocol(ContentType.JSON)
-                    .setRequestTimeout(1000)
-                    .build();
-        }
+    private static ConsulHealth createHealth() {
+      final int longPollWait = 30;
+      final long requestTimeout = longPollWait + 5;
+      return new ClientBuilder<>(ConsulHealth.class)
+              .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
+              .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
+              .bindEndpoint("filterHealthyInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&passing=true&tag={filterTag}&stale=true")
+              .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + longPollWait + "s")
+              .bindEndpoint("fetchInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
+              .bindEndpoint("fetchInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
+              .bindEndpoint("fetchInstancesAtState", HttpRequestMethodType.GET, "state/{state}?dc={dc}&stale=true")
+              .setProtocol(ContentType.JSON)
+              .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(requestTimeout))
+              .build();
     }
-
-    private static class ConsulCatalogHolder {
-        private static final ConsulCatalog INSTANCE = createCatalog();
-
-        private static ConsulCatalog createCatalog() {
-            return new ClientBuilder<>(ConsulCatalog.class)
-                    .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "catalog"))
-                    .bindEndpoint("findInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
-                    .bindEndpoint("findDcLocalInstances", HttpRequestMethodType.GET, "service/{service}&stale=true")
-                    .bindEndpoint("filterDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&stale=true")
-                    .bindEndpoint("pollDcLocalInstances", HttpRequestMethodType.GET, "service/{service}?tag={filterTag}&index={index}&wait={maxWaitSec}s&stale=true")
-                    .bindEndpoint("findDcLocalServices", HttpRequestMethodType.GET, "services?stale=true")
-                    .bindEndpoint("services", HttpRequestMethodType.GET, "services?dc={dc}&stale=true")
-                    .setProtocol(ContentType.JSON)
-                    .setRequestTimeout(10000)
-                    .build();
-        }
-    }
-
-    private static class ConsulHealthHolder {
-        private static final ConsulHealth INSTANCE = createHealth();
-
-        private static ConsulHealth createHealth() {
-            final int longPollWait = 30;
-            final long requestTimeout = longPollWait + 5;
-            return new ClientBuilder<>(ConsulHealth.class)
-                    .setTargetProvider(new SimpleTargetProvider(AGENT_BASE_URL + "health"))
-                    .bindEndpoint("filterDcLocalHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&tag={filterTag}&stale=true")
-                    .bindEndpoint("filterHealthyInstances", HttpRequestMethodType.GET, "service/{service}?dc={dc}&passing=true&tag={filterTag}&stale=true")
-                    .bindEndpoint("pollHealthyInstances", HttpRequestMethodType.GET, "service/{service}?passing=true&stale=true&tag={filterTag}&index={index}&wait=" + longPollWait + "s")
-                    .bindEndpoint("fetchInstancesHealth", HttpRequestMethodType.GET, "service/{service}?dc={dc}&stale=true")
-                    .bindEndpoint("fetchInstancesChecks", HttpRequestMethodType.GET, "checks/{service}?dc={dc}&stale=true")
-                    .bindEndpoint("fetchInstancesAtState", HttpRequestMethodType.GET, "state/{state}?dc={dc}&stale=true")
-                    .setProtocol(ContentType.JSON)
-                    .setRequestTimeout((int) TimeUnit.SECONDS.toMillis(requestTimeout))
-                    .build();
-        }
-    }
+  }
 
 }

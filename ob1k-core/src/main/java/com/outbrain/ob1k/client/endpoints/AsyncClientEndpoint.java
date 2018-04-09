@@ -33,9 +33,10 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
     @Override
     @SuppressWarnings("unchecked")
     public <T> T unmarshall(final Type type, final Response response) throws IOException {
-      final RequestMarshaller marshaller = marshallerRegistry.getMarshaller(response.getContentType());
+      final RequestMarshaller marshaller = getMarshaller(response);
       return marshaller.unmarshallResponse(response, type);
     }
+
     @Override
     public byte[] marshall(final Object value) throws IOException {
       return marshallObject(value);

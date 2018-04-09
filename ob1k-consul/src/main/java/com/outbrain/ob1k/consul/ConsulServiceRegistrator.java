@@ -6,8 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A server listener that registers the service in the consul.
@@ -19,6 +20,7 @@ public class ConsulServiceRegistrator implements Server.Listener {
   private static final Logger logger = LoggerFactory.getLogger(ConsulServiceRegistrator.class);
 
   private final ServiceRegistrationDataProvider serviceRegistrationDataProvider;
+  private final AtomicBoolean v1 = new AtomicBoolean(true);
 
   public ConsulServiceRegistrator(final ServiceRegistrationDataProvider serviceRegistrationDataProvider) {
     this.serviceRegistrationDataProvider = Preconditions.checkNotNull(serviceRegistrationDataProvider, "serviceRegistrationDataProvider must not be null");
@@ -38,13 +40,21 @@ public class ConsulServiceRegistrator implements Server.Listener {
   }
 
   private void registerService(final ServiceRegistration registration) {
-    logger.info("Registering {}", registration.getID());
-    ConsulAPI.getServiceRegistry().register(registration).consume(responseFuture -> {
-      logger.info("{} registration success={}", registration.getID(), responseFuture.isSuccess());
-      if (!responseFuture.isSuccess()) {
-        logger.warn("Failed to register service: {}", responseFuture.getError());
-      }
-    });
+    logger.info("Registering {} using consul API v1", registration.getID());
+    ConsulAPI.getServiceRegistryV1().register(registration).
+            map(res -> true).
+            recoverWith(throwable -> {
+              logger.warn("Failed to register service Using API v1, fallback to v0: {}", throwable);
+              return ConsulAPI.getServiceRegistry().register(registration).map(res -> false);
+            }).
+            consume(responseFuture -> {
+              logger.info("{} registration success={}", registration.getID(), responseFuture.isSuccess());
+              if (responseFuture.isSuccess()) {
+                v1.set(responseFuture.getValue());
+              } else {
+                logger.warn("Failed to register service: {}", responseFuture.getError());
+              }
+            });
   }
 
   private void registerShutdownHook(final ServiceRegistration registration) {
@@ -54,7 +64,8 @@ public class ConsulServiceRegistrator implements Server.Listener {
         logger.info("Going to deregister service {}", registration.getID());
         try {
           final String deregisterUrl = ConsulAPI.AGENT_BASE_URL + "agent/service/deregister/" + registration.getID();
-          final URLConnection urlConnection = new URL(deregisterUrl).openConnection();
+          final HttpURLConnection urlConnection = (HttpURLConnection) new URL(deregisterUrl).openConnection();
+          urlConnection.setRequestMethod(v1.get() ? "PUT" : "GET");
           urlConnection.setConnectTimeout(500);
           urlConnection.setReadTimeout(500);
           urlConnection.getInputStream().close();

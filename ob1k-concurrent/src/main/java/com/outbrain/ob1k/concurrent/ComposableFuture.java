@@ -32,7 +32,6 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
  * </p>
  * Eager futures activate the producer immediately and stores the result(or error) internally.
  * Lazy futures stores the producer and activate it upon consumption
- * </p>
  * <p>
  * Futures can be "continued" to create a flow of computations, each next step is activated upon the arrival of
  * the result on the previous future.
@@ -150,10 +149,9 @@ public interface ComposableFuture<T> {
   /**
    * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
    * computation status (failure/success).
-   * <p>
-   * ComposableFuture[T](success/failure) => ComposableFuture[Try[T]](success)
+   * ComposableFuture[T](success/failure) to ComposableFuture[Try[T]](success)
    *
-   * @return a new future of {@link Try[T]}, either Success or Failure depends on computation result.
+   * @return a new future of {@link Try}, either Success or Failure depends on computation result.
    */
   default ComposableFuture<Try<T>> successful() {
     return always(__ -> __);
@@ -333,6 +331,7 @@ public interface ComposableFuture<T> {
 
   /**
    * Continues a future with a handler that will be called whether the future has resulted in a successful value or an error.
+   * This method is deprecated. use {@link #alwaysWith(Function)}
    *
    * @param handler the continuation handler that returns a future
    * @param <R>     the resulting future type.
@@ -343,6 +342,7 @@ public interface ComposableFuture<T> {
 
   /**
    * continues a future with a handler that will be called whether the future has resulted in a successful value or an error.
+   * This method is deprecated. use {@link #always(Function)} (Function)}
    *
    * @param handler the continuation handler that returns a value or throws an exception.
    * @param <R>     the resulting future type.
@@ -354,6 +354,7 @@ public interface ComposableFuture<T> {
   /**
    * continues a future with a handler that will be called only if the original future resulted with success
    * in case of an error the error is continues forward.
+   * This method is deprecated. use {@link #flatMap(Function)}
    *
    * @param handler the continuation handler that returns a future(a.k.a flatMap)
    * @param <R>     the resulting future type.
@@ -365,6 +366,7 @@ public interface ComposableFuture<T> {
   /**
    * continues a future with a handler that will be called only if the original future resulted with success
    * in case of an error the error is continued forward.
+   * This method is deprecated. use {@link #map(Function)} (Function)}
    *
    * @param handler the continuation handler that returns a future(a.k.a map)
    * @param <R>     the resulting future type.
@@ -376,6 +378,7 @@ public interface ComposableFuture<T> {
   /**
    * continues a future with a handler that will be called only if the original future failed
    * in case of success the original result is continued forward.
+   * This method is deprecated. use {@link #recoverWith(Function)} (Function)} (Function)}
    *
    * @param handler the continuation handler that returns a future
    * @return a new future that will produce the original successful value the the result of the handler.
@@ -386,6 +389,7 @@ public interface ComposableFuture<T> {
   /**
    * continues a future with a handler that will be called only if the original future failed
    * in case of success the original result is continued forward.
+   * This method is deprecated. use {@link #recover(Function)} (Function)} (Function)}
    *
    * @param handler the continuation handler that returns a value or throws an exception.
    * @return a new future that will produce the original successful value the the result of the handler.
@@ -393,6 +397,15 @@ public interface ComposableFuture<T> {
   @Deprecated
   ComposableFuture<T> continueOnError(ErrorHandler<? extends T> handler);
 
+  /**
+   * continues a future with a conversion function that will be called only if the original future resulted with success
+   * in case of an error the error is continued forward.
+   * This method is deprecated. use {@link #map(Function)} (Function)}
+   *
+   * @param function the function converting a successful result of the future(a.k.a map)
+   * @param <R>     the resulting future type.
+   * @return return a new future that will produce the result either from the function if successful or the original error.
+   */
   @Deprecated
   <R> ComposableFuture<R> transform(com.google.common.base.Function<? super T, ? extends R> function);
 }

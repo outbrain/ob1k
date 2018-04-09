@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public class ParamMarshaller {
 
-  private final static Map<Class<?>, Marshaller<?>> marshallers = new HashMap<Class<?>, Marshaller<?>>() {{
+  private static final Map<Class<?>, Marshaller<?>> marshallers = new HashMap<Class<?>, Marshaller<?>>() {{
     put(String.class, String::valueOf);
     put(int.class, value -> Integer.parseInt(String.valueOf(value)));
     put(boolean.class, value -> Boolean.parseBoolean(String.valueOf(value)));

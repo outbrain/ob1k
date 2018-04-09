@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.205-SNAPSHOT</version>
+    <version>0.217-SNAPSHOT</version>
   </parent>
   <artifactId>ob1k-consul</artifactId>
   <name>ob1k-consul</name>
@@ -50,7 +50,7 @@
     <dependency>
       <groupId>com.pszymczyk.consul</groupId>
       <artifactId>embedded-consul</artifactId>
-      <version>0.3.4</version>
+      <version>1.0.2</version>
       <scope>test</scope>
     </dependency>
 

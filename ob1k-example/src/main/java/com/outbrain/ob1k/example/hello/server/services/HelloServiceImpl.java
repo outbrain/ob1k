@@ -56,7 +56,7 @@ public class HelloServiceImpl implements HelloService {
    *
    * @param name username (comes either from request body or as query param)
    * @param repeats repeats (comes either from request body or as query param)
-   * @return stream of results (>= repeats)
+   * @return stream of results (&gt;= repeats)
    */
   @Override
   public Observable<String> helloUserStream(final String name, final int repeats) {

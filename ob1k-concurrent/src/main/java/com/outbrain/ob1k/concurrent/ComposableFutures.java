@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.outbrain.ob1k.concurrent.combiners.Combiner;
@@ -33,6 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -198,56 +200,110 @@ public class ComposableFutures {
   }
 
   /**
-   * Execute the producer on each element in the list in batches.
-   * The batch size represent the max level of parallelism and each parallel flow will opportunistically try to process
+   * Execute the producer on each element in the list in parallel.
+   * Each parallel flow will opportunistically try to process
    * The next available item on the list upon completion of the previous one.
    * Use this method when execution time for each element is highly irregular so that slow elements
-   * In the beginning of the list won't necessarily hold up the rest of the execution.
+   * In the beginning of the list won't necessarily hold back the rest of the execution.
    * <p>
    * An error in one of the futures produced by the producer will end the flow and return a future containing the error
    *
    * @param elements  the input to the producer
-   * @param batchSize how many items will be processed in parallel
+   * @param parallelism how many items will be processed in parallel
    * @param producer  produces a future based on input from the element list
    * @param <T>       the type of the elements in the input list
    * @param <R>       the result type of the future returning from the producer
    * @return a future containing a list of all the results produced by the producer.
    */
-  public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int batchSize,
+  public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int parallelism,
                                                                 final FutureSuccessHandler<T, R> producer) {
+    Preconditions.checkArgument(parallelism > 0, "Parallelism must be > 0, not %s", parallelism);
 
-    final AtomicInteger index = new AtomicInteger(0);
-    final List<ComposableFuture<List<R>>> futures = new ArrayList<>(batchSize);
-    for (int i = 0; i < batchSize; i++) {
-      futures.add(seqUnordered(elements, index, producer));
+    final AtomicIntegerArray nodesState = new AtomicIntegerArray(elements.size());
+
+    @SuppressWarnings("unchecked")
+    final R[] results = (R[])new Object[elements.size()];
+
+    final AtomicInteger pendingNodeLowerBound = new AtomicInteger(parallelism + 1);
+    final List<ComposableFuture<Void>> futures = new ArrayList<>(parallelism);
+    for (int rootNode = 1; rootNode <= parallelism; rootNode++) {
+      futures.add(processTree(elements, rootNode, nodesState, results, pendingNodeLowerBound, producer, true));
     }
 
-    return all(true, futures).map(result -> {
-      final List<R> combined = new ArrayList<>(elements.size());
-      for (final List<R> lst : result) {
-        combined.addAll(lst);
-      }
+    return ComposableFutures.all(true, futures).map(__ -> Arrays.asList(results));
+  }
 
-      return combined;
+  /**
+   *
+   * @param elements
+   * @param rootNode: The root of the tree currently being processed.
+   * @param nodesState: Pending node is marked with 0, processed node with 1.
+   * @param results: An array containing the results of the computation.
+   * @param pendingNodeLowerBound: All elements with index < pendingNodeLowerBound are
+   *        either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
+   * @param producer
+   * @param jumpWhenDone: Indicates whether to continue processing from the pending node
+   *        with smallest index or return the processed results.
+   * @param <T>
+   * @param <R>
+   * @return A ComposableFuture that will eventually apply producer to a subset of elements.
+   * The computation progresses serially through a subset of elements in no particular order.
+   * Since the algorithm is recursive, effort is made to limit the recursion depth.
+   * The list of elements is treated as a binary tree rooted at index 1 (which maps to elements index 0),
+   * where each tree rooted at index i has left subtree rooted at 2 * i and right subtree rooted
+   * at 2 * i + 1.
+   * Given an input rootNode, the subtree rooted at rootNode is traversed Pre-order serially.
+   * When the traversal of a complete subtree ends,
+   * or a processed element is encountered, the traversal proceeds
+   * from the top leftmost pending node (smallest index).
+   * This traversal strategy minimizes contention on the same part of the tree
+   * by separate flows, and decreases the recursion depth.
+   *
+   */
+  private static <T, R> ComposableFuture<Void> processTree(final List<T> elements,
+                                                           final int rootNode,
+                                                           final AtomicIntegerArray nodesState,
+                                                           final R[] results,
+                                                           final AtomicInteger pendingNodeLowerBound,
+                                                           final FutureSuccessHandler<T, R> producer,
+                                                           final boolean jumpWhenDone) {
+    if (rootNode > elements.size()) {
+      return ComposableFutures.fromNull();
+    }
+
+    if (!nodesState.compareAndSet(rootNode - 1, 0, 1)) {
+      // A parallel flow is working on our subtree, let's look for another subtree.
+      return jump(elements, nodesState, results, pendingNodeLowerBound, producer);
+    }
+
+    final ComposableFuture<R> root = producer.handle(elements.get(rootNode - 1));
+
+    return root.flatMap(rootResult -> {
+      results[rootNode - 1] = rootResult;
+      final int leftNode = rootNode << 1;
+      final ComposableFuture<Void> left = processTree(elements, leftNode, nodesState, results, pendingNodeLowerBound, producer, false);
+      return left.flatMap(leftResults -> {
+        final int rightNode = leftNode + 1;
+        final ComposableFuture<Void> right = processTree(elements, rightNode, nodesState, results, pendingNodeLowerBound, producer, false);
+        return jumpWhenDone ? right.flatMap(rightResults -> jump(elements, nodesState, results, pendingNodeLowerBound, producer)) : right;
+      });
     });
   }
 
-  private static <T, R> ComposableFuture<List<R>> seqUnordered(final List<T> elements, final AtomicInteger index,
-                                                               final FutureSuccessHandler<T, R> producer) {
-    final int currentIndex = index.getAndIncrement();
-    if (currentIndex >= elements.size()) {
-      return ComposableFutures.fromValue(Collections.<R>emptyList());
-    } else {
-      return producer.handle(elements.get(currentIndex)).flatMap(result -> {
-        final ComposableFuture<List<R>> rest = seqUnordered(elements, index, producer);
-        return rest.map(restResult -> {
-          final List<R> combined = new ArrayList<>(restResult.size() + 1);
-          combined.addAll(restResult);
-          combined.add(result);
-          return combined;
-        });
-      });
-    }
+  private static <T, R> ComposableFuture<Void> jump(final List<T> elements,
+                                                    final AtomicIntegerArray nodesState,
+                                                    final R[] results,
+                                                    final AtomicInteger pendingNodeLowerBound,
+                                                    final FutureSuccessHandler<T, R> producer) {
+    int node = pendingNodeLowerBound.get();
+
+    // Find the top leftmost pending element
+    for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++);
+
+    // We may set pendingNodeLowerBound to a lower value than its latest value,
+    // but it won't break the invariant that for all x < pendingNodeLowerBound.get(), nodesState.get(x - 1) == 1
+    pendingNodeLowerBound.set(node + 1);
+    return processTree(elements, node, nodesState, results, pendingNodeLowerBound, producer, true);
   }
 
   /**
@@ -474,7 +530,7 @@ public class ComposableFutures {
       Try.apply(() -> producer.apply(attempt)).
         recover(ComposableFutures::fromError).
         map(action -> action.recoverWith(error -> {
-          if (attempt >= retries - 1) {
+          if (attempt >= retries) {
             return fromError(error);
           }
 

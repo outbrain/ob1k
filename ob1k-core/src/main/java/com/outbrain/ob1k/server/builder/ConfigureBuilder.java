@@ -1,9 +1,13 @@
 package com.outbrain.ob1k.server.builder;
 
+import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
+import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
+import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,6 +80,11 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
 
   public B addListener(final Server.Listener listener) {
     state.addListener(listener);
+    return self();
+  }
+
+  public B setMarshallerRegistry(final RequestMarshallerRegistry marshallerRegistry) {
+    state.setMarshallerRegistry(marshallerRegistry);
     return self();
   }
 

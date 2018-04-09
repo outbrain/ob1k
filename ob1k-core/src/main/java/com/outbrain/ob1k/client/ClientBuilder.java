@@ -177,8 +177,14 @@ public class ClientBuilder<T extends Service> {
     return proxy;
   }
 
-  private static RequestMarshallerRegistry createRegistry(final Class type) {
-    final RequestMarshallerRegistry registry = new RequestMarshallerRegistry();
+  private RequestMarshallerRegistry createRegistry(final Class type) {
+    final RequestMarshallerRegistry.Builder marshallerBuilder = new RequestMarshallerRegistry.Builder();
+
+    if (ContentType.MESSAGE_PACK.equals(clientType)) {
+      marshallerBuilder.withMessagePack();
+    }
+
+    final RequestMarshallerRegistry registry = marshallerBuilder.build();
 
     final Method[] methods = type.getDeclaredMethods();
     for (final Method method : methods) {

@@ -18,7 +18,6 @@ import java.util.concurrent.Callable;
 /**
  * <p>
  * A credentials authenticator that authenticates against an LDAP server.</p>
- * </p>
  * <p>
  * This authenticator uses a synchronous LDAP client (spring-ldap) and wraps it to conform to OB1K's
  * ComposableFutures interface. Be aware that for a large amount of authentication requests this authenticator
