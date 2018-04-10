@@ -17,11 +17,19 @@ public class SpringBeanContext {
   }
 
   public <T> T getBean(final String ctxName, final Class<T> type) {
-    return contexts.get(ctxName).getBean(type);
+    final AbstractApplicationContext context = contexts.get(ctxName);
+    if (context == null) {
+      throw new NullPointerException("Context not found for name '" + ctxName + "'");
+    }
+    return context.getBean(type);
   }
 
   public <T> T getBean(final String ctxName, final String id, final Class<T> type) {
-    return contexts.get(ctxName).getBean(id, type);
+    final AbstractApplicationContext context = contexts.get(ctxName);
+    if (context == null) {
+      throw new NullPointerException("Context not found for name '" + ctxName + "'");
+    }
+    return context.getBean(id, type);
   }
 
   public boolean contextExists(final String ctxName) {
