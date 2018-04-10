@@ -1,16 +1,14 @@
 package com.outbrain.ob1k.http;
 
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.ning.http.util.Base64;
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 import com.squareup.okhttp.mockwebserver.RecordedRequest;
 import io.netty.handler.codec.http.HttpHeaders;
+import org.asynchttpclient.util.Base64;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import rx.Observable;
 import rx.observables.BlockingObservable;
@@ -22,6 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -49,17 +48,15 @@ public class ClientBasicFlowsTest {
       return responseQueue.take().apply(request);
     }
     
-    public void enqueue(final MockResponse response) {
-      enqueue(input -> {
-        return response.clone();
-      });
+    void enqueue(final MockResponse response) {
+      enqueue(input -> response.clone());
     }
 
-    public void enqueue(final Function<RecordedRequest, MockResponse> responseFunction) {
+    void enqueue(final Function<RecordedRequest, MockResponse> responseFunction) {
       responseQueue.add(responseFunction);
     }
 
-    public RecordedRequest getRequest() {
+    RecordedRequest getRequest() {
       return lastRequest;
     }
   }
@@ -91,7 +88,6 @@ public class ClientBasicFlowsTest {
   }
 
   @Test
-  @Ignore
   public void testStream() throws Exception {
 
     final String singleResponse = "Hello World";
@@ -119,9 +115,7 @@ public class ClientBasicFlowsTest {
   @Test
   public void testRequestWithBody() throws Exception {
 
-    dispatcher.enqueue(request -> {
-      return new MockResponse().setBody(request.getBody());
-    });
+    dispatcher.enqueue(request -> new MockResponse().setBody(request.getBody()));
 
     final String name = "julia";
     final HttpClient httpClient = HttpClient.createDefault();

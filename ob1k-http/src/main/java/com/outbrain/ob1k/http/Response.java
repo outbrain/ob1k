@@ -42,7 +42,7 @@ public interface Response {
 
   List<String> getHeaders(String name);
 
-  Map<String, List<String>> getHeaders();
+  Iterable<Map.Entry<String, String>> getHeaders();
 
   boolean isRedirected();
 

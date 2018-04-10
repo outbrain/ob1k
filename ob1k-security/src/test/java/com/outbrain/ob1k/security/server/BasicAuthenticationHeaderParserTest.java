@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
+import org.asynchttpclient.util.Base64;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

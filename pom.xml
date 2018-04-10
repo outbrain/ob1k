@@ -70,6 +70,7 @@
     <java.compiler.target>1.8</java.compiler.target>
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
+    <netty.version>4.0.42.Final</netty.version>
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
     <findbugs-maven-plugin.version>3.0.3</findbugs-maven-plugin.version>
     <findbugs.skip>false</findbugs.skip>
@@ -257,7 +258,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.0.31.Final</version>
+        <version>${netty.version}</version>
       </dependency>
 
       <dependency>

@@ -22,6 +22,7 @@ import java.lang.reflect.Type;
 public class JacksonMarshallingStrategy implements MarshallingStrategy {
 
   private static final Logger log = LoggerFactory.getLogger(JacksonMarshallingStrategy.class);
+  public static final JacksonMarshallingStrategy INSTANCE = new JacksonMarshallingStrategy();
 
   private final ObjectMapper objectMapper;
 

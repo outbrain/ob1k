@@ -1,9 +1,9 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
 import io.netty.util.CharsetUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.asynchttpclient.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

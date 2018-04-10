@@ -6,10 +6,12 @@ import com.outbrain.ob1k.http.common.Cookie;
 import com.outbrain.ob1k.http.common.Header;
 import com.outbrain.ob1k.http.common.Param;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
+import io.netty.util.CharsetUtil;
 import org.apache.commons.codec.EncoderException;
 import rx.Observable;
 
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +28,7 @@ public interface RequestBuilder {
 
   String USER_AGENT_HEADER = "User-Agent";
   String CONTENT_TYPE_HEADER = "Content-Type";
-  String DEFAULT_CHARSET = "UTF8";
+  Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
 
   RequestBuilder setContentType(ContentType contentType);
 
@@ -52,7 +54,7 @@ public interface RequestBuilder {
 
   RequestBuilder setBody(Object body);
 
-  RequestBuilder setBodyEncoding(String charset);
+  RequestBuilder setBodyEncoding(Charset charset);
 
   RequestBuilder withBasicAuth(String username, String password);
 
