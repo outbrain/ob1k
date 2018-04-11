@@ -3,6 +3,7 @@ package com.outbrain.ob1k.server.spring;
 import org.springframework.context.support.AbstractApplicationContext;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * User: aronen
@@ -18,17 +19,13 @@ public class SpringBeanContext {
 
   public <T> T getBean(final String ctxName, final Class<T> type) {
     final AbstractApplicationContext context = contexts.get(ctxName);
-    if (context == null) {
-      throw new NullPointerException("Context not found for name '" + ctxName + "'");
-    }
+    Objects.requireNonNull(context, "Context not found for name '" + ctxName + "'");
     return context.getBean(type);
   }
 
   public <T> T getBean(final String ctxName, final String id, final Class<T> type) {
     final AbstractApplicationContext context = contexts.get(ctxName);
-    if (context == null) {
-      throw new NullPointerException("Context not found for name '" + ctxName + "'");
-    }
+    Objects.requireNonNull(context, "Context not found for name '" + ctxName + "'");
     return context.getBean(id, type);
   }
 
