@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
+
 /**
  * Created by gmarom on 6/24/15
  */
@@ -35,10 +37,10 @@ public class TestServer {
 
   public static Server newServer() {
     return ServerBuilder.newBuilder()
-      .contextPath(CONTEXT_PATH)
-      .configure(createPortsProvider())
-      .service(createServices())
-      .build();
+            .contextPath(CONTEXT_PATH)
+            .configure(createPortsProvider())
+            .service(createServices())
+            .build();
   }
 
   private static ServiceRegisterBuilderSection createServices() {
@@ -48,10 +50,10 @@ public class TestServer {
 
   private static HttpBasicAuthenticationFilter createAuthFilter() {
     return new HttpBasicAuthenticationFilter(
-      new AuthenticationCookieAesEncryptor(createKey()),
-      Lists.<CredentialsAuthenticator<UserPasswordToken>>newArrayList(new UserPassEqualAuthenticator()),
-      "myAppId",
-      3600
+            new AuthenticationCookieAesEncryptor(createKey()),
+            Lists.<CredentialsAuthenticator<UserPasswordToken>>newArrayList(new UserPassEqualAuthenticator()),
+            "myAppId",
+            3600
     );
   }
 
@@ -69,7 +71,7 @@ public class TestServer {
     return new ConfigureBuilderSection() {
       @Override
       public void apply(final ConfigureBuilder builder) {
-        builder.useRandomPort();
+        builder.useRandomPort().useMetricFactory(newDummyMetricFactory());
       }
     };
   }
