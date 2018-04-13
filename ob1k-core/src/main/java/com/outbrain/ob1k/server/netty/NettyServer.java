@@ -4,6 +4,7 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
+import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -48,6 +49,11 @@ public class NettyServer implements Server {
   private final ChannelGroup activeChannels;
   private final long requestTimeoutMs;
   private final long idleTimeoutMs;
+  private final Counter internalErrors;
+  private final Counter requestTimeoutErrors;
+  private final Counter notFoundErrors;
+  private final Counter unexpectedErrors;
+  private final Counter ioErrors;
   private volatile Channel channel;
   private final StaticPathResolver staticResolver;
   private final ServiceDispatcher dispatcher;
@@ -55,7 +61,6 @@ public class NettyServer implements Server {
   private final String applicationName;
   private final boolean acceptKeepAlive;
   private final boolean supportZip;
-  private final MetricFactory metricFactory;
   private final int maxContentLength;
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
 
@@ -75,11 +80,16 @@ public class NettyServer implements Server {
     this.nioGroup = new NioEventLoopGroup();
     this.acceptKeepAlive = acceptKeepAlive;
     this.supportZip = supportZip;
-    this.metricFactory = metricFactory;
     this.maxContentLength = maxContentLength;
     this.requestTimeoutMs = requestTimeoutMs;
     this.idleTimeoutMs = idleTimeoutMs;
     registry.logRegisteredEndpoints();
+    this.internalErrors = metricFactory.createCounter("Ob1kDispatcher", "internalErrors");
+    this.requestTimeoutErrors = metricFactory.createCounter("Ob1kDispatcher", "requestTimeoutErrors");
+    this.notFoundErrors = metricFactory.createCounter("Ob1kDispatcher", "notFoundErrors");
+    this.unexpectedErrors = metricFactory.createCounter("Ob1kDispatcher", "unexpectedErrors");
+    this.ioErrors = metricFactory.createCounter("Ob1kDispatcher", "ioErrors");
+    metricFactory.registerGauge("Ob1kDispatcher", "currentConnections", activeChannels::size);
   }
 
   @Override
@@ -217,7 +227,7 @@ public class NettyServer implements Server {
 
       p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
-          marshallerRegistry, activeChannels, acceptKeepAlive, metricFactory, requestTimeoutMs));
+          marshallerRegistry, activeChannels, acceptKeepAlive, requestTimeoutMs, internalErrors, requestTimeoutErrors, notFoundErrors, unexpectedErrors, ioErrors));
     }
 
   }
