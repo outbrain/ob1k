@@ -39,8 +39,8 @@ public class ConsulAPITest {
 
   @Before
   public void setup() throws ExecutionException, InterruptedException {
-    ConsulAPI.getServiceRegistry().register(SERVICE1_REGISTRATION).get();
-    ConsulAPI.getServiceRegistry().register(SERVICE2_REGISTRATION).get();
+    ConsulAPI.getServiceRegistryV1().register(SERVICE1_REGISTRATION).get();
+    ConsulAPI.getServiceRegistryV1().register(SERVICE2_REGISTRATION).get();
   }
 
   @After
@@ -138,7 +138,7 @@ public class ConsulAPITest {
 
   @Test
   public void testEnableMaintenance() throws ExecutionException, InterruptedException {
-    ConsulAPI.getServiceRegistry().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
+    ConsulAPI.getServiceRegistryV1().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Assert.assertNotNull(service1Health);
     Assert.assertTrue(service1Health.isEmpty());
@@ -146,8 +146,8 @@ public class ConsulAPITest {
 
   @Test
   public void testDisableMaintenance() throws ExecutionException, InterruptedException {
-    ConsulAPI.getServiceRegistry().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
-    ConsulAPI.getServiceRegistry().disableMaintenance(SERVICE1_REGISTRATION.getID()).get();
+    ConsulAPI.getServiceRegistryV1().enableMaintenance(SERVICE1_REGISTRATION.getID(), "fail health check").get();
+    ConsulAPI.getServiceRegistryV1().disableMaintenance(SERVICE1_REGISTRATION.getID()).get();
     Thread.sleep(1000); // fuck teamcity
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Assert.assertNotNull(service1Health);
@@ -156,7 +156,7 @@ public class ConsulAPITest {
 
   @Test
   public void testDeregister() throws ExecutionException, InterruptedException {
-    ConsulAPI.getServiceRegistry().deregister(SERVICE1_REGISTRATION.getID()).get();
+    ConsulAPI.getServiceRegistryV1().deregister(SERVICE1_REGISTRATION.getID()).get();
     final List<HealthInfoInstance> service1Health = ConsulAPI.getHealth().filterDcLocalHealthyInstances(SERVICE1_NAME, TAG1).get();
     Thread.sleep(1000); // fuck teamcity
     Assert.assertNotNull(service1Health);
