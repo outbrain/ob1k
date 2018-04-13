@@ -15,6 +15,8 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.concurrent.TimeUnit;
 
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
+
 @RunWith(MockitoJUnitRunner.class)
 public class SpringContextServerBuilderTest {
 
@@ -31,7 +33,7 @@ public class SpringContextServerBuilderTest {
     Mockito.when(springContext.getBean("ctx", HitsCounterFilter.class)).thenReturn(new HitsCounterFilter(metricFactory));
 
     final Server server = SpringContextServerBuilder.newBuilder(springContext).contextPath("contextPath").
-            configure(builder -> builder.usePort(8080).acceptKeepAlive(true).requestTimeout(100, TimeUnit.MILLISECONDS)).
+            configure(builder -> builder.usePort(8080).acceptKeepAlive(true).requestTimeout(100, TimeUnit.MILLISECONDS).useMetricFactory(newDummyMetricFactory())).
             resource(builder -> builder.staticMapping("virtualPath", "realPath").staticPath("path")).
             serviceFromContext(builder -> builder.register("ctx", TestService.class, "/path",
                 bind -> bind.endpoint("testMethod", "/test", "ctx", HitsCounterFilter.class)
