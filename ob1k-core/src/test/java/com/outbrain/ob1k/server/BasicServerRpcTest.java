@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
+
 /**
  * @author aronen
  */
@@ -33,18 +35,18 @@ public class BasicServerRpcTest {
     return ServerBuilder.newBuilder().
             contextPath("/test").
             configure(builder -> {
-              builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS);
+              builder.useRandomPort().requestTimeout(50, TimeUnit.MILLISECONDS).useMetricFactory(newDummyMetricFactory());
               if (listener != null) {
                 builder.addListener(listener);
               }
             }).
             service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple").
-            register(new RequestsTestServiceImpl(), "/users", builder1 -> builder1.endpoint(HttpRequestMethodType.GET, "getAll", "/").
-            endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
-            endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
-            endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
-            endpoint(HttpRequestMethodType.PUT, "createUser", "/").
-            endpoint("printDetails", "/print/{firstName}/{lastName}"))).build();
+                    register(new RequestsTestServiceImpl(), "/users", builder1 -> builder1.endpoint(HttpRequestMethodType.GET, "getAll", "/").
+                            endpoint(HttpRequestMethodType.GET, "fetchUser", "/{id}").
+                            endpoint(HttpRequestMethodType.POST, "updateUser", "/{id}").
+                            endpoint(HttpRequestMethodType.DELETE, "deleteUser", "/{id}").
+                            endpoint(HttpRequestMethodType.PUT, "createUser", "/").
+                            endpoint("printDetails", "/print/{firstName}/{lastName}"))).build();
   }
 
   @Test

@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.util.concurrent.TimeUnit;
 
 import static com.outbrain.ob1k.HttpRequestMethodType.ANY;
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static org.junit.Assert.assertEquals;
@@ -35,7 +36,7 @@ public class ServerBuilderTest {
                         .withFilters(new TestServiceFilter())
                 .register(new TestService(), "/path2")).
             configure(builder ->
-                builder.usePort(8080).acceptKeepAlive(true).supportZip(true).requestTimeout(100, TimeUnit.MILLISECONDS)).
+                builder.usePort(8080).acceptKeepAlive(true).supportZip(true).requestTimeout(100, TimeUnit.MILLISECONDS).useMetricFactory(newDummyMetricFactory())).
             withExtension(registryHolder). // for grabbing the registry to use later by asserts
             build();
 

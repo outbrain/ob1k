@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 
 import static com.outbrain.ob1k.http.common.ContentType.MESSAGE_PACK;
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -23,7 +24,7 @@ public class CustomMarshallerRpcTest {
   private static Server buildServer(final RequestMarshallerRegistry marshallerRegistry) {
     final Server server = ServerBuilder.newBuilder().
       contextPath("/test").
-      configure(builder -> builder.useRandomPort().setMarshallerRegistry(marshallerRegistry)).
+      configure(builder -> builder.useRandomPort().setMarshallerRegistry(marshallerRegistry).useMetricFactory(newDummyMetricFactory())).
       service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple")).build();
 
     server.start();

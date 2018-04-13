@@ -19,6 +19,13 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>util-metrics</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>ob1k-concurrent</artifactId>
     </dependency>
 

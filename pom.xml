@@ -208,6 +208,14 @@
 
       <dependency>
         <groupId>${project.groupId}</groupId>
+        <artifactId>util-metrics</artifactId>
+        <scope>test</scope>
+        <type>test-jar</type>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
         <artifactId>ob1k-security</artifactId>
         <version>${project.version}</version>
       </dependency>

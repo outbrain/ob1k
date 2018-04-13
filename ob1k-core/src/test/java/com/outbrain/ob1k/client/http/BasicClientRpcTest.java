@@ -28,6 +28,8 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
+
 /**
  * User: aronen
  * Date: 8/19/13
@@ -56,7 +58,7 @@ public class BasicClientRpcTest {
   @BeforeClass
   public static void setup() {
     server = ServerBuilder.newBuilder().contextPath(CTX_PATH).
-      configure(builder -> builder.useRandomPort().configureExecutorService(5, 10))
+      configure(builder -> builder.useRandomPort().configureExecutorService(5, 10).useMetricFactory(newDummyMetricFactory()))
       .service(builder -> builder
         .register(new HelloService(), HELLO_SERVICE_PATH)
         .register(new ParamsService(), "/params")).resource(builder -> builder.staticPath("/static")).build();
