@@ -1,12 +1,13 @@
 package com.outbrain.ob1k.common.marshalling;
 
+import com.outbrain.ob1k.http.common.ContentType;
+
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.outbrain.ob1k.http.common.ContentType.JSON;
 import static com.outbrain.ob1k.http.common.ContentType.MESSAGE_PACK;
-import static com.outbrain.ob1k.http.common.ContentType.TEXT_PLAIN;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -49,17 +50,14 @@ public class RequestMarshallerRegistry {
 
     public Builder() {
       // we always want to have a JSON default marshalling implementation
-      marshallers.put(JSON.requestEncoding(), new JsonRequestMarshaller());
-      marshallers.put(TEXT_PLAIN.requestEncoding(), new JsonRequestMarshaller());
+      for (ContentType contentType : ContentType.values()) {
+        marshallers.put(contentType.requestEncoding(), new JsonRequestMarshaller());
+      }
+      marshallers.remove(MESSAGE_PACK.requestEncoding());
     }
 
     public Builder withMessagePack() {
       marshallers.put(MESSAGE_PACK.requestEncoding(), new MessagePackRequestMarshaller());
-      return this;
-    }
-
-    public Builder withCustom(final String contentType, final RequestMarshaller marshaller) {
-      marshallers.put(contentType, requireNonNull(marshaller));
       return this;
     }
 

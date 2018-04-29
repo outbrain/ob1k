@@ -7,6 +7,7 @@ import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
 import com.outbrain.ob1k.server.services.SimpleTestService;
 import com.outbrain.ob1k.server.services.SimpleTestServiceImpl;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
