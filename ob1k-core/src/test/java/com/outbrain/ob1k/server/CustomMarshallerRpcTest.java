@@ -40,6 +40,9 @@ public class CustomMarshallerRpcTest {
       build();
   }
 
+  // This test is no longer valid since default behaviour is to return json marshaller
+  // if specific content type marshaller doesn't exists
+  @Ignore
   @Test
   public void testServerWithoutMsgPack() throws Exception {
     final Server server = buildServer(new RequestMarshallerRegistry.Builder().build()); // server without msgpack

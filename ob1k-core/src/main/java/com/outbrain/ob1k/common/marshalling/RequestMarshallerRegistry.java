@@ -1,13 +1,12 @@
 package com.outbrain.ob1k.common.marshalling;
 
-import com.outbrain.ob1k.http.common.ContentType;
-
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.outbrain.ob1k.http.common.ContentType.JSON;
 import static com.outbrain.ob1k.http.common.ContentType.MESSAGE_PACK;
+import static com.outbrain.ob1k.http.common.ContentType.TEXT_PLAIN;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -26,11 +25,17 @@ public class RequestMarshallerRegistry {
   }
 
   public RequestMarshaller getMarshaller(final String contentType) {
-    if (contentType == null) {
-      return marshallers.get(JSON.requestEncoding());
+    RequestMarshaller jsonMarsjhaller = marshallers.get(JSON.requestEncoding());
+    RequestMarshaller requestMarshaller = null;
+    if (contentType != null) {
+      requestMarshaller = marshallers.get(normalizeContentType(contentType));
     }
 
-    return marshallers.get(normalizeContentType(contentType));
+    if (requestMarshaller == null) {
+      return jsonMarsjhaller;
+    }
+
+    return requestMarshaller;
   }
 
   public void registerTypes(final Type... types) {
@@ -49,11 +54,8 @@ public class RequestMarshallerRegistry {
     private final Map<String, RequestMarshaller> marshallers = new HashMap<>();
 
     public Builder() {
-      // we always want to have a JSON default marshalling implementation
-      for (ContentType contentType : ContentType.values()) {
-        marshallers.put(contentType.requestEncoding(), new JsonRequestMarshaller());
-      }
-      marshallers.remove(MESSAGE_PACK.requestEncoding());
+      marshallers.put(JSON.requestEncoding(), new JsonRequestMarshaller());
+      marshallers.put(TEXT_PLAIN.requestEncoding(), new JsonRequestMarshaller());
     }
 
     public Builder withMessagePack() {
