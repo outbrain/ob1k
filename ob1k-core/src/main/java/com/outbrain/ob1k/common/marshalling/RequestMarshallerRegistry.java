@@ -25,11 +25,17 @@ public class RequestMarshallerRegistry {
   }
 
   public RequestMarshaller getMarshaller(final String contentType) {
-    if (contentType == null) {
-      return marshallers.get(JSON.requestEncoding());
+    RequestMarshaller jsonMarsjhaller = marshallers.get(JSON.requestEncoding());
+    RequestMarshaller requestMarshaller = null;
+    if (contentType != null) {
+      requestMarshaller = marshallers.get(normalizeContentType(contentType));
     }
 
-    return marshallers.get(normalizeContentType(contentType));
+    if (requestMarshaller == null) {
+      return jsonMarsjhaller;
+    }
+
+    return requestMarshaller;
   }
 
   public void registerTypes(final Type... types) {
@@ -48,18 +54,12 @@ public class RequestMarshallerRegistry {
     private final Map<String, RequestMarshaller> marshallers = new HashMap<>();
 
     public Builder() {
-      // we always want to have a JSON default marshalling implementation
       marshallers.put(JSON.requestEncoding(), new JsonRequestMarshaller());
       marshallers.put(TEXT_PLAIN.requestEncoding(), new JsonRequestMarshaller());
     }
 
     public Builder withMessagePack() {
       marshallers.put(MESSAGE_PACK.requestEncoding(), new MessagePackRequestMarshaller());
-      return this;
-    }
-
-    public Builder withCustom(final String contentType, final RequestMarshaller marshaller) {
-      marshallers.put(contentType, requireNonNull(marshaller));
       return this;
     }
 
