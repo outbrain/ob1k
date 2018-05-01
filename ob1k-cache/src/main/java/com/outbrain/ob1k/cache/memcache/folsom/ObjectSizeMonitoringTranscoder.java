@@ -6,7 +6,7 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.spotify.folsom.Transcoder;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author Eran Harel
@@ -20,8 +20,6 @@ public class ObjectSizeMonitoringTranscoder<T> implements Transcoder<T> {
 
   private final long sampleRate;
   private final Transcoder<T> delegate;
-
-  private final AtomicLong operations = new AtomicLong();
 
   public ObjectSizeMonitoringTranscoder(final Transcoder<T> transcoderDelegate, final MetricFactory metricFactory, final String cacheName, long sampleRate) {
     this.sampleRate = sampleRate;
@@ -60,6 +58,6 @@ public class ObjectSizeMonitoringTranscoder<T> implements Transcoder<T> {
   }
 
   private boolean shouldSampleNow() {
-    return operations.getAndDecrement() % sampleRate == 0;
+    return ThreadLocalRandom.current().nextLong(sampleRate) == 0;
   }
 }
