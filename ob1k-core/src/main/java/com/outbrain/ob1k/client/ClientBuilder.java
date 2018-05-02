@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.client;
 
+import com.fasterxml.jackson.databind.Module;
 import com.outbrain.ob1k.HttpRequestMethodType;
 import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.client.dispatch.DefaultDispatchStrategy;
@@ -18,6 +19,7 @@ import com.outbrain.ob1k.common.marshalling.TypeHelper;
 import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+
 import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -26,7 +28,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.*;
+
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isAsyncMethod;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isEndpoint;
+import static com.outbrain.ob1k.common.endpoints.ServiceEndpointContract.isStreamingMethod;
 
 /**
  * @author aronen
@@ -41,6 +46,7 @@ public class ClientBuilder<T extends Service> {
 
   private TargetProvider targetProvider = new EmptyTargetProvider();
   private ContentType clientType = ContentType.JSON;
+  private Module[] jsonModules;
   private DispatchStrategy dispatchStrategy = DefaultDispatchStrategy.INSTANCE;
 
   public ClientBuilder(final Class<T> type) {
@@ -60,6 +66,11 @@ public class ClientBuilder<T extends Service> {
       streamFilters.add((StreamFilter) filter);
     }
 
+    return this;
+  }
+
+  public ClientBuilder<T> setJsonModules(final Module... modules) {
+    this.jsonModules = modules;
     return this;
   }
 
@@ -182,6 +193,10 @@ public class ClientBuilder<T extends Service> {
 
     if (ContentType.MESSAGE_PACK.equals(clientType)) {
       marshallerBuilder.withMessagePack();
+    }
+
+    if (jsonModules != null) {
+      marshallerBuilder.withJsonModules(jsonModules);
     }
 
     final RequestMarshallerRegistry registry = marshallerBuilder.build();

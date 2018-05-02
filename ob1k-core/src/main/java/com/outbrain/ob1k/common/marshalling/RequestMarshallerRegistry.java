@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.common.marshalling;
 
+import com.fasterxml.jackson.databind.Module;
+
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
@@ -65,6 +67,11 @@ public class RequestMarshallerRegistry {
 
     public Builder withCustoms(final Map<String, RequestMarshaller> customMarshaller) {
       marshallers.putAll(requireNonNull(customMarshaller));
+      return this;
+    }
+
+    public Builder withJsonModules(final Module... modules) {
+      marshallers.put(JSON.requestEncoding(), new JsonRequestMarshaller().withModules(modules));
       return this;
     }
 
