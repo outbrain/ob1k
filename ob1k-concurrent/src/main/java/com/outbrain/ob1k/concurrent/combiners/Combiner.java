@@ -39,17 +39,25 @@ public class Combiner {
   }
 
   public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> elements) {
+    return all(failOnError, elements, null, null);
+  }
+
+  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> elements, final Long timeout, final TimeUnit timeUnit) {
     final Map<Integer, ComposableFuture<T>> elementsMap = new HashMap<>();
     int index = 0;
     for (final ComposableFuture<T> element : elements) {
       elementsMap.put(index++, element);
     }
 
-    return all(failOnError, elementsMap).map(result -> new ArrayList<>(result.values()));
+    return all(failOnError, elementsMap, timeout, timeUnit).map(result -> new ArrayList<>(result.values()));
   }
 
   public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> elements) {
-    return first(elements, elements.size(), failOnError, null, null);
+    return all(failOnError, elements, null, null);
+  }
+
+  public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> elements, final Long timeout, final TimeUnit timeUnit) {
+    return first(elements, elements.size(), failOnError, timeout, timeUnit);
   }
 
   private static class Status {
