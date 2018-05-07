@@ -83,9 +83,17 @@ public class ComposableFutures {
     return Combiner.all(failOnError, futures);
   }
 
+  public static <T> ComposableFuture<List<T>> all(final boolean failOnError, final Iterable<ComposableFuture<T>> elements, final Long timeout, final TimeUnit timeUnit) {
+    return Combiner.all(failOnError, elements, timeout, timeUnit);
+  }
+
   public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError,
                                                        final Map<K, ComposableFuture<T>> futures) {
     return Combiner.all(failOnError, futures);
+  }
+
+  public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> futures, final Long timeout, final TimeUnit timeUnit) {
+    return Combiner.all(failOnError, futures, timeout, timeUnit);
   }
 
   public static <K, T> ComposableFuture<Map<K, T>> first(final Map<K, ComposableFuture<T>> futures,

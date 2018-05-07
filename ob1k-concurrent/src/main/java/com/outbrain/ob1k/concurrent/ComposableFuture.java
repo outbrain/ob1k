@@ -147,6 +147,17 @@ public interface ComposableFuture<T> {
   ComposableFuture<T> andThen(Consumer<? super T> consumer);
 
   /**
+   * Applies the side-effecting function to the result of the current future
+   * only if it succeeds and returns a new future with same value.
+   *
+   * @param consumer the result consumer for the current future return value
+   * @return a future with same value
+   */
+  default ComposableFuture<T> peek(java.util.function.Consumer<? super T> consumer) {
+    return andThen(t -> t.forEach(consumer));
+  }
+
+  /**
    * Transforms current future into a successful one regardless of its status, with a {@link Try} to represent
    * computation status (failure/success).
    * ComposableFuture[T](success/failure) to ComposableFuture[Try[T]](success)

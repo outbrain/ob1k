@@ -128,6 +128,30 @@ public class ComposableFutureTest {
   }
 
   @Test
+  public void testPeekSucess() throws Exception {
+    final List<String> results = new ArrayList<>();
+    final ComposableFuture<String> future = fromValue("hello").peek(results::add);
+
+    final String value = future.get();
+
+    assertEquals("future value should be still 'hello'", "hello", value);
+    assertEquals("list should contain one result", 1, results.size());
+  }
+
+  @Test
+  public void testPeekFailure() {
+    final List<String> results = new ArrayList<>();
+    final ComposableFuture<String> future = ComposableFutures.<String>fromError(new Exception()).peek(results::add);
+
+    try {
+      future.get();
+      fail("should have failed");
+    } catch (final Exception e) {
+      assertTrue("list should not be modified", results.isEmpty());
+    }
+  }
+
+  @Test
   public void testSuccessful() throws Exception {
     final ComposableFuture<String> failureFuture = fromError(new RuntimeException("failureFuture"));
     final ComposableFuture<Try<String>> successfulFuture = failureFuture.successful();
