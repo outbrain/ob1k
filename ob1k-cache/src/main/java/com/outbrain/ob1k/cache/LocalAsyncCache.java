@@ -118,7 +118,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       return fromValue(res);
     } else {
       if (failOnMissingEntries) {
-        return fromError(new RuntimeException("result is missing from" + (cacheName == null ? "" : " " + cacheName) + " loader response."));
+        return fromError(new RuntimeException(key + " is missing from" + (cacheName == null ? "" : " " + cacheName) + " loader response."));
       } else {
         return fromNull();
       }
