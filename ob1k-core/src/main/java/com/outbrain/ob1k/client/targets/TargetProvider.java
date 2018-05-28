@@ -32,4 +32,25 @@ public interface TargetProvider {
    * @return targets hosts
    */
   List<String> provideTargets(int targetsNum);
+
+  /**
+   * Should be called before dispatching.
+   * Allows for load balancing decisions - e.g. counting the number of pending requests to each target.
+   *
+   * @param target host
+   */
+  default void targetDispatched(String target) {
+  }
+
+  /**
+   * Should be called when dispatch completes.
+   * Allows for load balancing decisions - e.g. counting the number of pending requests to each target,
+   * and monitoring targets latency.
+   *
+   * @param target          host
+   * @param success         whether the dispatch failed or succeeded
+   * @param startTimeNanos: dispatch start time in nanoseconds
+   */
+  default void targetDispatchEnded(String target, boolean success, final long startTimeNanos) {
+  }
 }

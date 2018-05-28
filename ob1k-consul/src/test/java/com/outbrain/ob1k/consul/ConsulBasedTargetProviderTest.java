@@ -18,7 +18,9 @@ import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.when;
 
 /**
@@ -48,6 +50,23 @@ public class ConsulBasedTargetProviderTest {
     assertEquals("onTargetsChanged should have updated targets list",
       createUrlFromTargetName(healthInfoInstances.get(0).Service.Address),
       targetProvider.provideTarget());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testProvideNonPositiveNumberOfTargets() {
+    targetProvider.provideTargets(0);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testOnTargetsChangedNotCalled() {
+    targetProvider.provideTarget();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testEmptyTargetsList() {
+    final List<HealthInfoInstance> healthInfoInstances = createHealthInfoInstances(0, true);
+    targetProvider.onTargetsChanged(healthInfoInstances);
+    targetProvider.provideTarget();
   }
 
   @Test
