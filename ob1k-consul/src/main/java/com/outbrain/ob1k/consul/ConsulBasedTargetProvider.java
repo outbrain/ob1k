@@ -1,7 +1,10 @@
 package com.outbrain.ob1k.consul;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import com.google.common.base.Preconditions;
+import com.outbrain.ob1k.client.targets.TargetProvider;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,12 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import com.outbrain.ob1k.client.targets.TargetProvider;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A {@link TargetProvider} that provides targets registered in consul.
@@ -29,16 +28,15 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
   private final String urlSuffix;
   private final Map<String, Integer> tag2weight;
   private final HealthyTargetsList healthyTargetsList;
-  private volatile List<String> targets;
   private final LoadBalancer loadBalancer;
 
   public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight) {
     this(healthyTargetsList, urlSuffix, tag2weight, new ThreadLocalRoundRobinLoadBalancer());
   }
 
-  public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight, LoadBalancer loadBalancer) {
+  public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight, final LoadBalancer loadBalancer) {
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
-    this.tag2weight = tag2weight == null ? Collections.<String, Integer>emptyMap() : new HashMap<>(tag2weight);
+    this.tag2weight = tag2weight == null ? Collections.emptyMap() : new HashMap<>(tag2weight);
     this.healthyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healthyTargetsList must not be null");
     healthyTargetsList.addListener(this);
     this.loadBalancer = loadBalancer;
@@ -66,12 +64,11 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
 
   @Override
   public List<String> provideTargets(final int targetsNum) {
-    final List<String> currTargets = targets;
+    checkArgument(targetsNum > 0, "targets number cannot be %s", targetsNum);
+    final List<String> targets = loadBalancer.provideTargets(targetsNum);
+    checkState(!targets.isEmpty(), "No targets are currently registered for module %s", healthyTargetsList.getModule());
 
-    checkState(!currTargets.isEmpty(), "No targets are currently registered for module " + healthyTargetsList.getModule());
-    checkArgument(targetsNum > 0, "targets number must be more than zero");
-
-    return loadBalancer.provideTargets(currTargets, targetsNum);
+    return targets;
   }
 
   @Override
@@ -86,7 +83,6 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     }
 
     Collections.shuffle(targets);
-    this.targets = targets;
     loadBalancer.onTargetsChanged(targets);
     log.debug("New weighed targets: {}", targets);
   }
