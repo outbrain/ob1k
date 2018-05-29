@@ -38,8 +38,8 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
     this.tag2weight = tag2weight == null ? Collections.emptyMap() : new HashMap<>(tag2weight);
     this.healthyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healthyTargetsList must not be null");
-    healthyTargetsList.addListener(this);
     this.loadBalancer = loadBalancer;
+    healthyTargetsList.addListener(this);
   }
 
   @Override
