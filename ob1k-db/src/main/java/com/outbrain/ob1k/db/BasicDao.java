@@ -228,7 +228,11 @@ public class BasicDao {
   }
 
   public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper) {
-    final String saveCommand = createSaveCommand(singletonList(entry), tableName, mapper);
+    return saveAndGetId(entry, tableName, mapper, false);
+  }
+
+  public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper, boolean onDuplicateIgnore) {
+    final String saveCommand = createSaveCommand(singletonList(entry), tableName, mapper, onDuplicateIgnore);
     return executeAndGetId(saveCommand);
   }
 
@@ -264,11 +268,11 @@ public class BasicDao {
   }
 
   public <T> ComposableFuture<Long> save(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
-    return execute(createSaveCommand(entries, tableName, mapper));
+    return execute(createSaveCommand(entries, tableName, mapper, false));
   }
 
   public <T> ComposableFuture<Long> save(final MySqlAsyncConnection conn, final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
-    return execute(conn, createSaveCommand(entries, tableName, mapper));
+    return execute(conn, createSaveCommand(entries, tableName, mapper, false));
   }
 
   /**
@@ -329,13 +333,19 @@ public class BasicDao {
       collect(Collectors.joining(seperator));
   }
 
-  private <T> String createSaveCommand(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
+  private <T> String createSaveCommand(final List<T> entries, final String tableName, final EntityMapper<T> mapper, boolean onDuplicateIgnore) {
     // using the following syntax: INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);
 
     if (entries == null || entries.isEmpty())
       throw new IllegalArgumentException("entries must contain at least on entry");
 
-    final StringBuilder command = new StringBuilder("insert into ");
+    final StringBuilder command = new StringBuilder();
+    if(onDuplicateIgnore) {
+      command.append("insert ignore into");
+    } else {
+      command.append("insert into");
+    }
+
     command.append(withBackticks(tableName));
 
     // setting the columns part (col1, col2, ...)
