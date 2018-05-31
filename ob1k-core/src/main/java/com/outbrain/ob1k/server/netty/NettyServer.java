@@ -3,6 +3,8 @@ package com.outbrain.ob1k.server.netty;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
+import com.outbrain.ob1k.server.cors.CorsConfig;
+import com.outbrain.ob1k.server.cors.CorsWrapperHandler;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
@@ -63,12 +65,13 @@ public class NettyServer implements Server {
   private final boolean supportZip;
   private final int maxContentLength;
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
+  private final CorsConfig corsConfig;
 
   public NettyServer(final int port, final ServiceRegistry registry,
                      final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
-                     final int maxContentLength, final long requestTimeoutMs) {
+                     final int maxContentLength, final long requestTimeoutMs, final CorsConfig corsConfig) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
     this.staticResolver = staticResolver;
@@ -83,6 +86,7 @@ public class NettyServer implements Server {
     this.maxContentLength = maxContentLength;
     this.requestTimeoutMs = requestTimeoutMs;
     this.idleTimeoutMs = idleTimeoutMs;
+    this.corsConfig = corsConfig;
     registry.logRegisteredEndpoints();
     this.internalErrors = metricFactory.createCounter("Ob1kDispatcher", "internalErrors");
     this.requestTimeoutErrors = metricFactory.createCounter("Ob1kDispatcher", "requestTimeoutErrors");
@@ -226,6 +230,11 @@ public class NettyServer implements Server {
       }
 
       p.addLast("idleState", new IdleStateHandler(0, 0, idleTimeoutMs, TimeUnit.MILLISECONDS));
+
+      if (corsConfig.isCorsSupportEnabled()) {
+        p.addLast("cors", new CorsWrapperHandler(corsConfig));
+      }
+
       p.addLast("handler", new HttpRequestDispatcherHandler(contextPath, dispatcher, staticResolver,
           marshallerRegistry, activeChannels, acceptKeepAlive, requestTimeoutMs, internalErrors, requestTimeoutErrors, notFoundErrors, unexpectedErrors, ioErrors));
     }

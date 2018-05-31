@@ -4,6 +4,7 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.Map;
@@ -84,6 +85,11 @@ public class ConfigureBuilder<B extends ConfigureBuilder<B>> {
 
   public B setMarshallerRegistry(final RequestMarshallerRegistry marshallerRegistry) {
     state.setMarshallerRegistry(marshallerRegistry);
+    return self();
+  }
+
+  public B withCors(final CorsConfig corsConfig) {
+    state.setCors(corsConfig);
     return self();
   }
 

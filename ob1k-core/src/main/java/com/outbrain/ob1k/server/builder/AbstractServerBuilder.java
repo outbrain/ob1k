@@ -9,6 +9,7 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.StaticPathResolver;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.netty.NettyServer;
 import com.outbrain.ob1k.server.registry.ServiceRegistry;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
@@ -66,6 +67,7 @@ public abstract class AbstractServerBuilder {
   private final Map<String, String> staticMappings = new HashMap<>();
 
   private final ServiceRegistry registry;
+  private CorsConfig corsConfig = new CorsConfig.Builder().disable().build();
 
   protected AbstractServerBuilder() {
     this.registry = new ServiceRegistry();
@@ -77,7 +79,7 @@ public abstract class AbstractServerBuilder {
     final StaticPathResolver staticResolver = new StaticPathResolver(contextPath, staticFolders, staticMappings, staticResources);
 
     final NettyServer server = new NettyServer(port, registry, staticResolver,  activeChannels, contextPath,
-            appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs);
+            appName, acceptKeepAlive, idleTimeoutMs, supportZip, metricFactory, maxContentLength, requestTimeoutMs, corsConfig);
     server.addListeners(listeners);
     return server;
   }
@@ -154,6 +156,11 @@ public abstract class AbstractServerBuilder {
     @Override
     public void setMetricFactory(final MetricFactory metricFactoryToUse) {
       metricFactory = metricFactoryToUse;
+    }
+
+    @Override
+    public void setCors(CorsConfig corsConfigToUse) {
+      corsConfig = corsConfigToUse;
     }
 
     @Override

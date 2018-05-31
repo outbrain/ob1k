@@ -7,6 +7,7 @@ import com.outbrain.ob1k.common.marshalling.RequestMarshaller;
 import com.outbrain.ob1k.common.marshalling.RequestMarshallerRegistry;
 import com.outbrain.ob1k.http.common.ContentType;
 import com.outbrain.ob1k.server.Server;
+import com.outbrain.ob1k.server.cors.CorsConfig;
 import com.outbrain.ob1k.server.registry.ServiceRegistryView;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
@@ -62,6 +63,8 @@ public interface ServerBuilderState {
   void setEndpointBinding(HttpRequestMethodType methodType, String methodName, String path, ServiceFilter[] filters);
 
   void setMarshallerRegistry(RequestMarshallerRegistry marshallers);
+
+  void setCors(CorsConfig corsConfig);
 
   ServiceRegistryView getRegistry();
 
