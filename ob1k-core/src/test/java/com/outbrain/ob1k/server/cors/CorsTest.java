@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.server.cors;
 
+import static com.outbrain.swinfra.metrics.DummyMetricFactory.newDummyMetricFactory;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS;
@@ -41,7 +42,7 @@ public class CorsTest {
                                       .build();
 
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .configure(b -> b.withCors(corsConfig))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
@@ -87,7 +88,7 @@ public class CorsTest {
                                             .build();
 
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .configure(b -> b.withCors(corsConfig))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
@@ -112,7 +113,7 @@ public class CorsTest {
   public void testCorsOrigin() throws Exception {
     final CorsConfig corsConfig = CorsConfig.withOrigin("http://cors.com").build();
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .configure(b -> b.withCors(corsConfig))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
@@ -129,7 +130,7 @@ public class CorsTest {
   @Test
   public void testNoCorsDefault() throws Exception {
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
     final int port = server.start().getPort();
@@ -145,7 +146,7 @@ public class CorsTest {
   @Test
   public void testNoCors() throws Exception {
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .configure(c -> c.withCors(new CorsConfig.Builder().disable().build()))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
@@ -162,7 +163,7 @@ public class CorsTest {
   @Test
   public void testShortCircuit() throws Exception {
     final Server server = ServerBuilder
-                            .newBuilder().contextPath("/test")
+                            .newBuilder().contextPath("/test").configure(c -> c.useMetricFactory(newDummyMetricFactory()))
                             .configure(c -> c.withCors(CorsConfig.withOrigin("outbrain.com").shortCircuit().build()))
                             .service(builder -> builder.register(new SimpleTestServiceImpl(), "/simple"))
                             .build();
