@@ -108,12 +108,21 @@ public class MemcachedClient<K, V> implements TypedCache<K, V> {
         return ComposableFutures.fromValue(true);
       }
 
-      if (maxIterations > 0 && result == MemcacheStatus.KEY_EXISTS) {
+      if (maxIterations > 0 && shouldRetry(result)) {
         return setAsync(key, mapper, maxIterations - 1);
       }
 
       return ComposableFutures.fromValue(false);
     });
+  }
+
+  private boolean shouldRetry(final MemcacheStatus status) {
+    // KEY_EXISTS: cas set failed because the key exists with a different version.
+    // KEY_NOT_FOUND: cas set failed because the key is missing.
+    // ITEM_NOT_STORED: add failed because the key exists.
+    return status == MemcacheStatus.KEY_EXISTS ||
+            status == MemcacheStatus.KEY_NOT_FOUND ||
+            status == MemcacheStatus.ITEM_NOT_STORED;
   }
 
   private ComposableFuture<MemcacheStatus> casUpdate(final K key, final EntryMapper<K, V> mapper) {

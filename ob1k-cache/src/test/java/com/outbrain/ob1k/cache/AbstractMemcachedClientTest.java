@@ -19,7 +19,10 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Base test class for memcached client wrappers
@@ -121,7 +124,7 @@ public abstract class AbstractMemcachedClientTest {
   @Test
   public void testCas() throws ExecutionException, InterruptedException {
     final String counterKey = "counterKey";
-    client.setAsync(counterKey, 0).get();
+    client.deleteAsync(counterKey).get();
 
     final int iterations = 1000;
     final int threadCount = 2;
@@ -139,7 +142,7 @@ public abstract class AbstractMemcachedClientTest {
       threads[i] = new Thread(() -> {
         for (int t = 0; t < iterations; t++) {
           try {
-            final Boolean res = client.setAsync(counterKey, (key, value) -> (Integer)value + 1, iterations).get();
+            final Boolean res = client.setAsync(counterKey, (key, value) -> value == null ? 1 : (Integer)value + 1, iterations).get();
             if (res) {
               successCount.incrementAndGet();
             }
