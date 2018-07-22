@@ -128,22 +128,21 @@ public abstract class AbstractMemcachedClientTest {
 
   @Test
   public void testModifyRace() throws ExecutionException, InterruptedException {
-    final String cacheKey = "key";
+    final String cacheKey = UUID.randomUUID().toString();
     client.setAsync(cacheKey, 1).get();
     testCas(cacheKey, () -> client.setAsync(cacheKey, 11).get(), 12);
   }
 
   @Test
   public void testKeyRemovedRace() throws ExecutionException, InterruptedException {
-    final String cacheKey = "key";
+    final String cacheKey = UUID.randomUUID().toString();
     client.setAsync(cacheKey, 11).get();
     testCas(cacheKey, () -> client.deleteAsync(cacheKey).get(), 1);
   }
 
   @Test
   public void testKeyAddedRace() throws ExecutionException, InterruptedException {
-    final String cacheKey = "key";
-    client.deleteAsync(cacheKey).get();
+    final String cacheKey = UUID.randomUUID().toString();
     testCas(cacheKey, () -> client.setAsync(cacheKey, 11).get(), 12);
   }
 
