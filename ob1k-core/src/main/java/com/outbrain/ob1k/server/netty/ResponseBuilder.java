@@ -36,7 +36,7 @@ public class ResponseBuilder {
     return new ResponseBuilder().withStatus(status);
   }
 
-  private ResponseBuilder withStatus(final int status) {
+  public ResponseBuilder withStatus(final int status) {
     return withStatus(HttpResponseStatus.valueOf(status));
   }
 
