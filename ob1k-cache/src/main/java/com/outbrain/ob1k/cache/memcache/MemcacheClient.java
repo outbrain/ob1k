@@ -105,12 +105,16 @@ public class MemcacheClient<K, V> implements TypedCache<K, V> {
         return fromValue(true);
       }
 
-      if (maxIterations > 0 && result == CASResponse.EXISTS) {
+      if (maxIterations > 0 && shouldRetry(result)) {
         return setAsync(key, mapper, maxIterations - 1);
       }
 
       return fromValue(false);
     });
+  }
+
+  private boolean shouldRetry(final CASResponse result) {
+    return result == CASResponse.EXISTS || result == CASResponse.NOT_FOUND;
   }
 
   private ComposableFuture<CASResponse> casUpdate(final K key, final EntryMapper<K, V> mapper) {
