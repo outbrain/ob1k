@@ -165,8 +165,7 @@ public class ComposableFutures {
   }
 
   /**
-   * Continues a future with a handler that will be called only if the original future resulted with success
-   * in case of an error the error is continues forward.
+   * Creates a new future with one level of nesting flattened, this method is equivalent to flatMap(identity)
    *
    * @param future the future to flatten
    * @param <R>    the future value type.
@@ -228,11 +227,11 @@ public class ComposableFutures {
    * <p>
    * An error in one of the futures produced by the producer will end the flow and return a future containing the error
    *
-   * @param elements  the input to the producer
+   * @param elements    the input to the producer
    * @param parallelism how many items will be processed in parallel
-   * @param producer  produces a future based on input from the element list
-   * @param <T>       the type of the elements in the input list
-   * @param <R>       the result type of the future returning from the producer
+   * @param producer    produces a future based on input from the element list
+   * @param <T>         the type of the elements in the input list
+   * @param <R>         the result type of the future returning from the producer
    * @return a future containing a list of all the results produced by the producer.
    */
   public static <T, R> ComposableFuture<List<R>> batchUnordered(final List<T> elements, final int parallelism,
@@ -241,8 +240,7 @@ public class ComposableFutures {
 
     final AtomicIntegerArray nodesState = new AtomicIntegerArray(elements.size());
 
-    @SuppressWarnings("unchecked")
-    final R[] results = (R[])new Object[elements.size()];
+    @SuppressWarnings("unchecked") final R[] results = (R[]) new Object[elements.size()];
 
     final AtomicInteger pendingNodeLowerBound = new AtomicInteger(parallelism + 1);
     final List<ComposableFuture<Void>> futures = new ArrayList<>(parallelism);
@@ -254,16 +252,15 @@ public class ComposableFutures {
   }
 
   /**
-   *
    * @param elements
-   * @param rootNode: The root of the tree currently being processed.
-   * @param nodesState: Pending node is marked with 0, processed node with 1.
-   * @param results: An array containing the results of the computation.
+   * @param rootNode:              The root of the tree currently being processed.
+   * @param nodesState:            Pending node is marked with 0, processed node with 1.
+   * @param results:               An array containing the results of the computation.
    * @param pendingNodeLowerBound: All elements with index < pendingNodeLowerBound are
-   *        either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
+   *                               either processed, or going to be processed by the thread modifying pendingNodeLowerBound.
    * @param producer
-   * @param jumpWhenDone: Indicates whether to continue processing from the pending node
-   *        with smallest index or return the processed results.
+   * @param jumpWhenDone:          Indicates whether to continue processing from the pending node
+   *                               with smallest index or return the processed results.
    * @param <T>
    * @param <R>
    * @return A ComposableFuture that will eventually apply producer to a subset of elements.
@@ -278,7 +275,6 @@ public class ComposableFutures {
    * from the top leftmost pending node (smallest index).
    * This traversal strategy minimizes contention on the same part of the tree
    * by separate flows, and decreases the recursion depth.
-   *
    */
   private static <T, R> ComposableFuture<Void> processTree(final List<T> elements,
                                                            final int rootNode,
@@ -318,7 +314,7 @@ public class ComposableFutures {
     int node = pendingNodeLowerBound.get();
 
     // Find the top leftmost pending element
-    for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++);
+    for (; node <= elements.size() && nodesState.get(node - 1) == 1; node++) ;
 
     // We may set pendingNodeLowerBound to a lower value than its latest value,
     // but it won't break the invariant that for all x < pendingNodeLowerBound.get(), nodesState.get(x - 1) == 1
@@ -550,14 +546,14 @@ public class ComposableFutures {
       Try.apply(() -> producer.apply(attempt)).
         recover(ComposableFutures::fromError).
         map(action -> action.recoverWith(error -> {
-          if (attempt >= retries) {
-            return fromError(error);
-          }
+            if (attempt >= retries) {
+              return fromError(error);
+            }
 
-          // we can't safely use generics here since we'll get into infinite nested generics
-          return (ComposableFuture<T>) f.apply(f, attempt + 1);
-        })
-      ).getValue();
+            // we can't safely use generics here since we'll get into infinite nested generics
+            return (ComposableFuture<T>) f.apply(f, attempt + 1);
+          })
+        ).getValue();
 
     return retriable.apply(retriable, 0);
   }

@@ -179,24 +179,16 @@ public class ComposableFutureTest {
     assertEquals("flatten and original should have same value", successFuture.get(), successFlatten.get());
   }
 
-  @Test
-  public void testFlattenFailure() throws Exception {
+  @Test(expected = IllegalStateException.class)
+  public void testFlattenFailure() throws Throwable {
     final ComposableFuture<String> errorFuture = fromError(new IllegalStateException("errr"));
     final ComposableFuture<ComposableFuture<String>> errorNestedFuture = fromValue(errorFuture);
     final ComposableFuture<String> errorFlatten = flatten(errorNestedFuture);
-
-    Throwable cause = getFutureCause(errorFuture);
-    Throwable causeFlatten = getFutureCause(errorFlatten);
-    assertEquals("flatten and original should have same value", cause, causeFlatten);
-  }
-
-  private Throwable getFutureCause(ComposableFuture<String> errorFuture) {
     try {
-      errorFuture.get();
+      errorFlatten.get();
     } catch (Exception e) {
-      return e.getCause();
+      throw e.getCause();
     }
-    throw new IllegalArgumentException("no future cause");
   }
 
   @Test
