@@ -29,22 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.retry;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
@@ -167,6 +152,34 @@ public class ComposableFutureTest {
     final long timeTook = successFuture.delay(1000, MILLISECONDS).map(time -> currentTimeMillis() - time).get();
 
     assertTrue("thread should have been waiting for at least 500ms (1s delay)", timeTook > 500);
+  }
+
+  @Test
+  public void testFlattenSuccess() throws Exception {
+    final ComposableFuture<String> successFuture = fromValue("deep");
+    final ComposableFuture<ComposableFuture<String>> successNestedFuture = fromValue(successFuture);
+    final ComposableFuture<String> successFlatten = flatten(successNestedFuture);
+
+    assertEquals("flatten and original should have same value", successFuture.get(), successFlatten.get());
+  }
+  @Test
+  public void testFlattenFailure() throws Exception {
+    final ComposableFuture<String> errorFuture = fromError(new IllegalStateException("errr"));
+    final ComposableFuture<ComposableFuture<String>> errorNestedFuture = fromValue(errorFuture);
+    final ComposableFuture<String> errorFlatten = flatten(errorNestedFuture);
+
+    Throwable cause = getFutureCause(errorFuture);
+    Throwable causeFlatten = getFutureCause(errorFlatten);
+    assertEquals("flatten and original should have same value", cause, causeFlatten);
+  }
+
+  private Throwable getFutureCause(ComposableFuture<String> errorFuture) {
+    try {
+      errorFuture.get();
+    } catch (Exception e) {
+      return e.getCause();
+    }
+    throw new IllegalArgumentException("no future cause");
   }
 
   @Test

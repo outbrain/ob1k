@@ -165,6 +165,18 @@ public class ComposableFutures {
   }
 
   /**
+   * Continues a future with a handler that will be called only if the original future resulted with success
+   * in case of an error the error is continues forward.
+   *
+   * @param future the future to flatten
+   * @param <R>    the future value type.
+   * @return a new future that will produce the result from invocation of 2 levels of futures.
+   */
+  public static <R> ComposableFuture<R> flatten(ComposableFuture<ComposableFuture<R>> future) {
+    return future.flatMap(Function.identity());
+  }
+
+  /**
    * Execute the producer on each element in the list in batches.
    * every batch is executed in parallel and the next batch begins only after the previous one ended.
    * An error in one of the futures produced by the producer will end the flow and return a future containing the error
