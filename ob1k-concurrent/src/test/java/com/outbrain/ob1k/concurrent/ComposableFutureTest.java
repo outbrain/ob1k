@@ -29,7 +29,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batch;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.flatten;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.recursive;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.repeat;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.retry;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.submit;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toHotObservable;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.toObservable;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
@@ -162,6 +178,7 @@ public class ComposableFutureTest {
 
     assertEquals("flatten and original should have same value", successFuture.get(), successFlatten.get());
   }
+
   @Test
   public void testFlattenFailure() throws Exception {
     final ComposableFuture<String> errorFuture = fromError(new IllegalStateException("errr"));
