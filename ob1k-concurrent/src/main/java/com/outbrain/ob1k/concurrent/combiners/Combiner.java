@@ -5,7 +5,6 @@ import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.stream.Collectors;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
@@ -49,7 +49,7 @@ public class Combiner {
       elementsMap.put(index++, element);
     }
 
-    return all(failOnError, elementsMap, timeout, timeUnit).map(result -> new ArrayList<>(result.values()));
+    return all(failOnError, elementsMap, timeout, timeUnit).map(result -> result.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue).collect(Collectors.toList()));
   }
 
   public static <K, T> ComposableFuture<Map<K, T>> all(final boolean failOnError, final Map<K, ComposableFuture<T>> elements) {

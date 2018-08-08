@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.concurrent;
 
+import com.google.common.collect.Ordering;
 import com.outbrain.ob1k.concurrent.combiners.BiFunction;
 import com.outbrain.ob1k.concurrent.combiners.TriFunction;
 import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
@@ -580,6 +581,12 @@ public class ComposableFutureTest {
     } finally {
       passThroughCount.releaseAllWaiters(); // release last two guys
     }
+  }
+
+  @Test
+  public void testAllRetainsElementOrder() throws Exception {
+    final List<Integer> result = ComposableFutures.all(IntStream.range(0, 797).mapToObj(ComposableFutures::fromValue).collect(toList())).get();
+    assertTrue(Ordering.natural().isOrdered(result));
   }
 
   @Test
