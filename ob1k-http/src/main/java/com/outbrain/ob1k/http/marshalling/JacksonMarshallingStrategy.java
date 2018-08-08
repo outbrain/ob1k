@@ -41,7 +41,7 @@ public class JacksonMarshallingStrategy implements MarshallingStrategy {
     final int statusCode = response.getStatusCode();
 
     if (statusCode < 200 || statusCode >= 300) {
-      log.debug("request fail, status code: {}", statusCode, response);
+      log.debug("request fail, status code: {}, url: {}", statusCode, response.getUrl());
       throw new IOException("Call failed for url: " + response.getUrl() + ", status code: " + statusCode + ".\n" +
               response.getResponseBody());
     }
