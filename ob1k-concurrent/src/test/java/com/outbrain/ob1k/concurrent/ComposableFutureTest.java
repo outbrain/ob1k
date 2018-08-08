@@ -36,6 +36,7 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.batchToStream;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.batchUnordered;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.combine;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.first;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.flatten;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.foreach;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
@@ -168,6 +169,27 @@ public class ComposableFutureTest {
     final long timeTook = successFuture.delay(1000, MILLISECONDS).map(time -> currentTimeMillis() - time).get();
 
     assertTrue("thread should have been waiting for at least 500ms (1s delay)", timeTook > 500);
+  }
+
+  @Test
+  public void testFlattenSuccess() throws Exception {
+    final ComposableFuture<String> successFuture = fromValue("deep");
+    final ComposableFuture<ComposableFuture<String>> successNestedFuture = fromValue(successFuture);
+    final ComposableFuture<String> successFlatten = flatten(successNestedFuture);
+
+    assertEquals("flatten and original should have same value", successFuture.get(), successFlatten.get());
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testFlattenFailure() throws Throwable {
+    final ComposableFuture<String> errorFuture = fromError(new IllegalStateException("errr"));
+    final ComposableFuture<ComposableFuture<String>> errorNestedFuture = fromValue(errorFuture);
+    final ComposableFuture<String> errorFlatten = flatten(errorNestedFuture);
+    try {
+      errorFlatten.get();
+    } catch (Exception e) {
+      throw e.getCause();
+    }
   }
 
   @Test
