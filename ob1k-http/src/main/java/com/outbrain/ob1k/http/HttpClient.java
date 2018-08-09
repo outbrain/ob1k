@@ -308,6 +308,7 @@ public class HttpClient implements Closeable {
      * @param metricFactory metric factory
      * @return builder
      */
+    @Deprecated //it is not in use
     public Builder setMetricFactory(final MetricFactory metricFactory) {
 
       this.metricFactory = metricFactory;
