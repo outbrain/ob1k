@@ -57,6 +57,11 @@
       <url>https://linkedin.com/in/avi-youkhananov-6b16b128</url>
       <email>ayoukhananov@outbrain.com</email>
     </developer>
+    <developer>
+      <name>Guy Kobrinsky</name>
+      <url>https://linkedin.com/in/guykobrinsky</url>
+      <email>gkobrinsky@outbrain.com</email>
+    </developer>
   </developers>
 
   <modules>
@@ -72,17 +77,23 @@
     <module>ob1k-http</module>
     <module>ob1k-swagger</module>
     <module>ob1k-spring</module>
+    <module>ob1k-crud</module>
   </modules>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.compiler.source>1.8</java.compiler.source>
     <java.compiler.target>1.8</java.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <org.springframework.version>4.0.7.RELEASE</org.springframework.version>
     <metrics.version>2.1.2</metrics.version>
     <spring-ldap-core.version>2.0.3.RELEASE</spring-ldap-core.version>
     <findbugs-maven-plugin.version>3.0.3</findbugs-maven-plugin.version>
     <findbugs.skip>false</findbugs.skip>
+    <kotlin.version>1.2.60</kotlin.version>
+    <kotlin-logging.version>1.5.9</kotlin-logging.version>
+    <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
   </properties>
 
   <profiles>
@@ -107,20 +118,65 @@
 
   <build>
     <plugins>
+
+      <plugin>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <goals> <goal>compile</goal> </goals>
+            <configuration>
+              <sourceDirs>
+                <sourceDir>${project.basedir}/src/main/java</sourceDir>
+              </sourceDirs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>test-compile</id>
+            <goals> <goal>test-compile</goal> </goals>
+            <configuration>
+              <sourceDirs>
+                <sourceDir>${project.basedir}/src/test/java</sourceDir>
+              </sourceDirs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.5.1</version>
+        <version>3.5.1</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>${java.compiler.source}</source>
-          <target>${java.compiler.target}</target>
-        </configuration>
+        <version>3.5.1</version>
+        <executions>
+          <!-- Replacing default-compile as it is treated specially by maven -->
+          <execution>
+            <id>default-compile</id>
+            <phase>none</phase>
+          </execution>
+          <!-- Replacing default-testCompile as it is treated specially by maven -->
+          <execution>
+            <id>default-testCompile</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>java-compile</id>
+            <phase>compile</phase>
+            <goals> <goal>compile</goal> </goals>
+          </execution>
+          <execution>
+            <id>java-test-compile</id>
+            <phase>test-compile</phase>
+            <goals> <goal>testCompile</goal> </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
@@ -198,7 +254,6 @@
           <findbugsXmlOutputDirectory>${project.build.directory}/reports/findbugs</findbugsXmlOutputDirectory>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 
@@ -264,6 +319,18 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>ob1k-spring</artifactId>
         <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>ob1k-db</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.8.5</version>
       </dependency>
 
       <dependency>
@@ -384,6 +451,29 @@
         <version>4.11</version>
         <scope>test</scope>
       </dependency>
+
+      <dependency>
+        <groupId>io.github.microutils</groupId>
+        <artifactId>kotlin-logging</artifactId>
+        <version>${kotlin-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib-jdk8</artifactId>
+        <version>${kotlin.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-test</artifactId>
+        <version>${kotlin.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib</artifactId>
+        <version>${kotlin.version}</version>
+      </dependency>
+      
     </dependencies>
   </dependencyManagement>
 </project>
