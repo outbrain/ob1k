@@ -20,10 +20,9 @@ class EntityFieldMapper : ResultSetMapper<EntityField> {
 
     private fun String.toAppType(): EFieldType {
         return when {
-            startsWith("varchar") -> EFieldType.STRING
-            startsWith("tinytext") -> EFieldType.STRING
+            startsWith("varchar") || startsWith("tinytext") -> EFieldType.STRING
             startsWith("tinyint") -> EFieldType.BOOLEAN
-            startsWith("date") -> EFieldType.DATE
+            startsWith("date") || startsWith("timestamp") -> EFieldType.DATE
             else -> EFieldType.NUMBER
         }
     }

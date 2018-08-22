@@ -13,10 +13,16 @@ enum class EFieldType {
         override fun toMysqlValue(value: String) = "\"$value\""
     },
     TEXT {
-        override fun toMysqlMatchValue(value: String) = " LIKE \"%$value%\""
-        override fun toMysqlValue(value: String) = "\"$value\""
+        override fun toMysqlMatchValue(value: String) = STRING.toMysqlMatchValue(value)
+        override fun toMysqlValue(value: String) = STRING.toMysqlValue(value)
     },
     NUMBER {
+        override fun toMysqlMatchValue(value: String): String {
+            val cleaned = value.removePrefix("[").removeSuffix("]").replace("\"", "")
+            val split = cleaned.split(",")
+            return if (split.size == 1) "=$cleaned" else " IN ($cleaned)"
+        }
+
         override fun fillJsonObject(obj: JsonObject, property: String, value: String?) {
             if (value == null) {
                 return
@@ -33,7 +39,12 @@ enum class EFieldType {
         }
     },
     DATE,
-    REFERENCE,
+    REFERENCE {
+        override fun fillJsonObject(obj: JsonObject, property: String, value: String?) = NUMBER.fillJsonObject(obj, property, value)
+    },
+    REFERENCEMANY {
+        override fun fillJsonObject(obj: JsonObject, property: String, value: String?) = obj.addProperty(property,value?.let { "[$value]" } ?: "[]")
+    },
     LIST;
 
     open fun toMysqlMatchValue(value: String) = "=$value"

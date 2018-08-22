@@ -1,6 +1,8 @@
 package com.outbrain.ob1k.crud.dao
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.concurrent.ComposableFutures
 import com.outbrain.ob1k.crud.model.Entities
@@ -43,15 +45,18 @@ class InMemoryCrudDao(private var idFieldName: String = "id", var resourceName: 
             return true
         }
         return entrySet.map { it.key }.all {
-            val myElement = this.get(it).asJsonPrimitive
-            val otherElement = other.get(it).asJsonPrimitive
-            when {
-                myElement == null -> false
-                myElement.asJsonPrimitive.isNumber -> myElement.asNumber == otherElement.asNumber
-                myElement.asJsonPrimitive.isBoolean -> myElement.asBoolean == otherElement.asBoolean
-                myElement.asJsonPrimitive.isString -> myElement.asString.contains(otherElement.asString)
-                else -> false
-            }
+            val myPrimitiveValue = this.get(it).asJsonPrimitive ?: return false
+            return myPrimitiveValue.match(other.get(it))
+        }
+    }
+
+    private fun JsonPrimitive.match(otherValue: JsonElement): Boolean {
+        return when {
+            otherValue.isJsonArray -> otherValue.asJsonArray.any { match(it) }
+            isNumber -> asNumber == otherValue.asJsonPrimitive.asNumber
+            isBoolean -> asBoolean == otherValue.asJsonPrimitive.asBoolean
+            isString -> asString.contains(otherValue.asJsonPrimitive.asString)
+            else -> false
         }
     }
 }
