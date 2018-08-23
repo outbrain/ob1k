@@ -15,6 +15,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
     override fun list(pagination: IntRange,
                       sort: Pair<String, String>,
                       filter: JsonObject): ComposableFuture<Entities<JsonObject>> {
+
         if (filter.filterAll()) return ComposableFutures.fromValue(Entities())
         val query = "${desc.select()} ${desc.from()} ${desc.join()} ${filter.where()} ${desc.groupBy()} ${sort.orderBy()} ${pagination.limit()}"
         val count = "select count(*) ${desc.from()} ${filter.where()}"
@@ -46,6 +47,8 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
     }
 
     override fun resourceName() = desc.resourceName
+    
+    override fun type() = JsonObject::class.java
 
     private fun JsonObject.where(): String {
         val filteredFields = desc.fields.map { it to get(it.name) }.filter { it.second != null }.filter { !it.second.isJsonNull }
@@ -108,7 +111,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun <T> ComposableFuture<T>.onFailure(query: String) = recoverWith { ComposableFutures.fromError(RuntimeException("failed to execute $query", it)) }
 
-    private fun EntityField.toSQLValue(json: JsonObject) = json.get(name)?.let { if(it.isJsonNull) "\'NULL\'" else type.toMysqlValue(it.asString) }
+    private fun EntityField.toSQLValue(json: JsonObject) = json.get(name)?.let { if (it.isJsonNull) "\'NULL\'" else type.toMysqlValue(it.asString) }
             ?: "\'NULL\'"
 }
 

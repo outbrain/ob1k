@@ -39,4 +39,9 @@ interface ICrudAsyncDao<T> {
      * return the name of the resource to crud
      */
     fun resourceName(): String
+
+    /**
+     * return the type of the resource
+     */
+    fun type() : Class<T>
 }

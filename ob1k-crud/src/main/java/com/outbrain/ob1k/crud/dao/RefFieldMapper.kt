@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.crud.dao
 
-import com.outbrain.ob1k.crud.model.*
+import com.outbrain.ob1k.crud.model.Model
 import com.outbrain.ob1k.db.ResultSetMapper
 import com.outbrain.ob1k.db.TypedRowData
 
@@ -15,27 +15,7 @@ class RefFieldMapper(val desc: Model) : ResultSetMapper<Boolean> {
         val targetTable = desc.getByTable(targetTableName) ?: return false
         val sourceField = sourceTable.getByColumn(sourceColumn) ?: return false
 
-
-        val targetReferenceField = EntityField("_",
-                sourceTable.resourceName + "s",
-                sourceTable.title + "s",
-                EFieldType.REFERENCEMANY,
-                false,
-                true,
-                false,
-                sourceTable.resourceName,
-                "id",
-                EntityFieldDisplay("name", EDisplayType.Chip))
-
-        sourceField.name = targetTable.resourceName
-        sourceField.label = targetTable.title
-        sourceField.type = EFieldType.REFERENCE
-        sourceField.reference = targetTable.resourceName
-        sourceField.target = "id"
-        sourceField.display = EntityFieldDisplay("name", EDisplayType.Select, "name")
-
-        targetTable.fields += targetReferenceField
-        targetTable.references += sourceTable
+        sourceTable.addReferenceTo(sourceField.name, targetTable)
         return true
     }
 }

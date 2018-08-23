@@ -20,7 +20,7 @@ public class CrudService implements ICrudService {
 
   @Override
   public ComposableFuture<Response> list(String sort, String range, String filter) {
-    IntRange rng = endpointUtils.range(Optional.ofNullable(range).orElse("[0,100]"));
+    IntRange rng = endpointUtils.range(Optional.ofNullable(range).orElse("[0,100000]"));
     return dao.list(rng,
             endpointUtils.sort(Optional.ofNullable(sort).orElse("[\"id\",\"ASC\"]")),
             endpointUtils.asJson(Optional.ofNullable(filter).orElse("{}"))).
@@ -39,7 +39,7 @@ public class CrudService implements ICrudService {
 
   @Override
   public ComposableFuture<Response> update(Request request) {
-    return dao.update(Integer.parseInt(request.getQueryParam("id")), endpointUtils.asJson(request.getRequestBody()).getAsJsonObject()).map(new AnyToResponseFunc());
+    return dao.update(Integer.parseInt(request.getPathParam("id")), endpointUtils.asJson(request.getRequestBody()).getAsJsonObject()).map(new AnyToResponseFunc());
   }
 
   @Override
