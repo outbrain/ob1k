@@ -2,9 +2,6 @@ package com.outbrain.ob1k.crud.dao
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.outbrain.ob1k.crud.CrudApplication
-import com.outbrain.ob1k.crud.example.Job
-import com.outbrain.ob1k.crud.example.Person
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -129,7 +126,7 @@ abstract class CrudDaoTestBase {
         val person = personDao.read(id0).get()!!
         val jobsOfId0 = person.value("jobs")
         assertEquals("[${job0.id()},${job1.id()}]", jobsOfId0)
-        assertNull(personDao.read(id1).get()!!.get("jobs"))
+        assertEquals("[]", personDao.read(id1).get()!!.value("jobs"))
         assertEquals(2, jobDao.list(filter = JsonObject().with("id", jobsOfId0)).get().data.size)
     }
 

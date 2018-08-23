@@ -46,9 +46,8 @@ enum class EFieldType {
         override fun fillJsonObject(obj: JsonObject, property: String, value: String?) = NUMBER.fillJsonObject(obj, property, value)
     },
     REFERENCEMANY {
-        override fun fillJsonObject(obj: JsonObject, property: String, value: String?) {
-            value?.let { if (value.isNotEmpty()) obj.addProperty(property, "[$value]") }
-        }
+        override fun fillJsonObject(obj: JsonObject, property: String, value: String?) = obj.addProperty(property, value?.let { "[$it]" }
+                ?: "[]")
     },
     LIST;
 

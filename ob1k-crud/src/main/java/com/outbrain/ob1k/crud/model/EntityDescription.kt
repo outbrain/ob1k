@@ -1,11 +1,14 @@
 package com.outbrain.ob1k.crud.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+
 data class EntityDescription(val table: String,
                              val id: Int,
                              val resourceName: String = table.substringAfterLast("_"),
                              var title: String = resourceName.capitalize(),
                              val endpoint: String = "../${resourceName}s",
                              var fields: List<EntityField> = emptyList()) {
+    @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
     operator fun invoke(name: String): EntityField? = fields.find { name == it.name }

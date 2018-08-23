@@ -48,10 +48,7 @@ public class PersonDao implements ICrudAsyncDao<Person> {
 
   private Person joinPersonWithJobs(Person person) {
     if (person != null) {
-      List<Integer> jobs = getJobs(person);
-      if (jobs.size() > 0) {
-        person.setJobs(jobs);
-      }
+      person.setJobs(getJobs(person));
     }
     return person;
   }
