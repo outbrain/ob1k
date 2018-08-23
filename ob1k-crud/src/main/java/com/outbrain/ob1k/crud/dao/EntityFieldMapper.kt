@@ -14,7 +14,7 @@ class EntityFieldMapper : ResultSetMapper<EntityField> {
         val dbType = row.getString("Type")
         val type = dbType.toAppType()
         val readOnly = row.getString("Extra") == "auto_increment"
-        return EntityField(dbName, name, label, type, required, readOnly)
+        return EntityField(dbName, name, label, type, required, readOnly, readOnly)
     }
 
 

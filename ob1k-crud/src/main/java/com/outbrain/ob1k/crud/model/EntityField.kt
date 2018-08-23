@@ -6,6 +6,7 @@ data class EntityField(var dbName: String,
                        var type: EFieldType,
                        var required: Boolean = true,
                        var readOnly: Boolean = false,
+                       var autoGenerate: Boolean = false,
                        var reference: String? = null,
                        var target: String? = null,
                        var display: EntityFieldDisplay? = null)

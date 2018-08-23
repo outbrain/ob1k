@@ -20,13 +20,13 @@ class MySQLCrudDaoTest {
     private val personDao = application.newMySQLDao("obcp_crud_person")
     private val jobDao = application.newMySQLDao("obcj_crud_job")
     private val email = "${Random().nextInt()}@outbrain.com"
+    private val title = "${Random().nextInt()}QA"
     private val jsonParser = JsonParser()
 
     @After
     fun tearDown() {
-        jobDao.list().andThen({ it.value.data.forEach { jobDao.delete(it.id()).get() } }).get()
-        personDao.list().andThen({ it.value.data.forEach { personDao.delete(it.id()).get() } }).get()
-        //personDao.list(filter = jsonParser.parse("{\"email\": \"$email\"}").asJsonObject).andThen({ it.value.data.forEach { personDao.delete(it.get("id").asInt).get() } }).get()
+        jobDao.list(filter = JsonObject().with("title", title)).andThen({ it.value.data.forEach { jobDao.delete(it.id()).get() } }).get()
+        personDao.list(filter = JsonObject().with("email", email)).andThen({ it.value.data.forEach { personDao.delete(it.id()).get() } }).get()
     }
 
     @org.junit.Test
@@ -65,10 +65,10 @@ class MySQLCrudDaoTest {
     @org.junit.Test
     internal fun `sort persons`() {
         (8 downTo 1).forEach { personDao.create(person("${it}sort")).get() }
-        val entities1 = personDao.list(sort = "name" to "ASC").get()
+        val entities1 = personDao.list(sort = "name" to "ASC", filter = JsonObject().with("email", email)).get()
         (0..entities1.data.size - 2).forEach {
-            val name1 = entities1.data[it].get("name").asString
-            val name2 = entities1.data[it + 1].get("name").asString
+            val name1 = entities1.data[it].value("name")
+            val name2 = entities1.data[it + 1].value("name")
             assertTrue(name1 < name2)
         }
         val entities2 = personDao.list(sort = "id" to "DESC").get()
@@ -105,7 +105,7 @@ class MySQLCrudDaoTest {
     private fun assertEqualsJson(expected: JsonObject, actual: JsonObject) = expected.entrySet().map { it.key }.forEach { assertEquals(expected.get(it), actual.get(it)) }
 
     @Test
-    fun manyToOneReferences() {
+    internal fun `many jobs to a person`() {
         val application = crudApplication()
 
         val personDao = application.newMySQLDao("obcp_crud_person")
@@ -123,12 +123,29 @@ class MySQLCrudDaoTest {
         job0 = jobDao.update(job0.id(), job0).get()
         assertEquals(id1, job0.int("person"))
 
-        assertFails { personDao.delete(id1).get() }
-
         jobDao.create(job("manyToOne", id0)).get()
         jobDao.create(job("manyToOne", id1)).get()
 
         assertEquals(2, jobDao.list(filter = JsonObject().with("person", id1)).get().data.size)
+    }
+
+    @Test
+    internal fun `person to many jobs`() {
+        val application = crudApplication()
+        val personDao = application.newMySQLDao("obcp_crud_person")
+        val jobDao = application.newMySQLDao("obcj_crud_job")
+
+        val id0 = personDao.create(person("oneToMany")).get().id()
+        val id1 = personDao.create(person("oneToMany")).get().id()
+        val job0 = jobDao.create(job("oneToMany", id0)).get()
+        val job1 = jobDao.create(job("oneToMany", id0)).get()
+
+        assertFails { personDao.delete(id0).get() }
+
+        val jobsOfId0 = personDao.read(id0).get()!!.value("jobs")
+        assertEquals("[${job0.id()},${job1.id()}]", jobsOfId0)
+        assertEquals("[]", personDao.read(id1).get()!!.value("jobs"))
+        assertEquals(2, jobDao.list(filter = JsonObject().with("id", jobsOfId0)).get().data.size)
     }
 
     private fun person(testcase: String) = JsonObject()
@@ -139,7 +156,7 @@ class MySQLCrudDaoTest {
 
     private fun job(testcase: String, personId: Int) = JsonObject()
             .with("company", "$testcase${Random().nextInt()}")
-            .with("title", "QA")
+            .with("title", title)
             .with("person", personId)
 
 
@@ -160,4 +177,5 @@ class MySQLCrudDaoTest {
 
     private fun JsonObject.id() = int("id")
     private fun JsonObject.int(name: String) = get(name).asInt
+    private fun JsonObject.value(name: String) = get(name).asString
 }

@@ -22,6 +22,7 @@ class RefFieldMapper(val desc: Model) : ResultSetMapper<Boolean> {
                 EFieldType.REFERENCEMANY,
                 false,
                 true,
+                false,
                 sourceTable.resourceName,
                 "id",
                 EntityFieldDisplay("name", EDisplayType.Chip))
