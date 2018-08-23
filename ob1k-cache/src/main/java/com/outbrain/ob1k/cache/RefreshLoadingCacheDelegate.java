@@ -242,4 +242,62 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       }
     }
   }
+
+  public static class Builder<K, V> {
+    private static final long DEFAULT_LOAD_TIMEOUT_MS = 500;
+
+    private final TypedCache<K, ValueWithWriteTime<V>> cache;
+    private final CacheLoader<K, V> loader;
+    private final String cacheName;
+    private final MetricFactory metricFactory;
+
+    private boolean failOnError = false;
+    private long loadTimeout = DEFAULT_LOAD_TIMEOUT_MS;
+    private TimeUnit loadTimeUnit = TimeUnit.MILLISECONDS;
+    private long refreshAfterWriteDuration = -1;
+    private TimeUnit refreshAfterWriteTimeUnit;
+    private long refreshRetryInterval = -1;
+    private TimeUnit refreshRetryTimeUnit;
+
+    public Builder(final TypedCache<K, ValueWithWriteTime<V>> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory) {
+      this.cache = cache;
+      this.loader = loader;
+      this.cacheName = cacheName;
+      this.metricFactory = metricFactory;
+    }
+
+    public Builder<K, V> failOnError() {
+      this.failOnError = true;
+      return this;
+    }
+
+    public Builder<K, V> withLoadTimeout(final long timeout, final TimeUnit timeUnit) {
+      this.loadTimeout = timeout;
+      this.loadTimeUnit = timeUnit;
+      return this;
+    }
+
+    public Builder<K, V> refreshAfterWrite(final long duration, final TimeUnit timeUnit) {
+      this.refreshAfterWriteDuration = duration;
+      this.refreshAfterWriteTimeUnit = timeUnit;
+      return this;
+    }
+
+    public Builder<K, V> withRefreshRetryInterval(final long duration, final TimeUnit timeUnit) {
+      this.refreshRetryInterval = duration;
+      this.refreshRetryTimeUnit = timeUnit;
+      return this;
+    }
+
+    public RefreshLoadingCacheDelegate<K, V> build() {
+      if (refreshAfterWriteDuration == -1) {
+        throw new IllegalArgumentException("missing refreshAfterWrite config");
+      }
+      if (refreshRetryInterval == -1) {
+        refreshRetryInterval = refreshAfterWriteDuration / 10;
+        refreshRetryTimeUnit = refreshAfterWriteTimeUnit;
+      }
+      return new RefreshLoadingCacheDelegate<>(cache, loader, cacheName, metricFactory, loadTimeout, loadTimeUnit, failOnError, refreshAfterWriteDuration, refreshRetryTimeUnit, refreshRetryInterval, refreshRetryTimeUnit);
+    }
+  }
 }
