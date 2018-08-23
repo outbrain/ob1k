@@ -3,6 +3,7 @@ package com.outbrain.ob1k.crud.dao
 import com.google.gson.JsonObject
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.concurrent.ComposableFutures
+import com.outbrain.ob1k.crud.model.EFieldType
 import com.outbrain.ob1k.crud.model.Entities
 import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.db.BasicDao
@@ -23,13 +24,16 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.recoverWith { ComposableFutures.fromError(RuntimeException("failed to execute $select", it)) }
     }
 
-    override fun read(id: Int) = basicDao.query("${desc.select()} ${desc.from()} ${desc.join()} ${desc.whereEq(id)} ${desc.groupBy()}").map { it.lastOrNull() }
+    override fun read(id: Int): ComposableFuture<JsonObject?> {
+        val query = "${desc.select()} ${desc.from()} ${desc.join()} ${desc.whereEq(id)} ${desc.groupBy()}"
+        return basicDao.query(query).map { it.lastOrNull() }
+    }
 
     override fun create(entity: JsonObject) = basicDao.executeAndGetId(desc.insert(entity)).map { entity.withId(it) }
 
     override fun update(id: Int, entity: JsonObject) = basicDao.execute(desc.update(id, entity)).map { entity }
 
-    override fun delete(id: Int) = basicDao.execute("DELETE ${desc.from()} ${desc.whereEq(id)}").map { id }
+    override fun delete(id: Int) = basicDao.execute("DELETE ${desc.from()} ${desc.whereEq(id)}").map { it.toInt() }
 
     override fun resourceName() = desc.resourceName
 
@@ -43,12 +47,19 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
     }
 
     private fun EntityDescription.update(id: Int, jsonObject: JsonObject): String {
-        val keyval = editableFields().map { "${it.dbName}=${it.type.toMysqlValue(jsonObject.get(it.name).asString)}" }.joinToString(",")
+        val keyval = editableFields()
+                .filter { jsonObject.get(it.name) != null }
+                .map { "${it.dbName}=${it.type.toMysqlValue(jsonObject.get(it.name).asString)}" }
+                .joinToString(",")
         return "UPDATE $table SET $keyval ${whereEq(id)}"
     }
 
     private fun EntityDescription.insert(jsonObject: JsonObject): String {
-        val jsonValues = editableFields().map { it.dbName to it.type.toMysqlValue(jsonObject.get(it.name).asString) }
+        val jsonValues = fields
+                .filter { it.type != EFieldType.REFERENCEMANY }
+                .filter { jsonObject.get(it.name) != null }
+                .map { it.dbName to it.type.toMysqlValue(jsonObject.get(it.name).asString) }
+
         val cols = jsonValues.map { it.first }.joinToString(",")
         val values = jsonValues.map { it.second }.joinToString(",")
         return "INSERT INTO $table ($cols) VALUES($values)"
@@ -60,7 +71,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun EntityDescription.whereEq(id: Int) = "where ${idDBFieldName()}=$id"
 
-    private fun EntityDescription.join() = references.map { " join ${it.table} on ${idDBFieldName()}=${it.referenceTo(resourceName)!!.dbName}" }.joinToString(" ")
+    private fun EntityDescription.join() = references.map { "left join ${it.table} on ${idDBFieldName()}=${it.referenceTo(resourceName)!!.dbName}" }.joinToString(" ")
 
     private fun EntityDescription.groupBy() = if (references.isEmpty()) "" else "group by ${desc.idDBFieldName()}"
 

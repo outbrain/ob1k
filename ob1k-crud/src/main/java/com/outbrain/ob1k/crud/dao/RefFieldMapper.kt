@@ -14,32 +14,26 @@ class RefFieldMapper(val desc: Model) : ResultSetMapper<Boolean> {
         val sourceTable = desc.getByTable(sourceTableName) ?: return false
         val targetTable = desc.getByTable(targetTableName) ?: return false
         val sourceField = sourceTable.getByColumn(sourceColumn) ?: return false
-        val sourceNameField = sourceTable("name") ?: return false
-        val targetNameField = targetTable("name") ?: return false
 
 
         val targetReferenceField = EntityField("_",
                 sourceTable.resourceName + "s",
                 sourceTable.title + "s",
                 EFieldType.REFERENCEMANY,
-                true,
+                false,
                 true,
                 sourceTable.resourceName,
                 "id",
-                EntityFieldDisplay(sourceNameField.name, EDisplayType.Chip))
+                EntityFieldDisplay("name", EDisplayType.Chip))
 
-        val sourceReferenceField = EntityField(sourceField.dbName,
-                targetTable.resourceName,
-                targetTable.title,
-                EFieldType.REFERENCE,
-                true,
-                false,
-                targetTable.resourceName,
-                "id",
-                EntityFieldDisplay(targetNameField.name, EDisplayType.Select, targetNameField.name))
+        sourceField.name = targetTable.resourceName
+        sourceField.label = targetTable.title
+        sourceField.type = EFieldType.REFERENCE
+        sourceField.reference = targetTable.resourceName
+        sourceField.target = "id"
+        sourceField.display = EntityFieldDisplay("name", EDisplayType.Select, "name")
 
         targetTable.fields += targetReferenceField
-        sourceTable.fields += sourceReferenceField
         targetTable.references += sourceTable
         return true
     }

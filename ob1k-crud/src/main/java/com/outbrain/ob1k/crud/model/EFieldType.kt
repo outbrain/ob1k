@@ -38,7 +38,10 @@ enum class EFieldType {
             }
         }
     },
-    DATE,
+    DATE {
+        override fun toMysqlMatchValue(value: String) = "=\"$value\""
+        override fun toMysqlValue(value: String) = "\"$value\""
+    },
     REFERENCE {
         override fun fillJsonObject(obj: JsonObject, property: String, value: String?) = NUMBER.fillJsonObject(obj, property, value)
     },

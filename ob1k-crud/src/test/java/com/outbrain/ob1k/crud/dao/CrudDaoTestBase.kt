@@ -14,7 +14,7 @@ abstract class CrudDaoTestBase {
     private val jsonParser = JsonParser()
 
     @After
-    fun tearDown() {
+    open fun tearDown() {
         dao.list().andThen({ entities -> entities.value.data.forEach { dao.delete(it.get("id").asInt).get() } }).get()
         //dao.list(filter = jsonParser.parse("{\"email\": \"$email\"}").asJsonObject).andThen({ it.value.data.forEach { dao.delete(it.get("id").asInt).get() } }).get()
     }
