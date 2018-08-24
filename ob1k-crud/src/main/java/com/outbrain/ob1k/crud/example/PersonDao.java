@@ -1,5 +1,6 @@
 package com.outbrain.ob1k.crud.example;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -89,6 +90,9 @@ public class PersonDao implements ICrudAsyncDao<Person> {
   @Override
   public ComposableFuture<Person> create(Person entity) {
     entity.setId(map.size() + 1);
+    if (entity.getJobs() == null) {
+      entity.setJobs(Lists.newArrayList());
+    }
     map.put(entity.getId(), entity);
     return ComposableFutures.fromValue(entity);
   }

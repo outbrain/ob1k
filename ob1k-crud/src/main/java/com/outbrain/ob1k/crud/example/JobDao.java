@@ -32,8 +32,8 @@ public class JobDao implements ICrudAsyncDao<Job> {
     if (sort.getSecond().contains("DESC")) {
       comparator = comparator.reversed();
     }
-    Integer startInteger = pagination.getStart();
     Integer endInteger = pagination.getEndInclusive();
+    Integer startInteger = pagination.getStart();
     List<Job> list = map.values()
             .stream()
             .filter(c -> pass(c, filter))
