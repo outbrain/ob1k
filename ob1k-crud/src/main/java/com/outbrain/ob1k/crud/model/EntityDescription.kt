@@ -33,6 +33,9 @@ data class EntityDescription(val table: String,
             target.fields += reverseField
         }
 
+        val displayField = this("name") ?: this("title") ?: idField()
+        val targetDisplayField = this("name") ?: this("title") ?: idField()
+
         reverseField.dbName = "_"
         reverseField.name = "${resourceName}s"
         reverseField.label = "${title}s"
@@ -41,15 +44,16 @@ data class EntityDescription(val table: String,
         reverseField.readOnly = true
         reverseField.autoGenerate = false
         reverseField.reference = resourceName
-        reverseField.display = EntityFieldDisplay("name", EDisplayType.Chip)
+        reverseField.target = target.resourceName
+        reverseField.display = EntityFieldDisplay(displayField.name, EDisplayType.Chip, displayField.name)
 
         referenceField.name = target.resourceName
         referenceField.label = target.title
         referenceField.type = EFieldType.REFERENCE
         referenceField.reference = target.resourceName
-        referenceField.target = "id"
+        referenceField.target = null
         referenceField.required = true
-        referenceField.display = EntityFieldDisplay("name", EDisplayType.Select, "name")
+        referenceField.display = EntityFieldDisplay(targetDisplayField.name, EDisplayType.Select, targetDisplayField.name)
 
 
         target.references += this

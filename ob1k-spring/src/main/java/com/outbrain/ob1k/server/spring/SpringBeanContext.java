@@ -29,6 +29,12 @@ public class SpringBeanContext {
     return context.getBean(id, type);
   }
 
+  public <T> Map<String, T> getBeans(final String ctxName, final Class<T> type) {
+    final AbstractApplicationContext context = contexts.get(ctxName);
+    Objects.requireNonNull(context, "Context not found for name '" + ctxName + "'");
+    return context.getBeansOfType(type);
+  }
+
   public boolean contextExists(final String ctxName) {
     return contexts.containsKey(ctxName);
   }

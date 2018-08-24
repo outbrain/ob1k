@@ -65,7 +65,6 @@ class CrudApplication(private val dao: BasicDao? = null,
 
     fun daosAsServices(dateformat: String, daos: List<ICrudAsyncDao<*>>) = daos.map { CrudService(newCustomDao(it, dateformat)) }
 
-
     fun service(dao: ICrudAsyncDao<JsonObject>) = CrudService(dao)
 
     fun modelService() = ModelService(model)
