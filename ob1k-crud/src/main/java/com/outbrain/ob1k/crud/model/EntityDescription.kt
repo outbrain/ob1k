@@ -2,7 +2,7 @@ package com.outbrain.ob1k.crud.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 
-data class EntityDescription(val table: String,
+data class EntityDescription(@JsonIgnore val table: String,
                              val id: Int,
                              val resourceName: String = table.substringAfterLast("_"),
                              var title: String = resourceName.capitalize(),
@@ -34,7 +34,7 @@ data class EntityDescription(val table: String,
         }
 
         val displayField = this("name") ?: this("title") ?: idField()
-        val targetDisplayField = this("name") ?: this("title") ?: idField()
+        val targetDisplayField = target("name") ?: target("title") ?: target.idField()
 
         reverseField.dbName = "_"
         reverseField.name = "${resourceName}s"

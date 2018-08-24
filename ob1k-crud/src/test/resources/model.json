@@ -1,0 +1,104 @@
+{
+  "total": 2,
+  "data": [
+    {
+      "id": 0,
+      "resourceName": "person",
+      "title": "Person",
+      "endpoint": "../persons",
+      "fields": [
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false
+        },
+        {
+          "name": "id",
+          "label": "Id",
+          "type": "NUMBER",
+          "required": true,
+          "readOnly": true
+        },
+        {
+          "name": "jobs",
+          "label": "Jobs",
+          "type": "REFERENCEMANY",
+          "required": false,
+          "readOnly": true,
+          "reference": "job",
+          "target": "person",
+          "display": {
+            "name": "title",
+            "type": "Chip",
+            "optionText": "title"
+          }
+        },
+        {
+          "name": "email",
+          "label": "Email",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false
+        },
+        {
+          "name": "alive",
+          "label": "Alive",
+          "type": "BOOLEAN",
+          "required": false,
+          "readOnly": false
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "resourceName": "job",
+      "title": "Job",
+      "endpoint": "../jobs",
+      "fields": [
+        {
+          "name": "id",
+          "label": "Id",
+          "type": "NUMBER",
+          "required": true,
+          "readOnly": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false
+        },
+        {
+          "name": "company",
+          "label": "Company",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false
+        },
+        {
+          "name": "person",
+          "label": "Person",
+          "type": "REFERENCE",
+          "required": true,
+          "readOnly": false,
+          "reference": "person",
+          "display": {
+            "name": "name",
+            "type": "Select",
+            "optionText": "name"
+          }
+        },
+        {
+          "name": "timestamp",
+          "label": "Timestamp",
+          "type": "DATE",
+          "required": false,
+          "readOnly": false
+        }
+      ]
+    }
+  ]
+}
