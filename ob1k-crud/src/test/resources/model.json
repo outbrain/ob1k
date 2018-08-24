@@ -28,7 +28,7 @@
           "required": false,
           "readOnly": true,
           "reference": "job",
-          "target": "person",
+          "target": "id",
           "display": {
             "name": "title",
             "type": "Chip",

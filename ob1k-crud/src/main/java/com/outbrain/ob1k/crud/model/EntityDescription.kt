@@ -44,7 +44,7 @@ data class EntityDescription(@JsonIgnore val table: String,
         reverseField.readOnly = true
         reverseField.autoGenerate = false
         reverseField.reference = resourceName
-        reverseField.target = target.resourceName
+        reverseField.target = "id"
         reverseField.display = EntityFieldDisplay(displayField.name, EDisplayType.Chip, displayField.name)
 
         referenceField.name = target.resourceName
