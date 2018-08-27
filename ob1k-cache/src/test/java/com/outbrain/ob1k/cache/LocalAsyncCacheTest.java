@@ -247,17 +247,16 @@ public class LocalAsyncCacheTest {
   @Test
   public void testRefreshAfterWrite() throws ExecutionException, InterruptedException {
     final CacheLoader<String, String> loader = mock(CacheLoader.class);
-    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> {
+    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> ComposableFutures.submit(() -> {
       Thread.sleep(100);
       String key = (String) invocation.getArguments()[1];
-      return ComposableFutures.fromValue(VALUE_FOR + key);
-    });
+      return VALUE_FOR + key;
+    }));
 
     final LocalAsyncCache<String, String> myCache =
             new LocalAsyncCache.Builder<String, String>(10, 200000, TimeUnit.MILLISECONDS, null, "myCache")
                     .refreshAfterWrite(500, TimeUnit.MILLISECONDS)
                     .withLoader(loader)
-                    .withLoadTimeout(5, TimeUnit.MILLISECONDS)
                     .build();
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
@@ -274,15 +273,14 @@ public class LocalAsyncCacheTest {
   @Test
   public void testGetAsyncAndRefreshNull() throws ExecutionException, InterruptedException {
     final CacheLoader<String, String> loader = mock(CacheLoader.class);
-    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> {
+    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> ComposableFutures.submit(() -> {
       Thread.sleep(100);
-      return ComposableFutures.fromNull();
-    });
+      return null;
+    }));
     final LocalAsyncCache<String, String> myCache =
             new LocalAsyncCache.Builder<String, String>(10, 200000, TimeUnit.MILLISECONDS, null, "myCache")
                     .refreshAfterWrite(500, TimeUnit.MILLISECONDS)
                     .withLoader(loader)
-                    .withLoadTimeout(5, TimeUnit.MILLISECONDS)
                     .build();
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
@@ -299,26 +297,25 @@ public class LocalAsyncCacheTest {
   @Test
   public void testGetAsyncAndRefreshException() throws ExecutionException, InterruptedException {
     final CacheLoader<String, String> loader = mock(CacheLoader.class);
-    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> {
+    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> ComposableFutures.submit(() -> {
       Thread.sleep(100);
-      return ComposableFutures.fromError(new RuntimeException());
-    });
+      throw new RuntimeException();
+    }));
     final LocalAsyncCache<String, String> myCache =
             new LocalAsyncCache.Builder<String, String>(10, 200000, TimeUnit.MILLISECONDS, null, "myCache")
-                    .refreshAfterWrite(500, TimeUnit.MILLISECONDS)
+                    .refreshAfterWrite(1000, TimeUnit.MILLISECONDS)
                     .withLoader(loader)
-                    .withLoadTimeout(5, TimeUnit.MILLISECONDS)
                     .build();
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(500);
+    Thread.sleep(1000);
     // get value and trigger refresh
     assertEquals("value1", myCache.getAsync("key1").get());
     Thread.sleep(200);
     //get value after refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    verify(loader, times(1)).load("myCache", "key1");
+    verify(loader, times(2)).load("myCache", "key1");
   }
 
   @Test
@@ -326,15 +323,14 @@ public class LocalAsyncCacheTest {
     CacheLoader<String, String> loader = mock(CacheLoader.class);
     final LocalAsyncCache<String, String> myCache =
             new LocalAsyncCache.Builder<String, String>(10, 200000, TimeUnit.MILLISECONDS, null, "myCache")
-                    .refreshAfterWrite(50, TimeUnit.MILLISECONDS)
+                    .refreshAfterWrite(500, TimeUnit.MILLISECONDS)
                     .withLoader(loader)
-                    .withLoadTimeout(5, TimeUnit.MILLISECONDS)
                     .build();
-    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> {
+    when(loader.load(anyString(), anyString())).thenAnswer(invocation -> ComposableFutures.submit(() -> {
       Thread.sleep(100);
       String key = (String) invocation.getArguments()[1];
-      return ComposableFutures.fromValue(VALUE_FOR + key);
-    });
+      return VALUE_FOR + key;
+    }));
     myCache.setAsync("key1", "value1").get();
     // get first value before refresh
     assertEquals("value1", myCache.getBulkAsync(Arrays.asList("key1")).get().get("key1"));

@@ -6,7 +6,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
+import com.google.common.util.concurrent.SettableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
@@ -17,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -34,14 +32,9 @@ import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
  * Time: 6:08 PM
  */
 public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
-  private static final int DEFAULT_LOAD_TIMEOUT = 1000;
-  private static final TimeUnit DEFAULT_LOAD_TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
-  private static final int DEFAULT_REFRESH_THREAD_COUNT = 10;
 
   private final LoadingCache<K, ComposableFuture<V>> loadingCache;
   private final Cache<K, ComposableFuture<V>> localCache;
-
-  private final ExecutorService executor;
 
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader,
                          final MetricFactory metricFactory, final String cacheName) {
@@ -50,13 +43,12 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader,
                          final MetricFactory metricFactory, final String cacheName, final boolean failOnMissingEntries) {
-    this(maximumSize, ttl, unit, loader,  metricFactory, cacheName, failOnMissingEntries, DEFAULT_LOAD_TIMEOUT, DEFAULT_LOAD_TIMEOUT_UNIT, -1, null, DEFAULT_REFRESH_THREAD_COUNT);
+    this(maximumSize, ttl, unit, loader,  metricFactory, cacheName, failOnMissingEntries, -1, null);
   }
 
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader,
                          final MetricFactory metricFactory, final String cacheName, final boolean failOnMissingEntries,
-                         final long loadTimeout, final TimeUnit loadTimeoutUnit,
-                         final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit, final int refreshThreadCount) {
+                         final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit) {
     final boolean collectStats = metricFactory != null;
     final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
             .maximumSize(maximumSize)
@@ -64,21 +56,12 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
     if (refreshAfterWriteDuration != -1) {
       builder.refreshAfterWrite(refreshAfterWriteDuration, refreshAfterWriteUnit);
-
-      if (refreshThreadCount < 1) {
-        this.executor = Executors.newFixedThreadPool(DEFAULT_REFRESH_THREAD_COUNT);
-      } else {
-        this.executor = Executors.newFixedThreadPool(refreshThreadCount);
-      }
-
-    } else {
-      this.executor = null;
     }
 
     if (collectStats)
       builder.recordStats();
 
-    this.loadingCache = builder.build(new InternalCacheLoader(loader, cacheName, failOnMissingEntries, loadTimeout, loadTimeoutUnit));
+    this.loadingCache = builder.build(new InternalCacheLoader(loader, cacheName, failOnMissingEntries));
 
     if (collectStats) {
       GuavaCacheGaugesFactory.createGauges(metricFactory, loadingCache, "LocalAsyncCache-" + cacheName);
@@ -93,7 +76,6 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final MetricFactory metricFactory, final String cacheName) {
     this.loadingCache = null;
-    this.executor = null;
 
     final boolean collectStats = metricFactory != null;
     final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
@@ -272,9 +254,6 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
     private boolean failOnMissingEntries = false;
     private long refreshAfterWriteDuration;
     private TimeUnit refreshAfterWriteUnit;
-    private long loadTimeout = DEFAULT_LOAD_TIMEOUT;
-    private TimeUnit loadTimeoutUnit = DEFAULT_LOAD_TIMEOUT_UNIT;
-    private int refreshThreadCount = DEFAULT_REFRESH_THREAD_COUNT;
 
     public Builder(final int maximumSize, final int ttl, final TimeUnit unit, final MetricFactory metricFactory, final String cacheName) {
       this.maximumSize = maximumSize;
@@ -289,12 +268,6 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       return this;
     }
 
-    public Builder<K, V> withLoadTimeout(final long loadTimeout, final TimeUnit loadTimeoutUnit) {
-      this.loadTimeout = loadTimeout;
-      this.loadTimeoutUnit = loadTimeoutUnit;
-      return this;
-    }
-
     public Builder<K, V> failOnMissingEntries() {
       this.failOnMissingEntries = true;
       return this;
@@ -306,45 +279,35 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       return this;
     }
 
-    public Builder<K, V> withRefreshThreadCount(int refreshThreadCount) {
-      this.refreshThreadCount = refreshThreadCount;
-      return this;
-    }
-
     public LocalAsyncCache<K, V> build() {
       if (loader == null) {
         return new LocalAsyncCache<>(maximumSize, ttl, unit, metricFactory, cacheName);
       }
       return new LocalAsyncCache<>(maximumSize, ttl, unit, loader, metricFactory, cacheName, failOnMissingEntries,
-              loadTimeout, loadTimeoutUnit, refreshAfterWriteDuration, refreshAfterWriteUnit, refreshThreadCount);
+              refreshAfterWriteDuration, refreshAfterWriteUnit);
     }
   }
 
-  private class InternalCacheLoader extends com.google.common.cache.CacheLoader<K, ComposableFuture<V>> {
+  private static class InternalCacheLoader<K, V> extends com.google.common.cache.CacheLoader<K, ComposableFuture<V>> {
 
     private final CacheLoader<K, V> loader;
     private final String cacheName;
     private final boolean failOnMissingEntries;
-    private final long loadTimeout;
-    private final TimeUnit loadTimeoutUnit;
 
-    InternalCacheLoader(final CacheLoader<K, V> loader, final String cacheName, final boolean failOnMissingEntries,
-                        final long loadTimeout, final TimeUnit loadTimeoutUnit) {
+    InternalCacheLoader(final CacheLoader<K, V> loader, final String cacheName, final boolean failOnMissingEntries) {
       this.loader = loader;
       this.cacheName = cacheName;
       this.failOnMissingEntries = failOnMissingEntries;
-      this.loadTimeout = loadTimeout;
-      this.loadTimeoutUnit = loadTimeoutUnit;
     }
 
     @Override
     public ComposableFuture<V> load(@Nonnull final K key) {
-      return loader.load(cacheName, key).withTimeout(loadTimeout, loadTimeoutUnit).materialize();
+      return loader.load(cacheName, key).materialize();
     }
 
     @Override
     public Map<K, ComposableFuture<V>> loadAll(final Iterable<? extends K> keys) {
-      final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).withTimeout(loadTimeout, loadTimeoutUnit).materialize();
+      final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).materialize();
       final Map<K, ComposableFuture<V>> result = new HashMap<>();
       for (final K key : keys) {
         result.put(key, loaded.flatMap(extractLoaderResultEntry(key)));
@@ -354,14 +317,16 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
 
     @Override
     public ListenableFuture<ComposableFuture<V>> reload(final K key, final ComposableFuture<V> oldValue) {
-      ListenableFutureTask<ComposableFuture<V>> task = ListenableFutureTask.create(() -> {
-        ComposableFuture<V> loadFuture = loader.load(cacheName, key).recoverWith(e -> oldValue);
-        V value = loadFuture.get(loadTimeout, loadTimeoutUnit);
-        return ComposableFutures.fromValue(value);
+      final SettableFuture<ComposableFuture<V>> future = SettableFuture.create();
+      loader.load(cacheName, key).materialize().consume(t -> {
+        if (t.isSuccess()) {
+          future.set(ComposableFutures.fromValue(t.getValue()));
+        } else {
+          future.setException(t.getError());
+        }
       });
 
-      executor.execute(task);
-      return task;
+      return future;
     }
 
     private Function<Map<K, V>, ComposableFuture<V>> extractLoaderResultEntry(final K key) {
