@@ -37,7 +37,7 @@ public class RefreshLoadingCacheDelegateTest {
 
   @Before
   public void setup() {
-    refreshingCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderStub, "myCache", null, 10, TimeUnit.SECONDS, false, 50, TimeUnit.MILLISECONDS, -1, null);
+    refreshingCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderStub, "myCache", null, 10, TimeUnit.SECONDS, false, 50, TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -64,7 +64,7 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefresh() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS, -1, null);
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
     when(cacheLoaderMock.load(anyString(), anyString())).thenAnswer(invocation -> {
       Thread.sleep(100);
       String key = (String) invocation.getArguments()[1];
@@ -86,7 +86,7 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefreshNull() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS, -1, null);
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
     when(cacheLoaderMock.load(anyString(), anyString())).thenAnswer(invocation -> {
       Thread.sleep(100);
       return ComposableFutures.fromNull();
@@ -107,7 +107,7 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefreshException() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 5000, TimeUnit.MILLISECONDS, -1, null);
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 5000, TimeUnit.MILLISECONDS);
     when(cacheLoaderMock.load("myCache", "key1")).thenAnswer(invocation -> {
       Thread.sleep(100);
       return ComposableFutures.fromError(new RuntimeException());
@@ -120,8 +120,8 @@ public class RefreshLoadingCacheDelegateTest {
     assertEquals("value1", myCache.getAsync("key1").get());
     Thread.sleep(200);
     //get value after refresh
-    verify(cacheLoaderMock, times(1)).load("myCache", "key1");
     assertEquals("value1", myCache.getAsync("key1").get());
+    verify(cacheLoaderMock, times(2)).load("myCache", "key1");
   }
 
   @Test
@@ -137,7 +137,7 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void getBulkAsyncAndRefresh() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS, -1, null);
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
     when(cacheLoaderMock.load(anyString(), any(Iterable.class))).thenAnswer(invocation -> {
       Thread.sleep(100);
       Iterable<String> keys = (Iterable<String>) invocation.getArguments()[1];

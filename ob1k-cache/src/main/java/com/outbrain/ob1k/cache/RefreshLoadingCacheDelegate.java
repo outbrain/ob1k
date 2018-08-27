@@ -1,7 +1,5 @@
 package com.outbrain.ob1k.cache;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Iterables;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.swinfra.metrics.api.Counter;
@@ -29,7 +27,6 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private final long refreshAfterWriteDuration;
 
   private final ConcurrentMap<K, Boolean> refreshingKeys;
-  private final Cache<K, Boolean> failedReloads;
 
   private final Counter refreshes;
   private final Counter refreshErrors;
@@ -37,8 +34,7 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
   public RefreshLoadingCacheDelegate(final TypedCache<K, ValueWithWriteTime<V>> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory,
                                      final long duration, final TimeUnit timeUnit, final boolean failOnError,
-                                     final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit,
-                                     final long refreshRetryInterval, final TimeUnit refreshRetryTimeUnit) {
+                                     final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit) {
     this.cacheName = cacheName;
     this.internalCacheLoader = new InternalCacheLoader(loader);
     this.cache = new LoadingCacheDelegate<>(cache, internalCacheLoader, cacheName, metricFactory, duration, timeUnit, failOnError);
@@ -47,16 +43,9 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     this.refreshAfterWriteDuration = refreshAfterWriteUnit.toMillis(refreshAfterWriteDuration);
 
     refreshingKeys = new ConcurrentHashMap<>();
-    long failedReloadsExpiration = refreshRetryInterval > 0 ? refreshRetryInterval : refreshAfterWriteDuration / 10;
-    TimeUnit failedReloadsTimeUnit = refreshRetryInterval > 0 ? refreshRetryTimeUnit : refreshRetryTimeUnit;
-    failedReloads = CacheBuilder.newBuilder()
-            .maximumSize(10000)
-            .expireAfterWrite(failedReloadsExpiration, failedReloadsTimeUnit)
-            .build();
 
     if (metricFactory != null) {
       metricFactory.registerGauge("RefreshLoadingCacheDelegate." + cacheName, "refreshMapSize", refreshingKeys::size);
-      metricFactory.registerGauge("RefreshLoadingCacheDelegate." + cacheName, "failedRefreshesSize", failedReloads::size);
 
       refreshes = metricFactory.createCounter("RefreshLoadingCacheDelegate." + cacheName, "refreshes");
       refreshErrors = metricFactory.createCounter("RefreshLoadingCacheDelegate." + cacheName, "refreshErrors");
@@ -172,10 +161,6 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
    * @param key to refresh value from loader
    */
   private void refresh(final K key) {
-    if (failedLoadRecently(key)) {
-      return;
-    }
-
     Boolean alreadyRefreshing = refreshingKeys.putIfAbsent(key, true);
     if (alreadyRefreshing == null) {
       incRefreshCount();
@@ -186,8 +171,6 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                 if (res.isSuccess()) {
                   cache.setAsync(key, res.getValue());
                 } else {
-                  failedReloads.put(key, true);
-
                   collectRefreshErrorMetrics(res.getError());
                 }
               });
@@ -204,7 +187,7 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     }
 
     final List<K> keysToRefresh = keys.stream()
-            .filter(key -> !failedLoadRecently(key) && null == refreshingKeys.putIfAbsent(key, true))
+            .filter(key -> null == refreshingKeys.putIfAbsent(key, true))
             .collect(Collectors.toList());
 
     if (!keysToRefresh.isEmpty()) {
@@ -216,16 +199,10 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
                 if (res.isSuccess()) {
                   cache.setBulkAsync(res.getValue());
                 } else {
-                  keysToRefresh.forEach(k -> failedReloads.put(k, true));
-
                   collectRefreshErrorMetrics(res.getError());
                 }
               });
     }
-  }
-
-  private boolean failedLoadRecently(K key) {
-    return failedReloads.getIfPresent(key) != null;
   }
 
   private void incRefreshCount() {
@@ -256,8 +233,6 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     private TimeUnit loadTimeUnit = TimeUnit.MILLISECONDS;
     private long refreshAfterWriteDuration = -1;
     private TimeUnit refreshAfterWriteTimeUnit;
-    private long refreshRetryInterval = -1;
-    private TimeUnit refreshRetryTimeUnit;
 
     public Builder(final TypedCache<K, ValueWithWriteTime<V>> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory) {
       this.cache = cache;
@@ -283,21 +258,11 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       return this;
     }
 
-    public Builder<K, V> withRefreshRetryInterval(final long duration, final TimeUnit timeUnit) {
-      this.refreshRetryInterval = duration;
-      this.refreshRetryTimeUnit = timeUnit;
-      return this;
-    }
-
     public RefreshLoadingCacheDelegate<K, V> build() {
       if (refreshAfterWriteDuration == -1) {
         throw new IllegalArgumentException("missing refreshAfterWrite config");
       }
-      if (refreshRetryInterval == -1) {
-        refreshRetryInterval = refreshAfterWriteDuration / 10;
-        refreshRetryTimeUnit = refreshAfterWriteTimeUnit;
-      }
-      return new RefreshLoadingCacheDelegate<>(cache, loader, cacheName, metricFactory, loadTimeout, loadTimeUnit, failOnError, refreshAfterWriteDuration, refreshRetryTimeUnit, refreshRetryInterval, refreshRetryTimeUnit);
+      return new RefreshLoadingCacheDelegate<>(cache, loader, cacheName, metricFactory, loadTimeout, loadTimeUnit, failOnError, refreshAfterWriteDuration, refreshAfterWriteTimeUnit);
     }
   }
 }
