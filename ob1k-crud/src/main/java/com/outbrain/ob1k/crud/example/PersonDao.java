@@ -3,9 +3,7 @@ package com.outbrain.ob1k.crud.example;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.JsonObject;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.crud.dao.ICrudAsyncDao;
+import com.outbrain.ob1k.crud.dao.ICrudDao;
 import com.outbrain.ob1k.crud.model.Entities;
 import kotlin.Pair;
 import kotlin.ranges.IntRange;
@@ -17,7 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class PersonDao implements ICrudAsyncDao<Person> {
+/**
+ * example of the async crud dao implementation
+ */
+public class PersonDao implements ICrudDao<Person> {
   private final Map<Integer, Person> map = Maps.newHashMap();
   private final JobDao jobDao;
 
@@ -27,8 +28,7 @@ public class PersonDao implements ICrudAsyncDao<Person> {
 
   @NotNull
   @Override
-  @SuppressWarnings("Unchecked")
-  public ComposableFuture<Entities<Person>> list(@NotNull IntRange pagination, @NotNull Pair<String, String> sort, @NotNull JsonObject filter) {
+  public Entities<Person> list(@NotNull IntRange pagination, @NotNull Pair<String, String> sort, @NotNull JsonObject filter) {
 
     Comparator<Person> comparator = Comparator.comparing(person -> getValue(person, sort.getFirst()));
     if (sort.getSecond().contains("DESC")) {
@@ -44,7 +44,7 @@ public class PersonDao implements ICrudAsyncDao<Person> {
             .sorted(comparator)
             .map(this::joinPersonWithJobs)
             .collect(Collectors.toList());
-    return ComposableFutures.fromValue(new Entities<>(map.size(), list));
+    return new Entities<>(map.size(), list);
   }
 
   private Person joinPersonWithJobs(Person person) {
@@ -58,11 +58,12 @@ public class PersonDao implements ICrudAsyncDao<Person> {
     return jobDao.hackGetAll().stream().filter(job -> job.getPerson().equals(person.getId())).map(Job::getId).collect(Collectors.toList());
   }
 
-  private Comparable getValue(Person c, String name) {
+  @SuppressWarnings("unchecked")
+  private <T> T getValue(Person c, String name) {
     try {
       Field field = Person.class.getDeclaredField(name.replace("\"", ""));
       field.setAccessible(true);
-      return (Comparable) field.get(c);
+      return (T) field.get(c);
     } catch (NoSuchFieldException | IllegalAccessException e) {
       return null;
     }
@@ -80,38 +81,37 @@ public class PersonDao implements ICrudAsyncDao<Person> {
     });
   }
 
-  @NotNull
   @Override
-  public ComposableFuture<Person> read(int id) {
-    return ComposableFutures.fromValue(joinPersonWithJobs(map.get(id)));
+  public Person read(int id) {
+    return joinPersonWithJobs(map.get(id));
   }
 
   @NotNull
   @Override
-  public ComposableFuture<Person> create(Person entity) {
+  public Person create(Person entity) {
     entity.setId(map.size() + 1);
     if (entity.getJobs() == null) {
       entity.setJobs(Lists.newArrayList());
     }
     map.put(entity.getId(), entity);
-    return ComposableFutures.fromValue(entity);
+    return entity;
   }
 
   @NotNull
   @Override
-  public ComposableFuture<Person> update(int id, Person entity) {
+  public Person update(int id, Person entity) {
     map.put(id, joinPersonWithJobs(entity));
-    return ComposableFutures.fromValue(entity);
+    return entity;
   }
 
   @NotNull
   @Override
-  public ComposableFuture<Integer> delete(int id) {
+  public int delete(int id) {
     Person person = map.get(id);
     if (person != null && getJobs(person).size() > 0) {
-      return ComposableFutures.fromError(new RuntimeException("can't delete person with jobs"));
+      throw new RuntimeException("can't delete person with jobs");
     }
-    return ComposableFutures.fromValue(map.remove(id) == null ? 0 : 1);
+    return map.remove(id) == null ? 0 : 1;
   }
 
   @NotNull

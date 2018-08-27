@@ -10,6 +10,7 @@ import com.outbrain.ob1k.crud.model.Model
 import com.outbrain.ob1k.crud.service.CrudService
 import com.outbrain.ob1k.crud.service.ModelService
 import com.outbrain.ob1k.db.BasicDao
+import java.util.concurrent.ExecutorService
 
 class CrudApplication(private val dao: BasicDao? = null,
                       commaDelimitedTables: String = "") {
@@ -57,7 +58,10 @@ class CrudApplication(private val dao: BasicDao? = null,
     }
 
     fun newMySQLDao(table: String) = MySQLCrudDao(model.getByTable(table)!!, dao!!)
+
     fun <T> newCustomDao(dao: ICrudAsyncDao<T>, dateformat: String) = CrudAsyncDaoDelegate(get(dao.resourceName()), dao, dateformat)
+
+    fun <T> newCustomDao(dao: ICrudDao<T>, dateformat: String, executorService: ExecutorService) = newCustomDao(AsyncDaoBridge(dao, executorService), dateformat)
 
     fun mysqlTablesAsServices() = dao?.let { tables.map { newMySQLDao(it) }.map { service(it) } } ?: listOf()
 

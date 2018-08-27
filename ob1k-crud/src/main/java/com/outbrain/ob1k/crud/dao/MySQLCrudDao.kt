@@ -9,7 +9,6 @@ import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.crud.model.EntityField
 import com.outbrain.ob1k.db.BasicDao
 
-//private val logger = KotlinLogging.logger {}
 class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: BasicDao) : ICrudAsyncDao<JsonObject> {
 
     override fun list(pagination: IntRange,
@@ -21,8 +20,6 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         val count = "select count(*) ${desc.from()} ${filter.where()}"
         val countFuture = basicDao.get(count).map { it.values.first().toString().toInt() }
         val listFuture = basicDao.query(query)
-        //  logger.info { count }
-        //  logger.info { select }
         return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.onFailure(query)
     }
 
@@ -47,7 +44,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
     }
 
     override fun resourceName() = desc.resourceName
-    
+
     override fun type() = JsonObject::class.java
 
     private fun JsonObject.where(): String {

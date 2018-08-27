@@ -1,7 +1,6 @@
 package com.outbrain.ob1k.crud.dao
 
 import com.google.gson.JsonObject
-import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.crud.model.Entities
 
 /**
@@ -9,7 +8,7 @@ import com.outbrain.ob1k.crud.model.Entities
  *
  * https://github.com/outbrain/ob1k/blob/master/ob1k-crud/src/test/java/com/outbrain/ob1k/crud/dao/CrudDaoTestBase.kt
  */
-interface ICrudAsyncDao<T> {
+interface ICrudDao<T> {
     /**
      * get multi. with support of
      * pagination - from, up to (inclusive) range. from your endpoint you will get something like "[0,5]"
@@ -18,27 +17,27 @@ interface ICrudAsyncDao<T> {
      */
     fun list(pagination: IntRange = (0..100),
              sort: Pair<String, String> = "id" to "ASC",
-             filter: JsonObject = JsonObject()): ComposableFuture<Entities<T>>
+             filter: JsonObject = JsonObject()): Entities<T>
 
     /**
      * return a single entity or null
      */
-    fun read(id: Int): ComposableFuture<T?>
+    fun read(id: Int): T?
 
     /**
      * create an entity, return it with an auto generated id
      */
-    fun create(entity: T): ComposableFuture<T>
+    fun create(entity: T): T
 
     /**
      * update an entity of the given id
      */
-    fun update(id: Int, entity: T): ComposableFuture<T>
+    fun update(id: Int, entity: T): T
 
     /**
      * delete an entity of the given id, return the id
      */
-    fun delete(id: Int): ComposableFuture<Int>
+    fun delete(id: Int): Int
 
     /**
      * return the name of the resource to crud

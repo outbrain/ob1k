@@ -6,6 +6,7 @@ import com.outbrain.ob1k.crud.example.Job
 import com.outbrain.ob1k.crud.example.JobDao
 import com.outbrain.ob1k.crud.example.Person
 import com.outbrain.ob1k.crud.example.PersonDao
+import java.util.concurrent.Executors
 
 class InMemoryCrudDaoTest : CrudDaoTestBase() {
 
@@ -17,8 +18,9 @@ class InMemoryCrudDaoTest : CrudDaoTestBase() {
                 .withEntity(Person::class.java)
                 .withEntity(Job::class.java)
                 .addReference("job", "person")
-        val personDao = application.newCustomDao(personDaoDelegate, "yyyy-MM-dd")
-        val jobDao = application.newCustomDao(jobDaoDelegate, "yyyy-MM-dd")
+        val executor = Executors.newCachedThreadPool()
+        val personDao = application.newCustomDao(personDaoDelegate, "yyyy-MM-dd", executor)
+        val jobDao = application.newCustomDao(jobDaoDelegate, "yyyy-MM-dd", executor)
         return personDao to jobDao
     }
 }
