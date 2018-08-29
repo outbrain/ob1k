@@ -23,7 +23,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.onFailure(query)
     }
 
-    override fun read(id: Int): ComposableFuture<JsonObject?> {
+    override fun read(id: String): ComposableFuture<JsonObject?> {
         val query = "${desc.select()} ${desc.from()} ${desc.join()} ${desc.whereEq(id)} ${desc.groupBy()}"
         return basicDao.query(query).map { it.lastOrNull() }.onFailure(query)
     }
@@ -33,12 +33,12 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return basicDao.executeAndGetId(query).map { entity.withId(it) }.onFailure(query)
     }
 
-    override fun update(id: Int, entity: JsonObject): ComposableFuture<JsonObject> {
+    override fun update(id: String, entity: JsonObject): ComposableFuture<JsonObject> {
         val query = desc.update(id, entity)
         return basicDao.execute(query).map { entity }.onFailure(query)
     }
 
-    override fun delete(id: Int): ComposableFuture<Int> {
+    override fun delete(id: String): ComposableFuture<Int> {
         val query = "DELETE ${desc.from()} ${desc.whereEq(id)}"
         return basicDao.execute(query).map { it.toInt() }.onFailure(query)
     }
@@ -56,7 +56,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return matchExpressions.joinToString(separator = " AND ", prefix = "where ")
     }
 
-    private fun EntityDescription.update(id: Int, jsonObject: JsonObject): String {
+    private fun EntityDescription.update(id: String, jsonObject: JsonObject): String {
         val keyval = editableFields()
                 .map { it to it.toSQLValue(jsonObject) }
                 .map { it.first.dbName to it.second }
@@ -80,7 +80,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun EntityDescription.from() = "from $table"
 
-    private fun EntityDescription.whereEq(id: Int) = "where ${idDBFieldName()}=$id"
+    private fun EntityDescription.whereEq(id: String) = "where ${idDBFieldName()}=$id"
 
     private fun EntityDescription.join() = references.map { "left join ${it.table} on ${idDBFieldName()}=${it.referenceTo(resourceName)!!.dbName}" }.joinToString(" ")
 

@@ -28,7 +28,7 @@ public class CrudService implements ICrudService {
   }
 
   @Override
-  public ComposableFuture<Response> get(int id) {
+  public ComposableFuture<Response> get(String id) {
     return dao.read(id).map(new AnyToResponseFunc());
   }
 
@@ -39,11 +39,11 @@ public class CrudService implements ICrudService {
 
   @Override
   public ComposableFuture<Response> update(Request request) {
-    return dao.update(Integer.parseInt(request.getPathParam("id")), endpointUtils.asJson(request.getRequestBody()).getAsJsonObject()).map(new AnyToResponseFunc());
+    return dao.update(request.getPathParam("id"), endpointUtils.asJson(request.getRequestBody()).getAsJsonObject()).map(new AnyToResponseFunc());
   }
 
   @Override
-  public ComposableFuture<Response> delete(int id) {
+  public ComposableFuture<Response> delete(String id) {
     return dao.delete(id).map(new EmptyResponseFunc());
   }
 

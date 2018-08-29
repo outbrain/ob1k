@@ -82,8 +82,8 @@ public class PersonDao implements ICrudDao<Person> {
   }
 
   @Override
-  public Person read(int id) {
-    return joinPersonWithJobs(map.get(id));
+  public Person read(String id) {
+    return joinPersonWithJobs(map.get(Integer.parseInt(id)));
   }
 
   @NotNull
@@ -99,19 +99,19 @@ public class PersonDao implements ICrudDao<Person> {
 
   @NotNull
   @Override
-  public Person update(int id, Person entity) {
-    map.put(id, joinPersonWithJobs(entity));
+  public Person update(String id, Person entity) {
+    map.put(Integer.parseInt(id), joinPersonWithJobs(entity));
     return entity;
   }
 
   @NotNull
   @Override
-  public int delete(int id) {
-    Person person = map.get(id);
+  public int delete(String id) {
+    Person person = map.get(Integer.parseInt(id));
     if (person != null && getJobs(person).size() > 0) {
       throw new RuntimeException("can't delete person with jobs");
     }
-    return map.remove(id) == null ? 0 : 1;
+    return map.remove(Integer.parseInt(id)) == null ? 0 : 1;
   }
 
   @NotNull

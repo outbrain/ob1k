@@ -23,7 +23,7 @@ interface ICrudAsyncDao<T> {
     /**
      * return a single entity or null
      */
-    fun read(id: Int): ComposableFuture<T?>
+    fun read(id: String): ComposableFuture<T?>
 
     /**
      * create an entity, return it with an auto generated id
@@ -33,12 +33,12 @@ interface ICrudAsyncDao<T> {
     /**
      * update an entity of the given id
      */
-    fun update(id: Int, entity: T): ComposableFuture<T>
+    fun update(id: String, entity: T): ComposableFuture<T>
 
     /**
      * delete an entity of the given id, return the id
      */
-    fun delete(id: Int): ComposableFuture<Int>
+    fun delete(id: String): ComposableFuture<Int>
 
     /**
      * return the name of the resource to crud

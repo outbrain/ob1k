@@ -19,13 +19,13 @@ class CrudAsyncDaoDelegate<T>(private val desc: EntityDescription,
     }
 
 
-    override fun read(id: Int) = delegate.read(id).map { it?.let { type.jsonOf(it) } }
+    override fun read(id: String) = delegate.read(id).map { it?.let { type.jsonOf(it) } }
 
     override fun create(entity: JsonObject) = delegate.create(type.typeOf(entity)).map { type.jsonOf(it) }
 
-    override fun update(id: Int, entity: JsonObject) = delegate.update(id, type.typeOf(entity)).map { type.jsonOf(it) }
+    override fun update(id: String, entity: JsonObject) = delegate.update(id, type.typeOf(entity)).map { type.jsonOf(it) }
 
-    override fun delete(id: Int) = delegate.delete(id)
+    override fun delete(id: String) = delegate.delete(id)
 
     override fun resourceName() = delegate.resourceName()
 

@@ -68,8 +68,8 @@ public class JobDao implements ICrudDao<Job> {
   }
 
   @Override
-  public Job read(int id) {
-    return map.get(id);
+  public Job read(String id) {
+    return map.get(Integer.parseInt(id));
   }
 
   @NotNull
@@ -82,15 +82,15 @@ public class JobDao implements ICrudDao<Job> {
 
   @NotNull
   @Override
-  public Job update(int id, Job entity) {
-    map.put(id, entity);
+  public Job update(String id, Job entity) {
+    map.put(Integer.parseInt(id), entity);
     return entity;
   }
 
   @NotNull
   @Override
-  public int delete(int id) {
-    return map.remove(id) == null ? 0 : 1;
+  public int delete(String id) {
+    return map.remove(Integer.parseInt(id)) == null ? 0 : 1;
   }
 
   @NotNull

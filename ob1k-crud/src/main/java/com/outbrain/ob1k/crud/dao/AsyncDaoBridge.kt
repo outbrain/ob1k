@@ -9,13 +9,13 @@ class AsyncDaoBridge<T>(val dao: ICrudDao<T>, val executor: ExecutorService) : I
 
     override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject) = toAsync { dao.list(pagination, sort, filter) }
 
-    override fun read(id: Int) = toAsync { dao.read(id) }
+    override fun read(id: String) = toAsync { dao.read(id) }
 
     override fun create(entity: T) = toAsync { dao.create(entity) }
 
-    override fun update(id: Int, entity: T) = toAsync { dao.update(id, entity) }
+    override fun update(id: String, entity: T) = toAsync { dao.update(id, entity) }
 
-    override fun delete(id: Int) = toAsync { dao.delete(id) }
+    override fun delete(id: String) = toAsync { dao.delete(id) }
 
     override fun resourceName() = dao.resourceName()
 

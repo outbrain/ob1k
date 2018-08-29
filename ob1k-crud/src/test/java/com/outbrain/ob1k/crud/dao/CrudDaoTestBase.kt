@@ -31,7 +31,7 @@ abstract class CrudDaoTestBase {
         val json = person("create")
         val created = personDao.create(json).get()
         val id = created.id()
-        assert(id > 0)
+        assert(id.toInt() > 0)
         created.addProperty("id", id)
         assertEqualsJson(json, created)
     }
@@ -47,7 +47,7 @@ abstract class CrudDaoTestBase {
     @org.junit.Test
     internal fun `read person`() {
         val created = personDao.create(person("read")).get()
-        val read = personDao.read(created.get("id").asInt).get()
+        val read = personDao.read(created.get("id").asString).get()
         assertEqualsJson(created, read!!)
     }
 
@@ -136,7 +136,7 @@ abstract class CrudDaoTestBase {
             .with("email", email)
 
 
-    private fun job(testcase: String, personId: Int) = JsonObject()
+    private fun job(testcase: String, personId: String) = JsonObject()
             .with("company", "$testcase${Random().nextInt()}")
             .with("title", title)
             .with("person", personId)
@@ -157,7 +157,7 @@ abstract class CrudDaoTestBase {
         return this
     }
 
-    private fun JsonObject.id() = int("id")
-    private fun JsonObject.int(name: String) = get(name).asInt
+    private fun JsonObject.id() = value("id")
+    private fun JsonObject.int(name: String) = value(name)
     private fun JsonObject.value(name: String) = get(name).asString
 }

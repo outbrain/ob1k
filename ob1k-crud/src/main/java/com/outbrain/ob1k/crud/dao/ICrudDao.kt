@@ -22,7 +22,7 @@ interface ICrudDao<T> {
     /**
      * return a single entity or null
      */
-    fun read(id: Int): T?
+    fun read(id: String): T?
 
     /**
      * create an entity, return it with an auto generated id
@@ -32,12 +32,12 @@ interface ICrudDao<T> {
     /**
      * update an entity of the given id
      */
-    fun update(id: Int, entity: T): T
+    fun update(id: String, entity: T): T
 
     /**
      * delete an entity of the given id, return the id
      */
-    fun delete(id: Int): Int
+    fun delete(id: String): Int
 
     /**
      * return the name of the resource to crud
