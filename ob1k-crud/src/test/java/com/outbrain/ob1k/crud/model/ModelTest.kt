@@ -17,7 +17,7 @@ class ModelTest {
         val model = ObjectMapper().writeValueAsString(original)
         val modelFromFile = "model.json".resource()
 
-        JSONAssert.assertEquals(modelFromFile, model, false)
+        JSONAssert.assertEquals("actual: $model", modelFromFile, model, false)
     }
 
     private fun String.resource() = ModelTest::class.java.classLoader.getResource(this).readText()

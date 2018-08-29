@@ -51,9 +51,21 @@ class CrudApplication(private val dao: BasicDao? = null,
     }
 
     fun addReference(from: String, to: String) = addReference(from, to, to)
+    fun addOneToOneReference(from: String, to: String) = addOneToOneReference(from, to, to)
+    fun addOneToManyReference(from: String, to: String) = addOneToManyReference(from, to, "${to}s")
 
     fun addReference(from: String, to: String, by: String): CrudApplication {
-        get(from).addReferenceTo(by, get(to))
+        get(from).add2DirectionReferenceTo(get(to), by)
+        return this
+    }
+
+    fun addOneToOneReference(from: String, to: String, by: String): CrudApplication {
+        get(from).addOneToOneference(get(to), by)
+        return this
+    }
+
+    fun addOneToManyReference(from: String, to: String, by: String): CrudApplication {
+        get(from).addOneToManyReference(get(to), by)
         return this
     }
 

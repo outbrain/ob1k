@@ -15,7 +15,7 @@ class RefFieldMapper(val desc: Model) : ResultSetMapper<Boolean> {
         val targetTable = desc.getByTable(targetTableName) ?: return false
         val sourceField = sourceTable.getByColumn(sourceColumn) ?: return false
 
-        sourceTable.addReferenceTo(sourceField.name, targetTable)
+        sourceTable.add2DirectionReferenceTo(targetTable, sourceField.name)
         return true
     }
 }

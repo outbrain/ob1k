@@ -24,28 +24,16 @@ data class EntityDescription(@JsonIgnore val table: String,
 
     fun referenceTo(resource: String) = fields.find { (it.type == EFieldType.REFERENCE || it.type == EFieldType.REFERENCEMANY) && it.reference == resource }
 
-    fun addReferenceTo(referenceFieldName: String, target: EntityDescription) {
+    fun add2DirectionReferenceTo(target: EntityDescription, referenceFieldName: String) {
+        addOneToOneference(target, referenceFieldName)
+        target.addOneToManyReference(this, "${resourceName}s")
+    }
+
+    fun addOneToOneference(target: EntityDescription, referenceFieldName: String) {
+
         val referenceField = this(referenceFieldName)!!
 
-        var reverseField = target.fields.find { it.name == "${resourceName}s" }
-        if (reverseField == null) {
-            reverseField = EntityField("_", "_", "_", EFieldType.REFERENCEMANY)
-            target.fields += reverseField
-        }
-
-        val displayField = this("name") ?: this("title") ?: idField()
         val targetDisplayField = target("name") ?: target("title") ?: target.idField()
-
-        reverseField.dbName = "_"
-        reverseField.name = "${resourceName}s"
-        reverseField.label = "${title}s"
-        reverseField.type = EFieldType.REFERENCEMANY
-        reverseField.required = false
-        reverseField.readOnly = true
-        reverseField.autoGenerate = false
-        reverseField.reference = resourceName
-        reverseField.target = "id"
-        reverseField.display = EntityFieldDisplay(displayField.name, EDisplayType.Chip, displayField.name)
 
         referenceField.name = target.resourceName
         referenceField.label = target.title
@@ -54,8 +42,28 @@ data class EntityDescription(@JsonIgnore val table: String,
         referenceField.target = null
         referenceField.required = true
         referenceField.display = EntityFieldDisplay(targetDisplayField.name, EDisplayType.Select, targetDisplayField.name)
+    }
 
+    fun addOneToManyReference(target: EntityDescription, referenceFieldName: String) {
+        var reverseField = fields.find { it.name == referenceFieldName }
+        if (reverseField == null) {
+            reverseField = EntityField("_", "_", "_", EFieldType.REFERENCEMANY)
+            fields += reverseField
+        }
 
-        target.references += this
+        val displayField = target("name") ?: target("title") ?: idField()
+
+        reverseField.dbName = "_"
+        reverseField.name = "${target.resourceName}s"
+        reverseField.label = "${target.title}s"
+        reverseField.type = EFieldType.REFERENCEMANY
+        reverseField.required = false
+        reverseField.readOnly = true
+        reverseField.autoGenerate = false
+        reverseField.reference = target.resourceName
+        reverseField.target = "id"
+        reverseField.display = EntityFieldDisplay(displayField.name, EDisplayType.Chip, displayField.name)
+
+        references += target
     }
 }
