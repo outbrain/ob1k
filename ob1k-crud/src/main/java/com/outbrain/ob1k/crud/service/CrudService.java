@@ -14,6 +14,7 @@ import kotlin.Pair;
 import kotlin.ranges.IntRange;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -63,11 +64,11 @@ public class CrudService implements ICrudService {
   }
 
   private JsonArray ids(JsonObject jo) {
-    Set<String> keySet = jo.keySet();
-    if (keySet.size() != 1) {
+    Set<Map.Entry<String, JsonElement>> entrySet = jo.entrySet();
+    if (entrySet.size() != 1) {
       return null;
     }
-    String key = keySet.iterator().next();
+    String key = entrySet.iterator().next().getKey();
     if (!key.replace("\"", "").equals("id")) {
       return null;
     }

@@ -28,10 +28,10 @@ public class DaoUtils {
 
     Comparator<T> comparator = getComparator(sort);
     List<T> list = values.stream()
+            .sorted(comparator)
             .filter(c -> like(c, filter))
             .skip(startInteger)
             .limit(endInteger - startInteger + 1)
-            .sorted(comparator)
             .collect(Collectors.toList());
     return new Entities<>(values.size(), list);
   }

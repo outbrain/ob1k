@@ -11,5 +11,6 @@ data class EntityField(@JsonIgnore var dbName: String,
                        @JsonIgnore var autoGenerate: Boolean = false,
                        var reference: String? = null,
                        var target: String? = null,
-                       var display: EntityFieldDisplay? = null)
+                       var display: EntityFieldDisplay? = null,
+                       var hidden: Boolean = false)
 

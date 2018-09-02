@@ -7,7 +7,9 @@ data class EntityDescription(@JsonIgnore val table: String,
                              val resourceName: String = table.substringAfterLast("_"),
                              var title: String = resourceName.capitalize(),
                              val endpoint: String = "../${resourceName}s",
-                             var fields: List<EntityField> = emptyList()) {
+                             var fields: List<EntityField> = emptyList(),
+                             var editable: Boolean = true,
+                             var icon: String? = null) {
     @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
