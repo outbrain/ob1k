@@ -8,7 +8,9 @@ import kotlin.Pair;
 import kotlin.ranges.IntRange;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * example of the async crud dao implementation
@@ -25,6 +27,12 @@ public class PersonDao implements ICrudDao<Person> {
   @Override
   public Entities<Person> list(@NotNull IntRange pagination, @NotNull Pair<String, String> sort, Person filter) {
     return DaoUtils.withSortFilterPaging(map.values(), pagination, sort, filter);
+  }
+
+  @NotNull
+  @Override
+  public Entities<Person> list(@NotNull List<String> ids) {
+    return new Entities<>(map.size(), map.values().stream().filter(job -> ids.contains(job.getId().toString())).collect(Collectors.toList()));
   }
 
   @Override

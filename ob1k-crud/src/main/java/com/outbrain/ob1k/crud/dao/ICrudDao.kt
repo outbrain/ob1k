@@ -19,6 +19,11 @@ interface ICrudDao<T> {
              filter: T? = null): Entities<T>
 
     /**
+     * get multi by ids
+     */
+    fun list(ids: List<String>): Entities<T>
+
+    /**
      * return a single entity or null
      */
     fun read(id: String): T?

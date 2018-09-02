@@ -78,10 +78,12 @@ abstract class CrudDaoTestBase {
 
     @org.junit.Test
     internal fun `filter persons`() {
-        (1..5).forEach { personDao.create(person("${it}filter1")).get() }
-        (1..5).forEach { personDao.create(person("${it}filter2")).get() }
+        val ids1 = (1..5).map { personDao.create(person("${it}filter1")).get() }.map { it.id() }
+        val ids2 = (1..5).map { personDao.create(person("${it}filter2")).get() }.map { it.id() }
         assertEquals(10, personDao.list(filter = jsonParser.parse("{\"name\": \"filter\",\"email\": \"$email\"}").asJsonObject).get().data.size)
         assertEquals(5, personDao.list(filter = jsonParser.parse("{\"name\": \"filter1\",\"email\": \"$email\"}").asJsonObject).get().data.size)
+        assertEquals(3, personDao.list(ids = listOf(ids1[0], ids1[1], ids2[0])).get().data.size)
+
     }
 
     @org.junit.Test

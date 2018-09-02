@@ -20,6 +20,11 @@ interface ICrudAsyncDao<T> {
              filter: T? = null): ComposableFuture<Entities<T>>
 
     /**
+     * get multi by ids
+     */
+    fun list(ids: List<String>): ComposableFuture<Entities<T>>
+
+    /**
      * return a single entity or null
      */
     fun read(id: String): ComposableFuture<T?>

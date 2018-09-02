@@ -19,6 +19,7 @@ class CrudAsyncDaoDelegate<T>(private val desc: EntityDescription,
                 .map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
     }
 
+    override fun list(ids: List<String>) = delegate.list(ids).map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
 
     override fun read(id: String) = delegate.read(id).map { it?.let { type.jsonOf(it) } }
 

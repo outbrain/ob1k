@@ -8,6 +8,8 @@ class AsyncDaoBridge<T>(val dao: ICrudDao<T>, val executor: ExecutorService) : I
 
     override fun list(pagination: IntRange, sort: Pair<String, String>, filter: T?) = toAsync { dao.list(pagination, sort, filter) }
 
+    override fun list(ids: List<String>) = toAsync { dao.list(ids) }
+
     override fun read(id: String) = toAsync { dao.read(id) }
 
     override fun create(entity: T) = toAsync { dao.create(entity) }

@@ -23,6 +23,16 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.onFailure(query)
     }
 
+    override fun list(ids: List<String>): ComposableFuture<Entities<JsonObject>> {
+        if (ids.isEmpty()) return ComposableFutures.fromValue(Entities())
+        val idField = desc.idField()
+        val query = "select * from ${desc.table} where ${idField.dbName} in (${ids.map { it.unqoute() }.joinToString(",")})"
+        val count = "select count(*) from ${desc.table}"
+        val countFuture = basicDao.get(count).map { it.values.first().toString().toInt() }
+        val listFuture = basicDao.query(query)
+        return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.onFailure(query)
+    }
+
     override fun read(id: String): ComposableFuture<JsonObject?> {
         val query = "select * from ${desc.table} ${desc.whereEq(id)}"
         return basicDao.query(query).map { it.lastOrNull() }.onFailure(query)

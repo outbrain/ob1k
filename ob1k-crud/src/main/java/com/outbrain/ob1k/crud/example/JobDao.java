@@ -9,7 +9,9 @@ import kotlin.ranges.IntRange;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * example of the crud dao implementation
@@ -25,6 +27,12 @@ public class JobDao implements ICrudDao<Job> {
   @Override
   public Entities<Job> list(@NotNull IntRange pagination, @NotNull Pair<String, String> sort, Job filter) {
     return DaoUtils.withSortFilterPaging(map.values(), pagination, sort, filter);
+  }
+
+  @NotNull
+  @Override
+  public Entities<Job> list(@NotNull List<String> ids) {
+    return new Entities<>(map.size(), map.values().stream().filter(job -> ids.contains(job.getId().toString())).collect(Collectors.toList()));
   }
 
   @Override
