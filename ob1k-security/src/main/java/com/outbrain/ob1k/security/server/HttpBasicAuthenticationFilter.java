@@ -33,9 +33,9 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
                                        final String appId,
                                        final int sessionMaxTimeSeconds) {
     this.httpAccessAuthenticator = new HttpBasicAccessAuthenticator(authenticationCookieEncryptor,
-                                                                    authenticators,
-                                                                    appId,
-                                                                    sessionMaxTimeSeconds);
+            authenticators,
+            appId,
+            sessionMaxTimeSeconds);
   }
 
   @Override
@@ -52,7 +52,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   private ComposableFuture<Response> handleUnauthorizedAsyncRequest(final AsyncServerRequestContext ctx) {
     final Response response =
-      httpAccessAuthenticator.createUnauthorizedResponse(extractRealm(ctx));
+            httpAccessAuthenticator.createUnauthorizedResponse(extractRealm(ctx));
     return ComposableFutures.fromValue(response);
   }
 
@@ -60,7 +60,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
                                                                   final String authenticatorId) {
     return ctx.invokeAsync().flatMap(result -> {
       final Response response =
-        httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, result);
+              httpAccessAuthenticator.createAuthorizedResponse(ctx.getRequest(), authenticatorId, result);
       return ComposableFutures.fromValue(response);
     });
   }
@@ -125,8 +125,8 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     private boolean isValidCookie(final AuthenticationCookie authenticationCookie) {
       return authenticationCookie != null &&
-        isValid(authenticationCookie.getCreationTime()) &&
-        StringUtils.equals(authenticationCookie.getAppId(), this.appId);
+              isValid(authenticationCookie.getCreationTime()) &&
+              StringUtils.equals(authenticationCookie.getAppId(), this.appId);
     }
 
     private ComposableFuture<String> authenticateCredentials(final Request request) {
@@ -182,7 +182,7 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
     /**
      * Creates a response that is marked as OK, containing the provided message.
-     *
+     * <p>
      * If the request does not currently contain a cookie with the given authenticator id, then one such cookie
      * will be added to the response.
      */
@@ -194,9 +194,9 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
       } else {
         final String username = headerParser.extractCredentials(request).get().getUsername();
         final AuthenticationCookie authenticationCookie = new AuthenticationCookie(username,
-                                                                                   DateTime.now(),
-                                                                                   appId,
-                                                                                   authenticatorId);
+                DateTime.now(),
+                appId,
+                authenticatorId);
         final String cookieValue = authenticationCookieEncryptor.encrypt(authenticationCookie);
         return createResponseWithCookie(message, cookieValue);
       }
@@ -205,22 +205,30 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
     private boolean requestContainsCookie(final Request request, final String authenticatorId) {
       final AuthenticationCookie existingCookie = extractCookieElements(request);
       return existingCookie != null &&
-        StringUtils.equals(existingCookie.getAuthenticatorId(), authenticatorId);
+              StringUtils.equals(existingCookie.getAuthenticatorId(), authenticatorId);
     }
 
     private Response createResponseWithoutCookie(final Object message) {
+      if (message instanceof Response) {
+        return (Response) message;
+      }
       return ResponseBuilder
-        .ok()
-        .withMessage(message)
-        .build();
+              .ok()
+              .withMessage(message)
+              .build();
     }
 
     private Response createResponseWithCookie(final Object message, final String cookieValue) {
+      if (message instanceof Response) {
+        Response origResponse = (Response) message;
+        origResponse.addCookie(SESSION_COOKIE_NAME + "=" + cookieValue);
+        return origResponse;
+      }
       return ResponseBuilder
-        .ok()
-        .withMessage(message)
-        .addCookie(SESSION_COOKIE_NAME + "=" + cookieValue)
-        .build();
+              .ok()
+              .withMessage(message)
+              .addCookie(SESSION_COOKIE_NAME + "=" + cookieValue)
+              .build();
     }
 
     /**
@@ -231,9 +239,9 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
      */
     Response createUnauthorizedResponse(final String realm) {
       return ResponseBuilder
-        .fromStatus(HttpResponseStatus.UNAUTHORIZED)
-        .addHeader(WWW_AUTHENTICATE, "Basic realm=\"" + realm + "\"")
-        .build();
+              .fromStatus(HttpResponseStatus.UNAUTHORIZED)
+              .addHeader(WWW_AUTHENTICATE, "Basic realm=\"" + realm + "\"")
+              .build();
     }
 
   }

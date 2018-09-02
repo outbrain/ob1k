@@ -50,6 +50,11 @@ public class NettyResponse implements Response {
   }
 
   @Override
+  public void addCookie(String rawCookie) {
+    headers.add(HttpHeaders.Names.SET_COOKIE, rawCookie);
+  }
+
+  @Override
   public int getStatus() {
     return status.code();
   }

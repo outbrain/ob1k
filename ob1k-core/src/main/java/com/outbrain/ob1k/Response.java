@@ -10,4 +10,6 @@ public interface Response {
   int getStatus();
 
   String getRawContent();
+
+  void addCookie(String rawCookie);
 }
