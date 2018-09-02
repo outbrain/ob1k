@@ -13,18 +13,18 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     override fun list(pagination: IntRange,
                       sort: Pair<String, String>,
-                      filter: JsonObject): ComposableFuture<Entities<JsonObject>> {
-
+                      filter: JsonObject?): ComposableFuture<Entities<JsonObject>> {
+        val filter = filter ?: JsonObject()
         if (filter.filterAll()) return ComposableFutures.fromValue(Entities())
-        val query = "${desc.select()} ${desc.from()} ${desc.join()} ${filter.where()} ${desc.groupBy()} ${sort.orderBy()} ${pagination.limit()}"
-        val count = "select count(*) ${desc.from()} ${filter.where()}"
+        val query = "select * from ${desc.table} ${filter.where()} ${sort.orderBy()} ${pagination.limit()}"
+        val count = "select count(*) from ${desc.table} ${filter.where()}"
         val countFuture = basicDao.get(count).map { it.values.first().toString().toInt() }
         val listFuture = basicDao.query(query)
         return countFuture.flatMap { total -> listFuture.map { Entities(total, it) } }.onFailure(query)
     }
 
     override fun read(id: String): ComposableFuture<JsonObject?> {
-        val query = "${desc.select()} ${desc.from()} ${desc.join()} ${desc.whereEq(id)} ${desc.groupBy()}"
+        val query = "select * from ${desc.table} ${desc.whereEq(id)}"
         return basicDao.query(query).map { it.lastOrNull() }.onFailure(query)
     }
 
@@ -39,7 +39,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
     }
 
     override fun delete(id: String): ComposableFuture<Int> {
-        val query = "DELETE ${desc.from()} ${desc.whereEq(id)}"
+        val query = "DELETE from ${desc.table} ${desc.whereEq(id)}"
         return basicDao.execute(query).map { it.toInt() }.onFailure(query)
     }
 
@@ -58,6 +58,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun EntityDescription.update(id: String, jsonObject: JsonObject): String {
         val keyval = editableFields()
+                .filter { it.type != EFieldType.REFERENCEMANY }
                 .map { it to it.toSQLValue(jsonObject) }
                 .map { it.first.dbName to it.second }
                 .joinToString(",") { "${it.first}=${it.second}" }
@@ -78,19 +79,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun BasicDao.query(query: String) = list(query, JsonObjectMapper(desc))
 
-    private fun EntityDescription.from() = "from $table"
-
     private fun EntityDescription.whereEq(id: String) = "where ${idDBFieldName()}=$id"
-
-    private fun EntityDescription.join() = references.map { "left join ${it.table} on ${idDBFieldName()}=${it.referenceTo(resourceName)!!.dbName}" }.joinToString(" ")
-
-    private fun EntityDescription.groupBy() = if (references.isEmpty()) "" else "group by ${desc.idDBFieldName()}"
-
-    private fun EntityDescription.select() = "select ${desc.table}.* ${groupConcatReferences()}"
-
-    private fun EntityDescription.groupConcatReferences() = if (references.isEmpty()) "" else references.map { it.groupConcat() }.joinToString(separator = ",", prefix = ",")
-
-    private fun EntityDescription.groupConcat() = "GROUP_CONCAT(${idDBFieldName()}) as ${desc.referenceTo(resourceName)!!.name}"
 
     private fun Pair<String, String>.orderBy() = "order by ${desc(first.unqoute())?.dbName
             ?: desc.idDBFieldName()} ${second.unqoute()}"

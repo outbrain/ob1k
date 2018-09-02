@@ -118,16 +118,11 @@ abstract class CrudDaoTestBase {
     internal fun `person to many jobs`() {
         val id0 = personDao.create(person("oneToMany")).get().id()
         val id1 = personDao.create(person("oneToMany")).get().id()
-        val job0 = jobDao.create(job("oneToMany", id0)).get()
-        val job1 = jobDao.create(job("oneToMany", id0)).get()
+        jobDao.create(job("oneToMany", id0)).get()
+        jobDao.create(job("oneToMany", id0)).get()
 
+        personDao.delete(id1).get()
         assertFails { personDao.delete(id0).get() }
-
-        val person = personDao.read(id0).get()!!
-        val jobsOfId0 = person.value("jobs")
-        assertEquals("[${job0.id()},${job1.id()}]", jobsOfId0)
-        assertEquals("[]", personDao.read(id1).get()!!.value("jobs"))
-        assertEquals(2, jobDao.list(filter = JsonObject().with("id", jobsOfId0)).get().data.size)
     }
 
     private fun person(testcase: String) = JsonObject()

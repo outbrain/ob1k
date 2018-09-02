@@ -26,9 +26,9 @@
           "label": "Jobs",
           "type": "REFERENCEMANY",
           "required": false,
-          "readOnly": true,
+          "readOnly": false,
           "reference": "job",
-          "target": "id",
+          "target": "person",
           "display": {
             "name": "title",
             "type": "Chip",

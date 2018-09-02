@@ -1,21 +1,10 @@
 package com.outbrain.ob1k.crud.example;
 
-import java.util.List;
-
 public class Person {
   private Integer id;
   private String name;
   private Boolean alive;
   private String email;
-  private List<Integer> jobs;
-
-  public List<Integer> getJobs() {
-    return jobs;
-  }
-
-  public void setJobs(List<Integer> jobs) {
-    this.jobs = jobs;
-  }
 
   public Integer getId() {
     return id;

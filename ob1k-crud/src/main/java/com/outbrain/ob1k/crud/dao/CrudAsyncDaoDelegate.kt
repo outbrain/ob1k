@@ -14,8 +14,9 @@ class CrudAsyncDaoDelegate<T>(private val desc: EntityDescription,
     private val gson = GsonBuilder().setDateFormat(dateformat).create()
     private val type = delegate.type()
 
-    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject): ComposableFuture<Entities<JsonObject>> {
-        return delegate.list(pagination, sort, filter).map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
+    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject?): ComposableFuture<Entities<JsonObject>> {
+        return delegate.list(pagination, sort, filter?.let { type.typeOf(filter) })
+                .map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
     }
 
 

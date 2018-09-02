@@ -1,13 +1,12 @@
 package com.outbrain.ob1k.crud.dao
 
-import com.google.gson.JsonObject
 import com.outbrain.ob1k.concurrent.ComposableFutures
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 
 class AsyncDaoBridge<T>(val dao: ICrudDao<T>, val executor: ExecutorService) : ICrudAsyncDao<T> {
 
-    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject) = toAsync { dao.list(pagination, sort, filter) }
+    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: T?) = toAsync { dao.list(pagination, sort, filter) }
 
     override fun read(id: String) = toAsync { dao.read(id) }
 

@@ -18,11 +18,7 @@ data class EntityDescription(@JsonIgnore val table: String,
 
     fun idDBFieldName() = idField().dbName
 
-    fun idFieldName() = idField().name
-
     fun idField() = this("id")!!
-
-    fun referenceTo(resource: String) = fields.find { (it.type == EFieldType.REFERENCE || it.type == EFieldType.REFERENCEMANY) && it.reference == resource }
 
     fun add2DirectionReferenceTo(target: EntityDescription, referenceFieldName: String) {
         addOneToOneference(target, referenceFieldName)
@@ -58,10 +54,10 @@ data class EntityDescription(@JsonIgnore val table: String,
         reverseField.label = "${target.title}s"
         reverseField.type = EFieldType.REFERENCEMANY
         reverseField.required = false
-        reverseField.readOnly = true
+        reverseField.readOnly = false
         reverseField.autoGenerate = false
         reverseField.reference = target.resourceName
-        reverseField.target = "id"
+        reverseField.target = resourceName
         reverseField.display = EntityFieldDisplay(displayField.name, EDisplayType.Chip, displayField.name)
 
         references += target

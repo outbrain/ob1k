@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.crud.dao
 
-import com.google.gson.JsonObject
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.crud.model.Entities
 
@@ -14,11 +13,11 @@ interface ICrudAsyncDao<T> {
      * get multi. with support of
      * pagination - from, up to (inclusive) range. from your endpoint you will get something like "[0,5]"
      * sort - pair of property value. from your endpoint you will get something like "["id":"DESC"]"
-     * filter - json of property = predicate value (can be substring). from your endpoint you will get something like "{"name":"ame"} or {"id, 17} or {"id", [4,5,6]}"
+     * filter - when fields are null you should ignore. otherwise you should filter by them
      */
     fun list(pagination: IntRange = (0..100),
              sort: Pair<String, String> = "id" to "ASC",
-             filter: JsonObject = JsonObject()): ComposableFuture<Entities<T>>
+             filter: T? = null): ComposableFuture<Entities<T>>
 
     /**
      * return a single entity or null
