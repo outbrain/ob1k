@@ -45,7 +45,7 @@ data class EntityDescription(@JsonIgnore val table: String,
     fun addOneToManyReference(target: EntityDescription, referenceFieldName: String) {
         var reverseField = fields.find { it.name == referenceFieldName }
         if (reverseField == null) {
-            reverseField = EntityField("_", "_", "_", EFieldType.REFERENCEMANY)
+            reverseField = EntityField(dbName = "_", name = "_", label = "_", type = EFieldType.REFERENCEMANY)
             fields += reverseField
         }
 

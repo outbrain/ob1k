@@ -12,5 +12,16 @@ data class EntityField(@JsonIgnore var dbName: String,
                        var reference: String? = null,
                        var target: String? = null,
                        var display: EntityFieldDisplay? = null,
-                       var hidden: Boolean = false)
+                       var hidden: Boolean = false,
+                       var options: EntityFieldOptions? = null) {
+
+    fun nonNullOptions(): EntityFieldOptions {
+        if (options == null) {
+            options = EntityFieldOptions()
+        }
+        return options!!
+    }
+}
+
+
 
