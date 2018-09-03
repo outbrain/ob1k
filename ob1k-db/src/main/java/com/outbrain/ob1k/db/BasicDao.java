@@ -22,7 +22,7 @@ import static java.util.Collections.singletonList;
  * @author Asy Ronen
  * @author Eran Harel
  */
-public class BasicDao {
+public class BasicDao implements IBasicDao {
   private final DbConnectionPool _pool;
 
   public BasicDao(final DbConnectionPool pool) {
@@ -38,6 +38,7 @@ public class BasicDao {
    * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper
    * @throws IllegalStateException if the result set contains a duplicate key
    */
+  @Override
   public <K, V> ComposableFuture<Map<K, V>> map(final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
     return toMap(list(query, valueMapper), keyMapper);
   }
@@ -69,6 +70,7 @@ public class BasicDao {
    * @param <K> map keys type
    * @return a mapping of the result set mapping each row using the provided keyMapper and valueMapper, grouping values by key
    */
+  @Override
   public <K, V> ComposableFuture<Map<K, List<V>>> group(final String query, final Function<V, K> keyMapper, final ResultSetMapper<V> valueMapper) {
     return toGroupMap(list(query, valueMapper), keyMapper);
   }
@@ -91,6 +93,7 @@ public class BasicDao {
       collect(Collectors.groupingBy(keyMapper)));
   }
 
+  @Override
   public ComposableFuture<List<Map<String, Object>>> list(final String query) {
     return list(query, new GenericResultSetMapper());
   }
@@ -99,6 +102,7 @@ public class BasicDao {
     return list(conn, query, new GenericResultSetMapper());
   }
 
+  @Override
   public <T> ComposableFuture<List<T>> list(final String query, final ResultSetMapper<T> mapper) {
     final ComposableFuture<QueryResult> queryRes = _pool.sendQuery(query);
     return _list(queryRes, mapper);
@@ -116,7 +120,7 @@ public class BasicDao {
         final Iterator<RowData> rows = resultSet.iterator();
         while (rows.hasNext()) {
           final RowData row = rows.next();
-          final T obj = mapper.map(new TypedRowData(row), columnNames);
+          final T obj = mapper.map(new TypedRowDataImpl(row), columnNames);
           response.add(obj);
         }
       }
@@ -130,6 +134,7 @@ public class BasicDao {
     return _list(queryRes, mapper);
   }
 
+  @Override
   public <T> ComposableFuture<List<T>> list(final String tableName, final String idColumnName, final List<?> ids, final ResultSetMapper<T> mapper) {
     return list(createListByIDsQuery(tableName, idColumnName, ids), mapper);
   }
@@ -163,6 +168,7 @@ public class BasicDao {
   //    ???
   //  }
 
+  @Override
   public <T> ComposableFuture<T> get(final String query, final ResultSetMapper<T> mapper) {
     final ComposableFuture<QueryResult> queryRes = _pool.sendQuery(query);
     return _get(queryRes, mapper);
@@ -179,7 +185,7 @@ public class BasicDao {
         final Iterator<RowData> rows = resultSet.iterator();
         if (rows.hasNext()) {
           final RowData row = rows.next();
-          return mapper.map(new TypedRowData(row), columnNames);
+          return mapper.map(new TypedRowDataImpl(row), columnNames);
         }
       }
 
@@ -200,6 +206,7 @@ public class BasicDao {
     return _pool.withTransaction(handler);
   }
 
+  @Override
   public <T> ComposableFuture<T> get(final ResultSetMapper<T> mapper, final String tableName, final int limit) {
     return get("select * from " + withBackticks(tableName) + " limit " + limit, mapper);
   }
@@ -208,6 +215,7 @@ public class BasicDao {
     return get(conn, "select * from " + withBackticks(tableName) + " limit " + limit, mapper);
   }
 
+  @Override
   public ComposableFuture<Map<String, Object>> get(final String query) {
     return get(query, new GenericResultSetMapper());
   }
@@ -216,17 +224,20 @@ public class BasicDao {
     return get(conn, query, new GenericResultSetMapper());
   }
 
+  @Override
   public ComposableFuture<Long> execute(final String command) {
     final ComposableFuture<QueryResult> queryRes = _pool.sendQuery(command);
     return _execute(queryRes);
   }
 
+  @Override
   public ComposableFuture<Long> executeAndGetId(final String command) {
     return withConnection(conn -> execute(conn, command)
       .flatMap(result -> get(conn, "select LAST_INSERT_ID()"))
       .map(result -> (Long) result.get("LAST_INSERT_ID()")));
   }
 
+  @Override
   public <T> ComposableFuture<Long> saveAndGetId(final T entry, final String tableName, final EntityMapper<T> mapper) {
     final String saveCommand = createSaveCommand(singletonList(entry), tableName, mapper);
     return executeAndGetId(saveCommand);
@@ -241,6 +252,7 @@ public class BasicDao {
     return queryRes.map(QueryResult::rowsAffected);
   }
 
+  @Override
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final Object id) {
     return execute(createDeleteCommand(tableName, idColumnName, singletonList(id)));
   }
@@ -250,6 +262,7 @@ public class BasicDao {
     return execute(conn, createDeleteCommand(tableName, idColumnName, singletonList(id)));
   }
 
+  @Override
   public ComposableFuture<Long> delete(final String tableName, final String idColumnName, final List<?> ids) {
     return execute(createDeleteCommand(tableName, idColumnName, ids));
   }
@@ -263,6 +276,7 @@ public class BasicDao {
     return createQueryForIds("delete from", tableName, idColumnName, ids);
   }
 
+  @Override
   public <T> ComposableFuture<Long> save(final List<T> entries, final String tableName, final EntityMapper<T> mapper) {
     return execute(createSaveCommand(entries, tableName, mapper));
   }
@@ -281,6 +295,7 @@ public class BasicDao {
    * @param <T> entry generic
    * @return number of updated entries
    */
+  @Override
   public <T> ComposableFuture<Long> update(final String tableName, final T entry, final EntityMapper<T> entryMapper,
                                            final EntityMapper<T> idMapper) {
     return execute(createUpdateCommand(tableName, entry, entryMapper, idMapper));
@@ -374,6 +389,7 @@ public class BasicDao {
     return command.toString();
   }
 
+  @Override
   public ComposableFuture<Boolean> shutdown() {
     return _pool.close();
   }

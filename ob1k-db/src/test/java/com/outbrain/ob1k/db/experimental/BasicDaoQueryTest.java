@@ -2,6 +2,9 @@ package com.outbrain.ob1k.db.experimental;
 
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.db.EntityMapper;
+import com.outbrain.ob1k.db.ResultSetMapper;
+import com.outbrain.ob1k.db.TypedRowData;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
