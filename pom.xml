@@ -64,6 +64,13 @@
     </developer>
   </developers>
 
+  <repositories>
+    <repository>
+      <id>jcenter</id>
+      <url>https://jcenter.bintray.com/</url>
+    </repository>
+  </repositories>
+
   <modules>
     <module>util-metrics</module>
     <module>ob1k-concurrent</module>

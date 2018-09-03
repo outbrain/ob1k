@@ -30,6 +30,12 @@
     </dependency>
 
     <dependency>
+      <groupId>com.github.jasync-sql</groupId>
+      <artifactId>jasync-mysql</artifactId>
+      <version>0.8.12</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-beans</artifactId>
       <!-- this is an optional dependency - needed only if the package springsupport is used -->
