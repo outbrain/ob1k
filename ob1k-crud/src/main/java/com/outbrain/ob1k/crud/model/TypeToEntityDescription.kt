@@ -24,7 +24,8 @@ class TypeToEntityDescription {
                     entityFields.with(name, type)
                 }
 
-        return EntityDescription(table = "_${type.simpleName.decapitalize()}", id = id, fields = entityFields.get())
+
+        return EntityDescription(table = "_${type.simpleName.decapitalize()}", id = id, fields = entityFields.get().sortedBy { it.name }).idFirst()
     }
 
     private fun Method.isGetter() = parameterTypes.isEmpty() && (name.startsWith("get") || name.startsWith("is"))

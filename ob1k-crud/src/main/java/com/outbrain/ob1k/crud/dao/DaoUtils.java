@@ -23,9 +23,8 @@ public class DaoUtils {
                                                      @NotNull IntRange pagination,
                                                      @NotNull Pair<String, String> sort,
                                                      T filter) {
-    Integer startInteger = pagination.getStart();
     Integer endInteger = pagination.getEndInclusive();
-
+    Integer startInteger = pagination.getStart();
     Comparator<T> comparator = getComparator(sort);
     List<T> list = values.stream()
             .sorted(comparator)

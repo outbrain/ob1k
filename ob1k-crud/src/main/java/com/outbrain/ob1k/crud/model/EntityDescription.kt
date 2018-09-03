@@ -64,4 +64,21 @@ data class EntityDescription(@JsonIgnore val table: String,
 
         references += target
     }
+
+    fun reindex(predicate: (EntityField) -> Boolean, idx: Int): EntityDescription {
+        val prevIdx = fields.indexOfFirst(predicate)
+        if (prevIdx >= 0) {
+            val entry = fields[prevIdx]
+            println(fields.map { it.name })
+            fields = fields.subList(0, prevIdx) + fields.subList(prevIdx + 1, fields.size)
+            println(fields.map { it.name })
+            fields = fields.subList(0, idx) + entry + fields.subList(idx, fields.size)
+            println(fields.map { it.name })
+        }
+        return this
+    }
+
+    fun reindex(name: String, idx: Int) = reindex({ it.name == name }, idx)
+
+    fun idFirst() = reindex("id", 0)
 }
