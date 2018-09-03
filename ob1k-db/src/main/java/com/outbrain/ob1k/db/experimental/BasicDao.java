@@ -5,6 +5,9 @@ import com.github.jasync.sql.db.ResultSet;
 import com.github.jasync.sql.db.RowData;
 import com.google.common.base.Joiner;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.db.EntityMapper;
+import com.outbrain.ob1k.db.IBasicDao;
+import com.outbrain.ob1k.db.ResultSetMapper;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -21,7 +24,7 @@ import static java.util.Collections.singletonList;
  * @author Asy Ronen
  * @author Eran Harel
  */
-public class BasicDao {
+public class BasicDao implements IBasicDao {
   private final DbConnectionPool _pool;
 
   public BasicDao(final DbConnectionPool pool) {
@@ -115,7 +118,7 @@ public class BasicDao {
         final Iterator<RowData> rows = resultSet.iterator();
         while (rows.hasNext()) {
           final RowData row = rows.next();
-          final T obj = mapper.map(new TypedRowData(row), columnNames);
+          final T obj = mapper.map(new TypedRowDataImpl(row), columnNames);
           response.add(obj);
         }
       }
@@ -177,7 +180,7 @@ public class BasicDao {
         final Iterator<RowData> rows = resultSet.iterator();
         if (rows.hasNext()) {
           final RowData row = rows.next();
-          return mapper.map(new TypedRowData(row), resultSet.columnNames());
+          return mapper.map(new TypedRowDataImpl(row), resultSet.columnNames());
         }
       }
 

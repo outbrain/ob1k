@@ -6,14 +6,12 @@ import org.joda.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * User: aronen
- * Date: 10/1/13
- * Time: 2:11 PM
+ *
  */
-public class TypedRowData {
+public class TypedRowDataImpl implements com.outbrain.ob1k.db.TypedRowData {
   private final RowData row;
 
-  public TypedRowData(final RowData row) {
+  public TypedRowDataImpl(RowData row) {
     this.row = row;
   }
 

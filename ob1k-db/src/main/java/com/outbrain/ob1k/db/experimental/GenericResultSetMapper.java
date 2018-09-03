@@ -1,5 +1,8 @@
 package com.outbrain.ob1k.db.experimental;
 
+import com.outbrain.ob1k.db.ResultSetMapper;
+import com.outbrain.ob1k.db.TypedRowData;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
