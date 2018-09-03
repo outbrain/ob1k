@@ -16,6 +16,10 @@ enum class EFieldType {
         override fun toMysqlMatchValue(value: String) = STRING.toMysqlMatchValue(value)
         override fun toMysqlValue(value: String) = STRING.toMysqlValue(value)
     },
+    URL {
+        override fun toMysqlMatchValue(value: String) = STRING.toMysqlMatchValue(value)
+        override fun toMysqlValue(value: String) = STRING.toMysqlValue(value)
+    },
     NUMBER {
         override fun toMysqlMatchValue(value: String): String {
             val cleaned = value.removePrefix("[").removeSuffix("]").replace("\"", "")
