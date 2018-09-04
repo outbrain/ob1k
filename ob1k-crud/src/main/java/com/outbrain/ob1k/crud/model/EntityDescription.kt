@@ -6,7 +6,7 @@ data class EntityDescription(@JsonIgnore val table: String,
                              val id: Int,
                              val resourceName: String = table.substringAfterLast("_"),
                              var title: String = resourceName.capitalize(),
-                             val endpoint: String = "../${resourceName}s",
+                             var endpoint: String = "../crud",
                              var fields: List<EntityField> = emptyList(),
                              var editable: Boolean = true,
                              var icon: String? = null) {

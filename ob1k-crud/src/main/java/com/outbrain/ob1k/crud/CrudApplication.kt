@@ -7,7 +7,7 @@ import com.outbrain.ob1k.crud.dao.*
 import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.crud.model.EntityField
 import com.outbrain.ob1k.crud.model.Model
-import com.outbrain.ob1k.crud.service.CrudService
+import com.outbrain.ob1k.crud.service.CrudDispatcher
 import com.outbrain.ob1k.crud.service.ModelService
 import com.outbrain.ob1k.db.BasicDao
 import java.util.concurrent.ExecutorService
@@ -16,11 +16,13 @@ class CrudApplication(private val dao: BasicDao? = null,
                       commaDelimitedTables: String = "") {
     private val tables = commaDelimitedTables.split(",").filter { it.isNotEmpty() }
     var model = Model()
+    var dispatcher = CrudDispatcher()
 
     init {
         if (commaDelimitedTables.isNotBlank()) {
             dao?.let { withTableInfo(dao, tables).get() }
             dao?.let { updateTableReferences(dao).get() }
+            dao?.let { tables.map { newMySQLDao(it) }.forEach { dispatcher = dispatcher.register(it) } }
         }
     }
 
@@ -71,18 +73,22 @@ class CrudApplication(private val dao: BasicDao? = null,
 
     fun newMySQLDao(table: String) = MySQLCrudDao(model.getByTable(table)!!, dao!!)
 
+
     fun <T> newCustomDao(dao: ICrudAsyncDao<T>, dateformat: String) = CrudAsyncDaoDelegate(get(dao.resourceName()), dao, dateformat)
 
     fun <T> newCustomDao(dao: ICrudDao<T>, dateformat: String, executorService: ExecutorService) = newCustomDao(AsyncDaoBridge(dao, executorService), dateformat)
 
-    fun mysqlTablesAsServices() = dao?.let { tables.map { newMySQLDao(it) }.map { service(it) } } ?: listOf()
 
-    fun <T> autoGenerateCustomDaoService(dateformat: String, dao: ICrudAsyncDao<T>) = CrudService(newCustomDao(dao, dateformat))
+    fun <T> withCustomDao(dao: ICrudDao<T>, dateformat: String, executorService: ExecutorService) = withCustomDao(AsyncDaoBridge(dao, executorService), dateformat)
 
-    fun daosAsServices(dateformat: String, daos: List<ICrudAsyncDao<*>>) = daos.map { CrudService(newCustomDao(it, dateformat)) }
+    fun <T> withCustomDao(dao: ICrudAsyncDao<T>, dateformat: String) = withDao(CrudAsyncDaoDelegate(get(dao.resourceName()), dao, dateformat))
 
-    fun service(dao: ICrudAsyncDao<JsonObject>) = CrudService(dao)
+    fun withDao(dao: ICrudAsyncDao<JsonObject>): CrudApplication {
+        dispatcher = dispatcher.register(dao)
+        return this
+    }
 
+    fun dispatcher() = dispatcher
     fun modelService() = ModelService(model)
 
     operator fun invoke(resourceName: String, fieldName: String) = model(resourceName, fieldName)

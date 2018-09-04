@@ -5,7 +5,7 @@
       "id": 0,
       "resourceName": "person",
       "title": "Person",
-      "endpoint": "../persons",
+      "endpoint": "../crud",
       "fields": [
         {
           "name": "name",
@@ -55,7 +55,7 @@
       "id": 1,
       "resourceName": "job",
       "title": "Job",
-      "endpoint": "../jobs",
+      "endpoint": "../crud",
       "fields": [
         {
           "name": "id",

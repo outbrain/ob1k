@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.crud.dao
 
-import com.google.gson.JsonObject
 import com.outbrain.ob1k.crud.CrudApplication
 import com.outbrain.ob1k.crud.example.Job
 import com.outbrain.ob1k.crud.example.JobDao
@@ -10,17 +9,15 @@ import java.util.concurrent.Executors
 
 class InMemoryCrudDaoTest : CrudDaoTestBase() {
 
-
-    override fun getPersonAndJobDaos(): Pair<ICrudAsyncDao<JsonObject>, ICrudAsyncDao<JsonObject>> {
-        val jobDaoDelegate = JobDao()
-        val personDaoDelegate = PersonDao(jobDaoDelegate)
-        val application = CrudApplication()
+    override fun crudApplication(): CrudApplication {
+        val jobDao = JobDao()
+        val personDao = PersonDao(jobDao)
+        val executor = Executors.newCachedThreadPool()
+        return CrudApplication()
                 .withEntity(Person::class.java)
                 .withEntity(Job::class.java)
                 .addReference("job", "person")
-        val executor = Executors.newCachedThreadPool()
-        val personDao = application.newCustomDao(personDaoDelegate, "yyyy-MM-dd", executor)
-        val jobDao = application.newCustomDao(jobDaoDelegate, "yyyy-MM-dd", executor)
-        return personDao to jobDao
+                .withCustomDao(jobDao, "yyyy-MM-dd", executor)
+                .withCustomDao(personDao, "yyyy-MM-dd", executor)
     }
 }

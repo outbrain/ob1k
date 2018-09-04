@@ -2,6 +2,7 @@ package com.outbrain.ob1k.crud.dao
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.outbrain.ob1k.crud.CrudApplication
 import org.junit.After
 import org.junit.Test
 import java.util.*
@@ -11,14 +12,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 abstract class CrudDaoTestBase {
-    private val daos = getPersonAndJobDaos();
-    private val personDao = daos.first
-    private val jobDao = daos.second
+    private val application = crudApplication()
+    private val personDao = application.dispatcher.dao("person")
+    private val jobDao = application.dispatcher.dao("job")
     private val email = "${Random().nextInt()}@outbrain.com"
     private val title = "${Random().nextInt()}QA"
     private val jsonParser = JsonParser()
 
-    abstract fun getPersonAndJobDaos(): Pair<ICrudAsyncDao<JsonObject>, ICrudAsyncDao<JsonObject>>
+    abstract fun crudApplication(): CrudApplication
 
     @After
     fun tearDown() {
