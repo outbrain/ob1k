@@ -9,7 +9,9 @@ import com.github.jasync.sql.db.pool.PoolConfiguration;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,29 +29,61 @@ class MySqlConnectionPool implements DbConnectionPool {
   private static final Logger logger = LoggerFactory.getLogger(MySqlConnectionPool.class);
 
   private final ConnectionPool<MySQLConnection> _pool;
+  private final MetricFactory metricFactory;
+  private final Counter sendQueryCounter;
+  private final Timer sendQueryTimer;
+  private final Counter preparedStatementCounter;
+  private final Timer preparedStatementTimer;
 
   MySqlConnectionPool(final MySQLConnectionFactory connFactory, final PoolConfiguration poolConfiguration, final MetricFactory metricFactory) {
     _pool = new ConnectionPool<>(connFactory, poolConfiguration, ComposableFutures.getExecutor());
-    initializeMetrics(metricFactory, _pool);
+    this.metricFactory = metricFactory;
+    if (metricFactory != null) {
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", () -> _pool.availables().size());
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", () -> _pool.queued().size());
+      metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", () -> _pool.inUse().size());
+      sendQueryCounter = metricFactory.createCounter("MysqlAsyncConnectionPool", "sendQueryCounter");
+      sendQueryTimer = metricFactory.createTimer("MysqlAsyncConnectionPool", "sendQueryTimer");
+      preparedStatementCounter = metricFactory.createCounter("MysqlAsyncConnectionPool", "preparedStatementCounter");
+      preparedStatementTimer = metricFactory.createTimer("MysqlAsyncConnectionPool", "preparedStatementTimer");
+    } else {
+      sendQueryCounter = null;
+      sendQueryTimer = null;
+      preparedStatementCounter = null;
+      preparedStatementTimer = null;
+    }
   }
 
 
-  private static void initializeMetrics(final MetricFactory metricFactory, final ConnectionPool<MySQLConnection> pool) {
+  private <T> ComposableFuture<T> withMetricsSendQuery(ComposableFuture<T> future) {
     if (metricFactory != null) {
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", () -> pool.availables().size());
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", () -> pool.queued().size());
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", () -> pool.inUse().size());
+      sendQueryCounter.inc();
+      final Timer.Context timer = sendQueryTimer.time();
+      future.andThen(tried -> {
+        timer.stop();
+      });
     }
+    return future;
+  }
+  private <T> ComposableFuture<T> withMetricsPreparedStatement(ComposableFuture<T> future) {
+    if (metricFactory != null) {
+      preparedStatementCounter.inc();
+      final Timer.Context timer = preparedStatementTimer.time();
+      future.andThen(tried -> {
+        timer.stop();
+      });
+    }
+    return future;
   }
 
   @Override
   public ComposableFuture<QueryResult> sendQuery(final String query) {
-    return JavaFutureHelper.from(() -> _pool.sendQuery(query));
+    return withMetricsSendQuery(JavaFutureHelper.from(() -> _pool.sendQuery(query)));
   }
 
   @Override
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
-    return JavaFutureHelper.from(() -> _pool.sendPreparedStatement(query, values));
+    return withMetricsPreparedStatement(JavaFutureHelper.from(() -> _pool.sendPreparedStatement(query, values)));
   }
 
   private ComposableFuture<MySqlAsyncConnection> take() {
