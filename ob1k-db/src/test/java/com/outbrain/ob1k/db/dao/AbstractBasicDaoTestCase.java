@@ -37,6 +37,7 @@ public abstract class AbstractBasicDaoTestCase {
   @After
   public final void closeDao() throws Exception {
     dao.close();
+    experimentalDao.close();
   }
 
   @Before
