@@ -1,10 +1,9 @@
 package com.outbrain.ob1k.db.dao;
 
-import org.junit.After;
-import org.junit.Before;
-
 import com.outbrain.ob1k.db.BasicDao;
 import com.outbrain.ob1k.db.BasicTestingDao;
+import org.junit.After;
+import org.junit.Before;
 
 /**
  * Base class for async dao testing
@@ -15,6 +14,7 @@ import com.outbrain.ob1k.db.BasicTestingDao;
 public abstract class AbstractBasicDaoTestCase {
 
   private BasicTestingDao dao;
+  private com.outbrain.ob1k.db.experimental.BasicTestingDao experimentalDao;
   private final String hostname;
   private final int port;
   private final String scheme;
@@ -42,9 +42,14 @@ public abstract class AbstractBasicDaoTestCase {
   @Before
   public final void initDao() throws Exception {
     this.dao = new BasicTestingDao(hostname, port, scheme, user, password, connectTimeoutMilliSeconds, queryTimeoutMilliSeconds);
+    this.experimentalDao = new com.outbrain.ob1k.db.experimental.BasicTestingDao(hostname, port, scheme, user, password, connectTimeoutMilliSeconds, queryTimeoutMilliSeconds);
   }
 
   public BasicDao getDao() {
     return this.dao;
+  }
+
+  public com.outbrain.ob1k.db.experimental.BasicTestingDao getExperimentalDao() {
+    return this.experimentalDao;
   }
 }
