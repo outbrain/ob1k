@@ -11,13 +11,14 @@ import com.outbrain.ob1k.server.netty.ResponseBuilder
 private val jsonParser = JsonParser()
 
 fun Entities<JsonObject>.toResponse(range: IntRange): Response {
-    val data = JsonArray()
+    val arrOfData = JsonArray()
     val result = JsonObject()
-    data.forEach { data.add(it) }
+    data.forEach { arrOfData.add(it) }
+
     result.addProperty("total", total)
-    result.add("data", data)
+    result.add("data", arrOfData)
     return ResponseBuilder.ok()
-            .setHeader("content-range", "${range.first}-${Math.min(range.last, data.size())}/$total")
+            .setHeader("content-range", "${range.first}-${Math.min(range.last, data.size)}/$total")
             .setHeader("content-type", "application/json")
             .withContent(data.toString())
             .build()
