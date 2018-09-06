@@ -41,8 +41,13 @@ abstract class CrudDaoTestBase {
     internal fun `update person`() {
         val created = personDao.create(person("update")).get()
         created.addProperty("alive", false)
+        created.addProperty("liveness", "DEAD")
         val updated = personDao.update(created.id(), created).get()
         assertEquals(false, updated.get("alive").asBoolean)
+        assertEquals("DEAD", updated.get("liveness").asString)
+        val read = personDao.read(created.id()).get()!!
+        assertEquals(false, read.get("alive").asBoolean)
+        assertEquals("DEAD", read.get("liveness").asString)
     }
 
     @org.junit.Test
@@ -131,6 +136,7 @@ abstract class CrudDaoTestBase {
     private fun person(testcase: String) = JsonObject()
             .with("name", "$testcase${Random().nextInt()}")
             .with("alive", true)
+            .with("liveness", "ALIVE")
             .with("email", email)
 
 

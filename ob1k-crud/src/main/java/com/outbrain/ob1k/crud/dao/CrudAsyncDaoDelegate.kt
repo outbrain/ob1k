@@ -2,7 +2,6 @@ package com.outbrain.ob1k.crud.dao
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
-import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.crud.model.EFieldType
 import com.outbrain.ob1k.crud.model.Entities
 import com.outbrain.ob1k.crud.model.EntityDescription
@@ -14,18 +13,16 @@ class CrudAsyncDaoDelegate<T>(private val desc: EntityDescription,
     private val gson = GsonBuilder().setDateFormat(dateformat).create()
     private val type = delegate.type()
 
-    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject?): ComposableFuture<Entities<JsonObject>> {
-        return delegate.list(pagination, sort, filter?.let { type.typeOf(filter) })
-                .map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
-    }
+    override fun list(pagination: IntRange, sort: Pair<String, String>, filter: JsonObject?) =
+            delegate.list(pagination, sort, filter?.asT()).map { it.asJson() }
 
-    override fun list(ids: List<String>) = delegate.list(ids).map { Entities(it.total, it.data.map { type.jsonOf(it) }) }
+    override fun list(ids: List<String>) = delegate.list(ids).map { it.asJson() }
 
-    override fun read(id: String) = delegate.read(id).map { it?.let { type.jsonOf(it) } }
+    override fun read(id: String) = delegate.read(id).map { it?.asJson() }
 
-    override fun create(entity: JsonObject) = delegate.create(type.typeOf(entity)).map { type.jsonOf(it) }
+    override fun create(entity: JsonObject) = delegate.create(entity.asT()).map { it.asJson() }
 
-    override fun update(id: String, entity: JsonObject) = delegate.update(id, type.typeOf(entity)).map { type.jsonOf(it) }
+    override fun update(id: String, entity: JsonObject) = delegate.update(id, entity.asT()).map { it.asJson() }
 
     override fun delete(id: String) = delegate.delete(id)
 
@@ -33,13 +30,15 @@ class CrudAsyncDaoDelegate<T>(private val desc: EntityDescription,
 
     override fun type() = JsonObject::class.java
 
-    private fun Class<T>.typeOf(obj: JsonObject): T {
-        desc.fields.filter { it.type == EFieldType.REFERENCEMANY }.forEach { obj.remove(it.name) }
-        return gson.fromJson(obj, this)
+    private fun JsonObject.asT(): T {
+        desc.fields.filter { it.type == EFieldType.REFERENCEMANY }.forEach { remove(it.name) }
+        return gson.fromJson(this, type)
     }
 
-    private fun Class<T>.jsonOf(t: T): JsonObject {
-        val jsonObject = gson.toJsonTree(t, this).asJsonObject
+    private fun Entities<T>.asJson() = Entities(total, data.map { it.asJson() })
+
+    private fun T.asJson(): JsonObject {
+        val jsonObject = gson.toJsonTree(this, type).asJsonObject
         desc.fields
                 .filter { it.type == EFieldType.REFERENCEMANY }
                 .forEach {

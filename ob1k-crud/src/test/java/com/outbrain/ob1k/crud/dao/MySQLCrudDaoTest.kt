@@ -1,6 +1,9 @@
 package com.outbrain.ob1k.crud.dao
 
 import com.outbrain.ob1k.crud.CrudApplication
+import com.outbrain.ob1k.crud.example.ELiveness
+import com.outbrain.ob1k.crud.model.EFieldType
+import com.outbrain.ob1k.crud.model.EntityField
 import com.outbrain.ob1k.db.BasicDao
 import com.outbrain.ob1k.db.MySqlConnectionPoolBuilder
 
@@ -12,4 +15,17 @@ class MySQLCrudDaoTest : CrudDaoTestBase() {
             .password("password")
             .forDatabase("outbrain")
             .build()), "obcp_crud_person,obcj_crud_job")
+            .withLiveness()
+
+
+    private fun CrudApplication.withLiveness(): CrudApplication {
+        get("person").let {
+            it.fields += EntityField(dbName = "obcp_alive",
+                    name = "liveness",
+                    label = "Liveness",
+                    type = EFieldType.SELECT_BY_IDX,
+                    choices = ELiveness.values().map { it.name })
+        }
+        return this
+    }
 }

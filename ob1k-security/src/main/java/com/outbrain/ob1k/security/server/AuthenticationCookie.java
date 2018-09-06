@@ -11,7 +11,7 @@ import org.joda.time.format.ISODateTimeFormat;
  * This cookie is meant to be serialized into the response and then sent back by the user for each subsequent
  * request.
  */
-class AuthenticationCookie {
+public class AuthenticationCookie {
 
   public final static String DELIMITER = ";";
   public static final DateTimeFormatter DATE_TIME_FORMATTER = ISODateTimeFormat.basicDateTime();

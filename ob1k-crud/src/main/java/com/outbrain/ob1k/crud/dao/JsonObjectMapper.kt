@@ -12,7 +12,7 @@ class JsonObjectMapper(private val description: EntityDescription) : ResultSetMa
         val jsonObject = JsonObject()
         description.fields
                 .filter { it.type != EFieldType.REFERENCEMANY }
-                .forEach { it.type.fillJsonObject(jsonObject, it.name, row!!.getRaw(it.dbName)?.toString()) }
+                .forEach { it.fillJsonObject(jsonObject, it.name, row!!.getRaw(it.dbName)?.toString()) }
         return jsonObject
     }
 }

@@ -16,8 +16,6 @@ data class EntityDescription(@JsonIgnore val table: String,
     operator fun invoke(name: String): EntityField? = fields.find { name == it.name }
     fun getByColumn(dbName: String): EntityField? = fields.find { dbName == it.dbName }
 
-    fun editableFields() = fields.filter { !it.readOnly }
-
     fun idDBFieldName() = idField().dbName
 
     fun idField() = this("id")!!

@@ -5,6 +5,7 @@ public class Person {
   private String name;
   private Boolean alive;
   private String email;
+  private ELiveness liveness;
 
   public Integer getId() {
     return id;
@@ -36,5 +37,13 @@ public class Person {
 
   public void setAlive(Boolean alive) {
     this.alive = alive;
+  }
+
+  public ELiveness getLiveness() {
+    return liveness;
+  }
+
+  public void setLiveness(ELiveness liveness) {
+    this.liveness = liveness;
   }
 }

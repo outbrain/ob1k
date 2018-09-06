@@ -8,18 +8,72 @@
       "endpoint": "../crud",
       "fields": [
         {
-          "name": "name",
-          "label": "Name",
-          "type": "STRING",
-          "required": false,
-          "readOnly": false
-        },
-        {
           "name": "id",
           "label": "Id",
           "type": "NUMBER",
           "required": true,
-          "readOnly": true
+          "readOnly": true,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
+        },
+        {
+          "name": "alive",
+          "label": "Alive",
+          "type": "BOOLEAN",
+          "required": false,
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
+        },
+        {
+          "name": "email",
+          "label": "Email",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
+        },
+        {
+          "name": "liveness",
+          "label": "Liveness",
+          "type": "SELECT",
+          "required": false,
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": [
+            "DEAD",
+            "ALIVE"
+          ]
+        },
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
         },
         {
           "name": "jobs",
@@ -33,23 +87,14 @@
             "name": "title",
             "type": "Chip",
             "optionText": "title"
-          }
-        },
-        {
-          "name": "email",
-          "label": "Email",
-          "type": "STRING",
-          "required": false,
-          "readOnly": false
-        },
-        {
-          "name": "alive",
-          "label": "Alive",
-          "type": "BOOLEAN",
-          "required": false,
-          "readOnly": false
+          },
+          "hidden": false,
+          "options": null,
+          "choices": null
         }
-      ]
+      ],
+      "editable": true,
+      "icon": null
     },
     {
       "id": 1,
@@ -62,21 +107,26 @@
           "label": "Id",
           "type": "NUMBER",
           "required": true,
-          "readOnly": true
-        },
-        {
-          "name": "title",
-          "label": "Title",
-          "type": "STRING",
-          "required": false,
-          "readOnly": false
+          "readOnly": true,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
         },
         {
           "name": "company",
           "label": "Company",
           "type": "STRING",
           "required": false,
-          "readOnly": false
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
         },
         {
           "name": "person",
@@ -85,20 +135,45 @@
           "required": true,
           "readOnly": false,
           "reference": "person",
+          "target": null,
           "display": {
             "name": "name",
             "type": "Select",
             "optionText": "name"
-          }
+          },
+          "hidden": false,
+          "options": null,
+          "choices": null
         },
         {
           "name": "timestamp",
           "label": "Timestamp",
           "type": "DATE",
           "required": false,
-          "readOnly": false
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false,
+          "reference": null,
+          "target": null,
+          "display": null,
+          "hidden": false,
+          "options": null,
+          "choices": null
         }
-      ]
+      ],
+      "editable": true,
+      "icon": null
     }
   ]
 }

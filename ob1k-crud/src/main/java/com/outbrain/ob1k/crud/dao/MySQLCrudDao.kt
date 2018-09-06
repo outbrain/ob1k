@@ -62,13 +62,14 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         if (filteredFields.isEmpty()) {
             return ""
         }
-        val matchExpressions = filteredFields.map { "${it.first.dbName}${it.first.type.toMysqlMatchValue(it.second.toString().unqoute())}" }
+        val matchExpressions = filteredFields.map { "${it.first.dbName}${it.first.toMysqlMatchValue(it.second.toString().unqoute())}" }
         return matchExpressions.joinToString(separator = " AND ", prefix = "where ")
     }
 
     private fun EntityDescription.update(id: String, jsonObject: JsonObject): String {
-        val keyval = editableFields()
+        val keyval = fields.filter { !it.readOnly }
                 .filter { it.type != EFieldType.REFERENCEMANY }
+                .distinctBy { it.dbName }
                 .map { it to it.toSQLValue(jsonObject) }
                 .map { it.first.dbName to it.second }
                 .joinToString(",") { "${it.first}=${it.second}" }
@@ -79,6 +80,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         val jsonValues = fields
                 .filter { !it.autoGenerate }
                 .filter { it.type != EFieldType.REFERENCEMANY }
+                .distinctBy { it.dbName }
                 .map { it to it.toSQLValue(jsonObject) }
                 .map { it.first.dbName to it.second }
 
@@ -107,7 +109,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
 
     private fun <T> ComposableFuture<T>.onFailure(query: String) = recoverWith { ComposableFutures.fromError(RuntimeException("failed to execute $query", it)) }
 
-    private fun EntityField.toSQLValue(json: JsonObject) = json.get(name)?.let { if (it.isJsonNull) "\'NULL\'" else type.toMysqlValue(it.asString) }
+    private fun EntityField.toSQLValue(json: JsonObject) = json.get(name)?.let { if (it.isJsonNull) "\'NULL\'" else toMysqlValue(it.asString) }
             ?: "\'NULL\'"
 }
 
