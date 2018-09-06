@@ -103,7 +103,7 @@ public class NettyServer implements Server {
       final ServerBootstrap b = new ServerBootstrap();
       b.option(ChannelOption.SO_BACKLOG, 1024);
       b.option(ChannelOption.SO_RCVBUF, 64 * 1024);
-      b.option(ChannelOption.SO_SNDBUF, 64 * 1024);
+      b.childOption(ChannelOption.SO_SNDBUF, 64 * 1024);
       // it means that the max static file can be 1024*ResourceRegion.BUFFER_SIZE = 64Mb
       b.childOption(ChannelOption.WRITE_SPIN_COUNT, 1024);
       b.childOption(ChannelOption.TCP_NODELAY, true);
