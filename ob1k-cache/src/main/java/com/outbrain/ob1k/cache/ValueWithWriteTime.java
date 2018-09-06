@@ -17,9 +17,9 @@ public class ValueWithWriteTime<V> {
    * creates an object with the given value and the current timestamp
    * @param value
    */
-  public ValueWithWriteTime(final V value) {
+  public ValueWithWriteTime(final V value, final long writeTime) {
     this.value = value;
-    writeTime = System.currentTimeMillis();
+    this.writeTime = writeTime;
   }
 
   /**

@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.outbrain.ob1k.cache.CacheLoaderForTesting.MISSING_KEY;
 import static com.outbrain.ob1k.cache.CacheLoaderForTesting.NULL_KEY;
@@ -29,6 +30,9 @@ import static org.mockito.Mockito.when;
 
 public class RefreshLoadingCacheDelegateTest {
 
+  private static final long REFRESH_AFTER_WRITE_DURATION = 500L;
+  private static final long LOAD_DURATION = 100L;
+  private static final long LOAD_GRACE_DURATION = 200L;
   private TypedCache<String, ValueWithWriteTime<String>> cacheMock = new TypedCacheMock();
 
   private CacheLoader<String, String> cacheLoaderStub = new CacheLoaderForTesting();
@@ -37,7 +41,7 @@ public class RefreshLoadingCacheDelegateTest {
 
   @Before
   public void setup() {
-    refreshingCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderStub, "myCache", null, 10, TimeUnit.SECONDS, false, 50, TimeUnit.MILLISECONDS);
+    refreshingCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderStub, "myCache", null, 10, TimeUnit.SECONDS, false, 50, TimeUnit.MILLISECONDS, null);
   }
 
   @Test
@@ -64,19 +68,20 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefresh() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
+    TimeSupplierMock timeSupplierMock = new TimeSupplierMock();
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, REFRESH_AFTER_WRITE_DURATION, TimeUnit.MILLISECONDS, timeSupplierMock);
     when(cacheLoaderMock.load(anyString(), anyString())).thenAnswer(invocation -> {
-      Thread.sleep(100);
+      timeSupplierMock.inc(LOAD_DURATION);
       String key = (String) invocation.getArguments()[1];
       return ComposableFutures.fromValue(VALUE_FOR + key);
     });
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(500);
+    timeSupplierMock.inc(REFRESH_AFTER_WRITE_DURATION);
     // get value and trigger refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(200);
+    timeSupplierMock.inc(LOAD_GRACE_DURATION);
     //get value after refresh
     assertEquals(VALUE_FOR + "key1", myCache.getAsync("key1").get());
     verify(cacheLoaderMock, times(1)).load("myCache", "key1");
@@ -86,18 +91,19 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefreshNull() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
+    TimeSupplierMock timeSupplierMock = new TimeSupplierMock();
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, REFRESH_AFTER_WRITE_DURATION, TimeUnit.MILLISECONDS, timeSupplierMock);
     when(cacheLoaderMock.load(anyString(), anyString())).thenAnswer(invocation -> {
-      Thread.sleep(100);
+      timeSupplierMock.inc(LOAD_DURATION);
       return ComposableFutures.fromNull();
     });
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(500);
+    timeSupplierMock.inc(REFRESH_AFTER_WRITE_DURATION);
     // get value and trigger refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(200);
+    timeSupplierMock.inc(LOAD_GRACE_DURATION);
     //get value after refresh
     assertNull(myCache.getAsync("key1").get());
     verify(cacheLoaderMock, times(1)).load("myCache", "key1");
@@ -107,18 +113,19 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void testGetAsyncAndRefreshException() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 5000, TimeUnit.MILLISECONDS);
+    TimeSupplierMock timeSupplierMock = new TimeSupplierMock();
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, REFRESH_AFTER_WRITE_DURATION, TimeUnit.MILLISECONDS, timeSupplierMock);
     when(cacheLoaderMock.load("myCache", "key1")).thenAnswer(invocation -> {
-      Thread.sleep(100);
+      timeSupplierMock.inc(LOAD_DURATION);
       return ComposableFutures.fromError(new RuntimeException());
     });
     myCache.setAsync("key1", "value1").get();
     // get value before refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(5000);
+    timeSupplierMock.inc(REFRESH_AFTER_WRITE_DURATION);
     // get value and trigger refresh
     assertEquals("value1", myCache.getAsync("key1").get());
-    Thread.sleep(200);
+    timeSupplierMock.inc(LOAD_GRACE_DURATION);
     //get value after refresh
     assertEquals("value1", myCache.getAsync("key1").get());
     verify(cacheLoaderMock, times(2)).load("myCache", "key1");
@@ -137,9 +144,10 @@ public class RefreshLoadingCacheDelegateTest {
   @SuppressWarnings("unchecked")
   public void getBulkAsyncAndRefresh() throws ExecutionException, InterruptedException {
     CacheLoader<String, String> cacheLoaderMock = mock(CacheLoader.class);
-    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, 500, TimeUnit.MILLISECONDS);
+    TimeSupplierMock timeSupplierMock = new TimeSupplierMock();
+    TypedCache<String, String> myCache = new RefreshLoadingCacheDelegate<>(cacheMock, cacheLoaderMock, "myCache", null, 10, TimeUnit.SECONDS, false, REFRESH_AFTER_WRITE_DURATION, TimeUnit.MILLISECONDS, timeSupplierMock);
     when(cacheLoaderMock.load(anyString(), any(Iterable.class))).thenAnswer(invocation -> {
-      Thread.sleep(100);
+      timeSupplierMock.inc(LOAD_DURATION);
       Iterable<String> keys = (Iterable<String>) invocation.getArguments()[1];
       Map<String, String> res = new HashMap<>();
       for (String key : keys) {
@@ -150,13 +158,13 @@ public class RefreshLoadingCacheDelegateTest {
     myCache.setAsync("key1", "value1").get();
     // get first value before refresh
     assertEquals("value1", myCache.getBulkAsync(Collections.singletonList("key1")).get().get("key1"));
-    Thread.sleep(500);
+    timeSupplierMock.inc(REFRESH_AFTER_WRITE_DURATION);
     // get first value and trigger refresh, second value should not trigger refresh
     myCache.setAsync("key2", "value2").get();
     Map<String, String> res = myCache.getBulkAsync(Arrays.asList("key1", "key2")).get();
     assertEquals("value1", res.get("key1"));
     assertEquals("value2", res.get("key2"));
-    Thread.sleep(200);
+    timeSupplierMock.inc(LOAD_GRACE_DURATION);
     //get value after refresh
     Map<String, String> res2 = myCache.getBulkAsync(Arrays.asList("key1", "key2")).get();
     assertEquals(VALUE_FOR_BULK + "key1", res2.get("key1"));
@@ -215,6 +223,20 @@ public class RefreshLoadingCacheDelegateTest {
     @Override
     public ComposableFuture<Boolean> deleteAsync(final String key) {
       return ComposableFutures.fromValue(map.remove(key) != null);
+    }
+  }
+
+  private static class TimeSupplierMock implements Supplier<Long> {
+
+    private Long currentTime = 0L;
+
+    @Override
+    public Long get() {
+      return currentTime;
+    }
+
+    void inc(final Long time) {
+      this.currentTime += time;
     }
   }
 }

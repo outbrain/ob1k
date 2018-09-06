@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -20,11 +21,10 @@ import java.util.stream.Collectors;
 public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
   private final LoadingCacheDelegate<K, ValueWithWriteTime<V>> cache;
-  private final InternalCacheLoader internalCacheLoader;
+  private final InternalCacheLoader<K, V> internalCacheLoader;
   private final String cacheName;
-  private final long loadDuration;
-  private final TimeUnit loadTimeUnit;
   private final long refreshAfterWriteDuration;
+  private final Supplier<Long> timeSupplier;
 
   private final ConcurrentMap<K, Boolean> refreshingKeys;
 
@@ -32,17 +32,23 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private final Counter refreshErrors;
   private final Counter refreshTimeouts;
 
-  public RefreshLoadingCacheDelegate(final TypedCache<K, ValueWithWriteTime<V>> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory,
-                                     final long duration, final TimeUnit timeUnit, final boolean failOnError,
-                                     final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit) {
+  RefreshLoadingCacheDelegate(final TypedCache<K, ValueWithWriteTime<V>> cache, final CacheLoader<K, V> loader, final String cacheName, final MetricFactory metricFactory,
+                              final long duration, final TimeUnit timeUnit, final boolean failOnError,
+                              final long refreshAfterWriteDuration, final TimeUnit refreshAfterWriteUnit,
+                              final Supplier<Long> timeSupplier) {
     this.cacheName = cacheName;
-    this.internalCacheLoader = new InternalCacheLoader(loader);
-    this.cache = new LoadingCacheDelegate<>(cache, internalCacheLoader, cacheName, metricFactory, duration, timeUnit, failOnError);
-    this.loadDuration = duration;
-    this.loadTimeUnit = timeUnit;
     this.refreshAfterWriteDuration = refreshAfterWriteUnit.toMillis(refreshAfterWriteDuration);
 
     refreshingKeys = new ConcurrentHashMap<>();
+
+    if (timeSupplier == null) {
+      this.timeSupplier = new SystemTimeSupplier();
+    } else {
+      this.timeSupplier = timeSupplier;
+    }
+
+    this.internalCacheLoader = new InternalCacheLoader<>(loader, this.timeSupplier);
+    this.cache = new LoadingCacheDelegate<>(cache, internalCacheLoader, cacheName, metricFactory, duration, timeUnit, failOnError);
 
     if (metricFactory != null) {
       metricFactory.registerGauge("RefreshLoadingCacheDelegate." + cacheName, "refreshMapSize", refreshingKeys::size);
@@ -61,7 +67,7 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   public ComposableFuture<V> getAsync(final K key) {
     ComposableFuture<ValueWithWriteTime<V>> futureValue = cache.getAsync(key);
     futureValue.consume(value -> {
-      if (value.isSuccess() && shouldRefresh(value.getValue(), System.currentTimeMillis())) {
+      if (value.isSuccess() && shouldRefresh(value.getValue(), timeSupplier.get())) {
         this.refresh(key);
       }
     });
@@ -77,7 +83,7 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     ComposableFuture<Map<K, ValueWithWriteTime<V>>> resultMap = cache.getBulkAsync(keys);
     resultMap.consume(result -> {
       if (result.isSuccess()) {
-        final List<K> keysToRefresh = collectKeysToRefresh(result.getValue(), System.currentTimeMillis());
+        final List<K> keysToRefresh = collectKeysToRefresh(result.getValue(), timeSupplier.get());
         this.refresh(keysToRefresh);
       }
     });
@@ -99,23 +105,23 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
-    return cache.setAsync(key, new ValueWithWriteTime<>(value));
+    return cache.setAsync(key, new ValueWithWriteTime<>(value, timeSupplier.get()));
   }
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    return cache.setAsync(key, new InternalEntityMapper(mapper), maxIterations);
+    return cache.setAsync(key, new InternalEntityMapper<>(mapper, timeSupplier), maxIterations);
   }
 
   @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
-    Map<K, ValueWithWriteTime<V>> newEntries = entries.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> new ValueWithWriteTime<>(e.getValue())));
+    Map<K, ValueWithWriteTime<V>> newEntries = entries.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> new ValueWithWriteTime<>(e.getValue(), timeSupplier.get())));
     return cache.setBulkAsync(newEntries);
   }
 
   @Override
   public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
-    return cache.setIfAbsentAsync(key, new ValueWithWriteTime<>(value));
+    return cache.setIfAbsentAsync(key, new ValueWithWriteTime<>(value, timeSupplier.get()));
   }
 
   @Override
@@ -123,36 +129,40 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     return cache.deleteAsync(key);
   }
 
-  private class InternalCacheLoader implements CacheLoader<K, ValueWithWriteTime<V>> {
+  private static class InternalCacheLoader<K, V> implements CacheLoader<K, ValueWithWriteTime<V>> {
 
     private final CacheLoader<K, V> loader;
+    private Supplier<Long> timeSupplier;
 
-    private InternalCacheLoader(final CacheLoader<K, V> loader) {
+    private InternalCacheLoader(final CacheLoader<K, V> loader, final Supplier<Long> timeSupplier) {
       this.loader = loader;
+      this.timeSupplier = timeSupplier;
     }
 
     @Override
     public ComposableFuture<ValueWithWriteTime<V>> load(final String cacheName, final K key) {
-      return loader.load(cacheName, key).map(ValueWithWriteTime::new);
+      return loader.load(cacheName, key).map(v -> new ValueWithWriteTime<>(v, timeSupplier.get()));
     }
 
     @Override
     public ComposableFuture<Map<K, ValueWithWriteTime<V>>> load(final String cacheName, final Iterable<? extends K> keys) {
-      return loader.load(cacheName, keys).map(entries -> entries.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> new ValueWithWriteTime<>(e.getValue()))));
+      return loader.load(cacheName, keys).map(entries -> entries.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> new ValueWithWriteTime<>(e.getValue(), timeSupplier.get()))));
     }
   }
 
-  private class InternalEntityMapper implements EntryMapper<K, ValueWithWriteTime<V>> {
+  private static class InternalEntityMapper<K, V> implements EntryMapper<K, ValueWithWriteTime<V>> {
     private final EntryMapper<K, V> mapper;
+    private Supplier<Long> timeSupplier;
 
-    InternalEntityMapper(final EntryMapper<K, V> mapper) {
+    InternalEntityMapper(final EntryMapper<K, V> mapper, final Supplier<Long> timeSupplier) {
       this.mapper = mapper;
+      this.timeSupplier = timeSupplier;
     }
 
     @Override
     public ValueWithWriteTime<V> map(final K key, final ValueWithWriteTime<V> value) {
       V extractedValue = value == null ? null : value.getValue();
-      return new ValueWithWriteTime<>(mapper.map(key, extractedValue));
+      return new ValueWithWriteTime<>(mapper.map(key, extractedValue), timeSupplier.get());
     }
   }
 
@@ -163,9 +173,8 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
   private void refresh(final K key) {
     Boolean alreadyRefreshing = refreshingKeys.putIfAbsent(key, true);
     if (alreadyRefreshing == null) {
-      incRefreshCount();
+      incRefreshCount(1);
       internalCacheLoader.load(cacheName, key)
-              .withTimeout(loadDuration, loadTimeUnit, "RefreshLoadingCacheDelegate fetch from loader; cache name: " + cacheName)
               .consume(res -> {
                 refreshingKeys.remove(key);
                 if (res.isSuccess()) {
@@ -191,11 +200,10 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
             .collect(Collectors.toList());
 
     if (!keysToRefresh.isEmpty()) {
-      incRefreshCount();
+      incRefreshCount(keys.size());
       internalCacheLoader.load(cacheName, keysToRefresh)
-              .withTimeout(loadDuration, loadTimeUnit, "RefreshLoadingCacheDelegate fetch bulk from loader; cache name: " + cacheName)
               .consume(res -> {
-                keysToRefresh.forEach(refreshingKeys::remove);
+                refreshingKeys.keySet().removeAll(keysToRefresh);
                 if (res.isSuccess()) {
                   cache.setBulkAsync(res.getValue());
                 } else {
@@ -205,9 +213,9 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     }
   }
 
-  private void incRefreshCount() {
+  private void incRefreshCount(int amount) {
     if (refreshes != null) {
-      refreshes.inc();
+      refreshes.inc(amount);
     }
   }
 
@@ -262,7 +270,15 @@ public class RefreshLoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       if (refreshAfterWriteDuration == -1) {
         throw new IllegalArgumentException("missing refreshAfterWrite config");
       }
-      return new RefreshLoadingCacheDelegate<>(cache, loader, cacheName, metricFactory, loadTimeout, loadTimeUnit, failOnError, refreshAfterWriteDuration, refreshAfterWriteTimeUnit);
+      return new RefreshLoadingCacheDelegate<>(cache, loader, cacheName, metricFactory, loadTimeout, loadTimeUnit, failOnError, refreshAfterWriteDuration, refreshAfterWriteTimeUnit, null);
+    }
+  }
+
+  private static class SystemTimeSupplier implements Supplier<Long> {
+
+    @Override
+    public Long get() {
+      return System.currentTimeMillis();
     }
   }
 }
