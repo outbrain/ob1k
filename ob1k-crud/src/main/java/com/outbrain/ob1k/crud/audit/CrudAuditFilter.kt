@@ -5,15 +5,15 @@ import com.outbrain.ob1k.Response
 import com.outbrain.ob1k.common.filters.AsyncFilter
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.security.server.AuthenticationCookieAesEncryptor
+import com.outbrain.ob1k.security.server.BasicAuthenticationHeaderParser
 import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext
-import org.slf4j.LoggerFactory
 
 
 class CrudAuditFilter(private val encryptor: AuthenticationCookieAesEncryptor) : AsyncFilter<Response, AsyncServerRequestContext> {
 
     var callbacks: List<ICrudAudit> = mutableListOf(LogAudit())
+    private val headerParser = BasicAuthenticationHeaderParser()
 
-    private val logger = LoggerFactory.getLogger(CrudAuditFilter::class.java)
 
     override fun handleAsync(ctx: AsyncServerRequestContext): ComposableFuture<Response> {
         val username = ctx.username()
@@ -34,8 +34,7 @@ class CrudAuditFilter(private val encryptor: AuthenticationCookieAesEncryptor) :
         return try {
             encryptor.decrypt(encodedCookie).username
         } catch (e: Exception) {
-            logger.warn("Error decrypting cookie for request $this")
-            null
+            return headerParser.extractCredentials(this)?.get()?.username
         }
     }
 }

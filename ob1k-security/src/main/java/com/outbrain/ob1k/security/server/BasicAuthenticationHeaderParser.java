@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Parses an "Authorization" header of a HTTP request
  */
-class BasicAuthenticationHeaderParser {
+public class BasicAuthenticationHeaderParser {
 
   private final static Logger logger = LoggerFactory.getLogger(BasicAuthenticationHeaderParser.class);
 
