@@ -9,8 +9,9 @@ import com.outbrain.ob1k.server.ctx.AsyncServerRequestContext
 import org.slf4j.LoggerFactory
 
 
-class CrudAuditFilter(private val encryptor: AuthenticationCookieAesEncryptor,
-                      private val callbacks: List<ICrudAudit> = listOf(LogAudit())) : AsyncFilter<Response, AsyncServerRequestContext> {
+class CrudAuditFilter(private val encryptor: AuthenticationCookieAesEncryptor) : AsyncFilter<Response, AsyncServerRequestContext> {
+
+    var callbacks: List<ICrudAudit> = mutableListOf(LogAudit())
 
     private val logger = LoggerFactory.getLogger(CrudAuditFilter::class.java)
 

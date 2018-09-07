@@ -9,7 +9,7 @@ class SlackAudit(private val httpClient: HttpClient,
                  private val url: String,
                  private val prefix: String) : ICrudAudit {
 
-    var methods: Set<HttpRequestMethodType> = setOf(HttpRequestMethodType.POST, HttpRequestMethodType.PUT, HttpRequestMethodType.DELETE)
+    var methods: Set<HttpRequestMethodType> = mutableSetOf(HttpRequestMethodType.POST, HttpRequestMethodType.PUT, HttpRequestMethodType.DELETE)
 
     override fun audit(username: String?, request: Request) {
         username?.let {

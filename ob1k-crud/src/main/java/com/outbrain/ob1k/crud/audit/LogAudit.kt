@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 
 class LogAudit : ICrudAudit {
     private val logger = LoggerFactory.getLogger(LogAudit::class.java)
-    var methods: Set<HttpRequestMethodType> = setOf(HttpRequestMethodType.POST, HttpRequestMethodType.PUT, HttpRequestMethodType.DELETE)
+    var methods: Set<HttpRequestMethodType> = mutableSetOf(HttpRequestMethodType.POST, HttpRequestMethodType.PUT, HttpRequestMethodType.DELETE)
 
     override fun audit(username: String?, request: Request) {
         if (methods.contains(request.method)) {
