@@ -18,9 +18,9 @@ class CrudAuditFilter(private val encryptor: AuthenticationCookieAesEncryptor) :
     override fun handleAsync(ctx: AsyncServerRequestContext): ComposableFuture<Response> {
         val username = ctx.username()
         val request = ctx.request
-        return ctx.invokeAsync<Response>().map {
-            callbacks.forEach { it.audit(username, request) }
-            it
+        return ctx.invokeAsync<Response>().map { response ->
+            callbacks.forEach { it.audit(username, request, response) }
+            response
         }
     }
 
