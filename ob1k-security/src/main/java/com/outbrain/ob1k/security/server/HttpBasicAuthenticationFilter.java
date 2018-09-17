@@ -40,7 +40,10 @@ public class HttpBasicAuthenticationFilter implements AsyncFilter<Response, Asyn
 
   @Override
   public ComposableFuture<Response> handleAsync(final AsyncServerRequestContext ctx) {
-    return httpAccessAuthenticator.authenticate(ctx.getRequest()).alwaysWith(result -> {
+    Request request = ctx.getRequest();
+    // tricky. authenticators may work in other thread pools and buffer will be drained. this way it's cached
+    request.getRequestBody();
+    return httpAccessAuthenticator.authenticate(request).alwaysWith(result -> {
       if (result.isSuccess() && result.getValue() != null) {
         final String authenticatorId = result.getValue();
         return handleAuthorizedAsyncRequest(ctx, authenticatorId);

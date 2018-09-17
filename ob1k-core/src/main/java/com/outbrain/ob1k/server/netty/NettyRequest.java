@@ -39,6 +39,7 @@ public class NettyRequest implements Request {
   private final Map<String, String> pathParams;
   private volatile QueryStringDecoder postQueryDecoder;
   private volatile Map<String, Cookie> cookies;
+  private volatile String body;
 
   NettyRequest(final HttpRequest inner,
                final HttpContent content,
@@ -110,8 +111,11 @@ public class NettyRequest implements Request {
 
   @Override
   public String getRequestBody() {
-    final ByteBuf buffer = content.content();
-    return buffer.toString(CharsetUtil.UTF_8);
+    if (body == null) {
+      final ByteBuf buffer = content.content();
+      body = buffer.toString(CharsetUtil.UTF_8);
+    }
+    return body;
   }
 
   @Override
