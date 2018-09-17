@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
 
 /**
  * Created by aronen on 4/24/14.
-*/
+ */
 abstract class AbstractServerEndpoint<F extends ServiceFilter> implements ServerEndpoint<F> {
 
   private static final String TARGET_FORMAT = "%s.%s(%s)";
@@ -62,4 +62,11 @@ abstract class AbstractServerEndpoint<F extends ServiceFilter> implements Server
   protected Object invokeMethodOnService(final Object[] params) throws InvocationTargetException, IllegalAccessException {
     return method.invoke(service, params);
   }
+
+  @Override
+  public final Service service() {
+    return service;
+  }
 }
+
+

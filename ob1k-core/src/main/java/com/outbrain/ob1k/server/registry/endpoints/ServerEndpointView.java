@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.registry.endpoints;
 
 import com.outbrain.ob1k.HttpRequestMethodType;
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 
 import java.lang.reflect.Method;
@@ -16,4 +17,6 @@ public interface ServerEndpointView<F extends ServiceFilter> {
     String[] getParamNames();
 
     F[] getFilters();
+
+    Service service();
 }

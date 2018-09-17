@@ -22,7 +22,7 @@ class CrudApplication(private val dao: BasicDao? = null,
         if (commaDelimitedTables.isNotBlank()) {
             dao?.let { withTableInfo(dao, tables).get() }
             dao?.let { updateTableReferences(dao).get() }
-            dao?.let { tables.map { newMySQLDao(it) }.forEach { dispatcher = dispatcher.register(it) } }
+            dao?.let { tables.map { newMySQLDao(it) }.forEach { dispatcher = dispatcher.register(it, model) } }
         }
     }
 
@@ -53,7 +53,9 @@ class CrudApplication(private val dao: BasicDao? = null,
     }
 
     fun addReference(from: String, to: String) = addReference(from, to, to)
+
     fun addOneToOneReference(from: String, to: String) = addOneToOneReference(from, to, to)
+
     fun addOneToManyReference(from: String, to: String) = addOneToManyReference(from, to, "${to}s")
 
     fun addReference(from: String, to: String, by: String): CrudApplication {
@@ -84,7 +86,7 @@ class CrudApplication(private val dao: BasicDao? = null,
     fun <T> withCustomDao(dao: ICrudAsyncDao<T>, dateformat: String) = withDao(CrudAsyncDaoDelegate(get(dao.resourceName()), dao, dateformat))
 
     fun withDao(dao: ICrudAsyncDao<JsonObject>): CrudApplication {
-        dispatcher = dispatcher.register(dao)
+        dispatcher = dispatcher.register(dao, model)
         return this
     }
 

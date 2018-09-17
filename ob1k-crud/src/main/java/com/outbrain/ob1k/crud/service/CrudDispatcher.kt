@@ -6,11 +6,15 @@ import com.outbrain.ob1k.Response
 import com.outbrain.ob1k.Service
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.crud.dao.ICrudAsyncDao
+import com.outbrain.ob1k.crud.model.Model
 import com.outbrain.ob1k.server.netty.ResponseBuilder
+import com.outbrain.ob1k.swagger.service.ISwaggerAware
+import io.swagger.models.Swagger
 
-class CrudDispatcher(private val registered: Map<String, ICrudAsyncDao<JsonObject>> = emptyMap()) : Service {
+class CrudDispatcher(private val registered: Map<String, ICrudAsyncDao<JsonObject>> = emptyMap(),
+                     private val model: Model = Model()) : Service, ISwaggerAware {
 
-    fun register(dao: ICrudAsyncDao<JsonObject>) = CrudDispatcher(registered + (dao.resourceName() to dao))
+    fun register(dao: ICrudAsyncDao<JsonObject>, model: Model) = CrudDispatcher(registered + (dao.resourceName() to dao), model)
 
     fun list(request: Request): ComposableFuture<Response> {
         val resource = request.getPathParam("resource")
@@ -46,6 +50,8 @@ class CrudDispatcher(private val registered: Map<String, ICrudAsyncDao<JsonObjec
         val id = request.getPathParam("id")
         return dao(resource).delete(id).map { ResponseBuilder.ok().build() }
     }
+
+    override fun invoke(swagger: Swagger, key: String) = model.registerToSwagger(swagger, key)
 
     fun dao(resource: String) = registered[resource]!!
 }

@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.registry.endpoints;
 
 import com.outbrain.ob1k.Request;
+import com.outbrain.ob1k.Service;
 import com.outbrain.ob1k.common.filters.ServiceFilter;
 import com.outbrain.ob1k.server.ResponseHandler;
 
