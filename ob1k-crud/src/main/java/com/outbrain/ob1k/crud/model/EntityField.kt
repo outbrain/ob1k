@@ -48,8 +48,7 @@ data class EntityField(@JsonIgnore var dbName: String,
     internal fun toMysqlValue(value: String): String {
         return when (type) {
             EFieldType.BOOLEAN -> if (value == "true") "1" else "0"
-            EFieldType.STRING, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING -> "\"$value\""
-            EFieldType.DATE -> "=\"$value\""
+            EFieldType.STRING, EFieldType.DATE, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING -> "\"$value\""
             EFieldType.SELECT_BY_IDX -> "${choices!!.indexOf(value)}"
             else -> value
         }
