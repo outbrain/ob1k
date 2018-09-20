@@ -41,8 +41,9 @@ fun com.outbrain.ob1k.crud.model.Model.registerToSwagger(swagger: Swagger, key: 
 }
 
 private fun EntityDescription.asProperty() = fields
+        .asSequence()
         .filter { it.type != EFieldType.REFERENCEMANY }
-        .fold(ObjectProperty(), { obj, entity -> obj.property(entity.name, entity.asProperty()) })
+        .fold(ObjectProperty()) { obj, entity -> obj.property(entity.name, entity.asProperty()) }
 
 
 private fun Property.toSchema() = PropertyModelConverter().propertyToModel(this)

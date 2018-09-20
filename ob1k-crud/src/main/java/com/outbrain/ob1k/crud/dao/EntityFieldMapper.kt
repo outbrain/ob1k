@@ -13,8 +13,12 @@ class EntityFieldMapper : ResultSetMapper<EntityField> {
         val required = row.getString("Null")!! == "NO"
         val dbType = row.getString("Type")
         val type = dbType.toAppType()
-        val readOnly = row.getString("Extra") == "auto_increment"
-        return EntityField(dbName, name, label, type, required, readOnly, readOnly)
+        val audoGenerate = row.getString("Extra") == "auto_increment"
+        val entityField = EntityField(dbName, name, label, type, required, audoGenerate, audoGenerate)
+        if (audoGenerate) {
+            entityField.nonNullOptions().useGrouping = false
+        }
+        return entityField
     }
 
 

@@ -9,7 +9,8 @@ data class EntityDescription(@JsonIgnore val table: String,
                              var endpoint: String = "../crud",
                              var fields: List<EntityField> = emptyList(),
                              var editable: Boolean = true,
-                             var icon: String? = null) {
+                             var icon: String? = null,
+                             var perPage: Int? = null) {
     @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
