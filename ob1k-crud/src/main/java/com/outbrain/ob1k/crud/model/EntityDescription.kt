@@ -10,7 +10,8 @@ data class EntityDescription(@JsonIgnore val table: String,
                              var fields: List<EntityField> = emptyList(),
                              var editable: Boolean = true,
                              var icon: String? = null,
-                             var perPage: Int? = null) {
+                             var perPageList: Int? = null,
+                             var perPageEdit: Int? = null) {
     @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
