@@ -72,6 +72,7 @@
           "required": false,
           "readOnly": false,
           "hidden": false,
+          "className" : "xyz",
           "rangeStyles": [
             {
               "style": {

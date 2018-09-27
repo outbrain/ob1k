@@ -15,7 +15,7 @@ class ModelTest {
                 .withEntity(Person::class.java)
                 .withEntity(Job::class.java)
                 .addReference("job", "person").model
-
+        model("person")!!("name")!!.className = "xyz"
         model("person")!!("name")!!
                 .withRangeStyle("Yosi", mapOf("color" to "black"))
                 .withRangeStyle("Yosi", mapOf("backgroundColor" to "white"))
@@ -26,7 +26,7 @@ class ModelTest {
         val modelJson = ObjectMapper().dontWriteNulls().writeValueAsString(model)
         val modelJsonFromFile = "model.json".resource()
 
-        JSONAssert.assertEquals("actual: $modelJson", modelJsonFromFile, modelJson, false)
+        JSONAssert.assertEquals("actual: $modelJson", modelJsonFromFile, modelJson, true)
     }
 
     private fun String.resource() = ModelTest::class.java.classLoader.getResource(this).readText()
