@@ -31,7 +31,7 @@
                 "backgroundColor": "green"
               },
               "range": [
-                10,
+                10.0,
                 null
               ]
             }

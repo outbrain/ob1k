@@ -21,7 +21,7 @@ class ModelTest {
                 .withRangeStyle("Yosi", mapOf("backgroundColor" to "white"))
         model("person")!!("id")!!
                 .withRangeStyle(0, 10, mapOf("color" to "black", "backgroundColor" to "red"))
-                .withRangeStyle(10, null, mapOf("color" to "blue", "backgroundColor" to "green"))
+                .withRangeStyle(10.0, null, mapOf("color" to "blue", "backgroundColor" to "green"))
 
         val modelJson = ObjectMapper().dontWriteNulls().writeValueAsString(model)
         val modelJsonFromFile = "model.json".resource()
