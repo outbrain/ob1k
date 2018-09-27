@@ -15,7 +15,20 @@ data class EntityField(@JsonIgnore var dbName: String,
                        var display: EntityFieldDisplay? = null,
                        var hidden: Boolean = false,
                        var options: EntityFieldOptions? = null,
-                       var choices: List<String>? = null) {
+                       var choices: List<String>? = null,
+                       var rangeStyles: MutableList<RangeStyle>? = null) {
+
+    fun withRangeStyle(value: String, style: Map<String, String>) = withRangeStyle(RangeStyle(style = style, value = value))
+
+    fun withRangeStyle(start: Int?, end: Int?, style: Map<String, String>) = withRangeStyle(RangeStyle(style = style, range = listOf(start, end)))
+
+    private fun withRangeStyle(rangeStyle: RangeStyle): EntityField {
+        if (rangeStyles == null) {
+            rangeStyles = mutableListOf()
+        }
+        rangeStyles?.let { it += rangeStyle }
+        return this
+    }
 
 
     fun nonNullOptions(): EntityFieldOptions {

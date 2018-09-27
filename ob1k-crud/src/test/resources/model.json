@@ -13,12 +13,29 @@
           "type": "NUMBER",
           "required": true,
           "readOnly": true,
-          "reference": null,
-          "target": null,
-          "display": null,
           "hidden": false,
-          "options": null,
-          "choices": null
+          "rangeStyles": [
+            {
+              "style": {
+                "color": "black",
+                "backgroundColor": "red"
+              },
+              "range": [
+                0,
+                10
+              ]
+            },
+            {
+              "style": {
+                "color": "blue",
+                "backgroundColor": "green"
+              },
+              "range": [
+                10,
+                null
+              ]
+            }
+          ]
         },
         {
           "name": "alive",
@@ -26,12 +43,7 @@
           "type": "BOOLEAN",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "email",
@@ -39,12 +51,7 @@
           "type": "STRING",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "liveness",
@@ -52,11 +59,7 @@
           "type": "SELECT",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
           "hidden": false,
-          "options": null,
           "choices": [
             "DEAD",
             "ALIVE"
@@ -68,12 +71,21 @@
           "type": "STRING",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
           "hidden": false,
-          "options": null,
-          "choices": null
+          "rangeStyles": [
+            {
+              "style": {
+                "color": "black"
+              },
+              "value": "Yosi"
+            },
+            {
+              "style": {
+                "backgroundColor": "white"
+              },
+              "value": "Yosi"
+            }
+          ]
         },
         {
           "name": "jobs",
@@ -88,13 +100,10 @@
             "type": "Chip",
             "optionText": "title"
           },
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         }
       ],
-      "editable": true,
-      "icon": null
+      "editable": true
     },
     {
       "id": 1,
@@ -108,12 +117,7 @@
           "type": "NUMBER",
           "required": true,
           "readOnly": true,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "company",
@@ -121,12 +125,7 @@
           "type": "STRING",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "person",
@@ -135,15 +134,12 @@
           "required": true,
           "readOnly": false,
           "reference": "person",
-          "target": null,
           "display": {
             "name": "name",
             "type": "Select",
             "optionText": "name"
           },
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "timestamp",
@@ -151,12 +147,7 @@
           "type": "DATE",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         },
         {
           "name": "title",
@@ -164,16 +155,10 @@
           "type": "STRING",
           "required": false,
           "readOnly": false,
-          "reference": null,
-          "target": null,
-          "display": null,
-          "hidden": false,
-          "options": null,
-          "choices": null
+          "hidden": false
         }
       ],
-      "editable": true,
-      "icon": null
+      "editable": true
     }
   ]
 }
