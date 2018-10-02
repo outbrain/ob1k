@@ -8,7 +8,7 @@ import org.joda.time.LocalDateTime;
  * Date: 10/1/13
  * Time: 2:11 PM
  */
-public class TypedRowDataImpl implements TypedRowData {
+public class TypedRowDataImpl extends TypedRowData {
   private final RowData row;
 
   public TypedRowDataImpl(final RowData row) {
