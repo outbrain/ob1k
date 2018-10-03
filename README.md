@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/outbrain/ob1k.svg?branch=master)](https://travis-ci.org/outbrain/ob1k)
 [![Download](https://api.bintray.com/packages/outbrain/OutbrainOSS/OB1K/images/download.svg)](https://bintray.com/outbrain/OutbrainOSS/OB1K/_latestVersion)
+[![Code Quality: Java](https://img.shields.io/lgtm/grade/java/g/outbrain/ob1k.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/outbrain/ob1k/context:java)
+[![Total Alerts](https://img.shields.io/lgtm/alerts/g/outbrain/ob1k.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/outbrain/ob1k/alerts)
 
 ## Overview 
 Ob1k is an asynchronous light-weight RPC framework for rapid development of async, high performance micro-services.
