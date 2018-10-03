@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  *
  */
-public class TypedRowDataImpl implements com.outbrain.ob1k.db.TypedRowData {
+public class TypedRowDataImpl extends com.outbrain.ob1k.db.TypedRowData {
   private final RowData row;
 
   public TypedRowDataImpl(RowData row) {
