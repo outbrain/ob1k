@@ -53,6 +53,11 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
   }
 
   @Override
+  public long transferred() {
+    return transfered();
+  }
+
+  @Override
   public long transfered() {
     return transfered;
   }
@@ -82,4 +87,25 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
     return bytesWritten;
   }
 
+  @Override
+  public FileRegion retain() {
+    super.retain();
+    return this;
+  }
+
+  @Override
+  public FileRegion retain(int increment) {
+    super.retain(increment);
+    return this;
+  }
+
+  @Override
+  public FileRegion touch() {
+    return this;
+  }
+
+  @Override
+  public FileRegion touch(Object hint) {
+    return this;
+  }
 }

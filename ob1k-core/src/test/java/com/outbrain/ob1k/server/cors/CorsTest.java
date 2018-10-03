@@ -55,14 +55,15 @@ public class CorsTest {
                   .addHeader(ACCESS_CONTROL_REQUEST_METHOD, "POST")
                   .execute().get();
     Assert.assertEquals(200, r.getStatusCode());
-    Assert.assertEquals("POST", r.getHeader(ACCESS_CONTROL_ALLOW_METHODS));
-    Assert.assertEquals(Arrays.asList("Origin", "Accept", "Content-Type"), r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS));
+    Assert.assertEquals("POST,GET,OPTIONS", r.getHeader(ACCESS_CONTROL_ALLOW_METHODS));
+    Assert.assertFalse(r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).isEmpty());
+    Assert.assertEquals("Origin,Accept,Content-Type", r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).get(0));
     Assert.assertEquals("0", r.getHeader(CONTENT_LENGTH));
     Assert.assertEquals("http://blah.com", r.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
-    Assert.assertEquals("Origin", r.getHeader(VARY));
+    Assert.assertEquals("origin", r.getHeader(VARY));
     Assert.assertEquals("10", r.getHeader(ACCESS_CONTROL_MAX_AGE));
     Assert.assertEquals("true", r.getHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS));
-    Assert.assertTrue(r.getHeader(DATE) != null);
+    Assert.assertNotNull(r.getHeader(DATE));
 
     c = new AsyncHttpClient();
     r = c.prepareGet(uri)
@@ -70,11 +71,11 @@ public class CorsTest {
                   .addHeader("X-Exposed", "true")
                   .execute().get();
     Assert.assertEquals(200, r.getStatusCode());
-    Assert.assertEquals("Origin", r.getHeader(VARY));
+    Assert.assertEquals("origin", r.getHeader(VARY));
     Assert.assertEquals("http://blah.com", r.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
     Assert.assertEquals("true", r.getHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS));
     Assert.assertEquals("X-Exposed", r.getHeader(ACCESS_CONTROL_EXPOSE_HEADERS));
-    Assert.assertEquals(Arrays.asList("Origin", "Accept", "Content-Type"), r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS));
+    Assert.assertTrue(r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).isEmpty());
   }
 
   @Test
@@ -100,10 +101,12 @@ public class CorsTest {
                   .addHeader(ACCESS_CONTROL_REQUEST_METHOD, "POST")
                   .execute().get();
     Assert.assertEquals(200, r.getStatusCode());
-    Assert.assertEquals("POST", r.getHeader(ACCESS_CONTROL_ALLOW_METHODS));
-    Assert.assertEquals(Arrays.asList("Origin", "Accept", "Content-Type"), r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS));
+    Assert.assertEquals("POST,GET,OPTIONS", r.getHeader(ACCESS_CONTROL_ALLOW_METHODS));
+    Assert.assertFalse(r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).isEmpty());
+    Assert.assertEquals(1, r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).size());
+    Assert.assertEquals("Origin,Accept,Content-Type", r.getHeaders(ACCESS_CONTROL_ALLOW_HEADERS).get(0));
     Assert.assertEquals("0", r.getHeader(CONTENT_LENGTH));
-    Assert.assertEquals("*", r.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
+    Assert.assertEquals("null", r.getHeader(ACCESS_CONTROL_ALLOW_ORIGIN));
     Assert.assertNull(r.getHeader(VARY));
     Assert.assertEquals("10", r.getHeader(ACCESS_CONTROL_MAX_AGE));
     Assert.assertTrue(r.getHeader(DATE) != null);
