@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.jasync-sql</groupId>
       <artifactId>jasync-mysql</artifactId>
-      <version>0.8.32</version>
+      <version>0.8.34</version>
     </dependency>
 
     <dependency>
