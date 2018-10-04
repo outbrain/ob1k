@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.db.experimental.springsupport;
 
-import com.outbrain.ob1k.db.DbConnectionPool;
-import com.outbrain.ob1k.db.MySqlConnectionPoolBuilder;
+import com.outbrain.ob1k.db.experimental.DbConnectionPool;
+import com.outbrain.ob1k.db.experimental.MySqlConnectionPoolBuilder;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import org.springframework.beans.factory.FactoryBean;
 
