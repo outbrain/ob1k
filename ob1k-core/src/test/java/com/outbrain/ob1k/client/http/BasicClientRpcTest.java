@@ -232,8 +232,8 @@ public class BasicClientRpcTest {
 
     final List<String> results = new ArrayList<>();
     messages.toBlocking().forEach(results::add);
-    Assert.assertEquals(results.size(), SIZE);
-    Assert.assertEquals(results.get(0), "hello moshe #0");
+    Assert.assertEquals(SIZE, results.size());
+    Assert.assertEquals("hello moshe #0", results.get(0));
 
     final Observable<String> badMessages = client.getMessages("moshe", SIZE, true);
     final List<String> badResults = new ArrayList<>();

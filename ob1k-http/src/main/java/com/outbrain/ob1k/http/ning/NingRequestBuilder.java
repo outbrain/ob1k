@@ -1,11 +1,5 @@
 package com.outbrain.ob1k.http.ning;
 
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.HttpResponseBodyPart;
-import com.ning.http.client.ListenableFuture;
-import com.ning.http.client.Realm;
-import com.ning.http.client.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.Response;
@@ -18,8 +12,17 @@ import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.utils.ComposableFutureAdapter.Provider;
 import com.outbrain.ob1k.http.utils.UrlUtils;
 import org.apache.commons.codec.EncoderException;
+import org.asynchttpclient.AsyncCompletionHandler;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.BoundRequestBuilder;
+import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.ListenableFuture;
+import org.asynchttpclient.Realm;
+import org.asynchttpclient.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.handler.codec.http.cookie.DefaultCookie;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 
@@ -43,7 +46,7 @@ public class NingRequestBuilder implements RequestBuilder {
   private static final Logger log = LoggerFactory.getLogger(RequestBuilder.class);
 
   private final AsyncHttpClient asyncHttpClient;
-  private final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder;
+  private final BoundRequestBuilder asyncHttpRequestBuilder;
 
   private MarshallingStrategy marshallingStrategy;
   private String requestUrl;
@@ -53,11 +56,11 @@ public class NingRequestBuilder implements RequestBuilder {
   private byte[] bodyByteArray;
   private Object bodyObject;
 
-  public NingRequestBuilder(final AsyncHttpClient asyncHttpClient, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder,
+  public NingRequestBuilder(final AsyncHttpClient asyncHttpClient, final BoundRequestBuilder asyncHttpRequestBuilder,
                             final String requestUrl, final long responseMaxSize, final MarshallingStrategy marshallingStrategy) {
 
     this.asyncHttpClient = checkNotNull(asyncHttpClient, "asyncHttpClient may not be null");
-    this.ningRequestBuilder = checkNotNull(ningRequestBuilder, "ningRequestBuilder may not be null");
+    this.asyncHttpRequestBuilder = checkNotNull(asyncHttpRequestBuilder, "asyncHttpRequestBuilder may not be null");
     this.requestUrl = checkNotNull(requestUrl, "requestUrl may not be null");
     this.responseMaxSize = responseMaxSize;
     this.marshallingStrategy = marshallingStrategy;
@@ -72,7 +75,7 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder setContentType(final String contentType) {
 
-    ningRequestBuilder.setHeader(CONTENT_TYPE_HEADER, contentType);
+    asyncHttpRequestBuilder.setHeader(CONTENT_TYPE_HEADER, contentType);
     return this;
   }
 
@@ -80,7 +83,7 @@ public class NingRequestBuilder implements RequestBuilder {
   public RequestBuilder setPathParam(final String param, final String value) throws EncoderException {
 
     requestUrl = UrlUtils.replacePathParam(requestUrl, param, value);
-    ningRequestBuilder.setUrl(requestUrl);
+    asyncHttpRequestBuilder.setUrl(requestUrl);
     return this;
   }
 
@@ -109,7 +112,7 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder addHeader(final String name, final String value) {
 
-    ningRequestBuilder.addHeader(name, value);
+    asyncHttpRequestBuilder.addHeader(name, value);
     return this;
   }
 
@@ -157,21 +160,19 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder withBasicAuth(final String username, final String password) {
 
-    final Realm realm = new Realm.RealmBuilder().
-      setPrincipal(username).
-      setPassword(password).
+    final Realm realm = new Realm.Builder(username, password).
       setUsePreemptiveAuth(true).
       setScheme(Realm.AuthScheme.BASIC).
       build();
 
-    ningRequestBuilder.setRealm(realm);
+    asyncHttpRequestBuilder.setRealm(realm);
     return this;
   }
 
   @Override
   public RequestBuilder addQueryParam(final String name, final String value) {
 
-    ningRequestBuilder.addQueryParam(name, value);
+    asyncHttpRequestBuilder.addQueryParam(name, value);
     return this;
   }
 
@@ -208,15 +209,14 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder addCookie(final Cookie cookie) {
 
-    final com.ning.http.client.cookie.Cookie ningCookie = transformToNingCookie(cookie);
-    ningRequestBuilder.addCookie(ningCookie);
+    asyncHttpRequestBuilder.addCookie(transformToNettyCookie(cookie));
     return this;
   }
 
   @Override
   public RequestBuilder setRequestTimeout(final int requestTimeout) {
 
-    ningRequestBuilder.setRequestTimeout(requestTimeout);
+    asyncHttpRequestBuilder.setRequestTimeout(requestTimeout);
     return this;
   }
 
@@ -236,11 +236,11 @@ public class NingRequestBuilder implements RequestBuilder {
       return fromError(e);
     }
 
-    final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
+    final ComposableFuture<org.asynchttpclient.Response> responseFuture = executeAndTransformRequest();
 
     return responseFuture.flatMap(ningResponse -> {
       try {
-        final Response response = new NingResponse<>(ningResponse, null, null);
+        final Response response = new AsyncHttpResponse<>(ningResponse, null, null);
         return fromValue(response);
       } catch (final IOException e) {
         return fromError(e);
@@ -262,7 +262,7 @@ public class NingRequestBuilder implements RequestBuilder {
     final PublishSubject<Response> result = PublishSubject.create();
     final NingHttpStreamHandler handler = new NingHttpStreamHandler(responseMaxSize, result);
 
-    ningRequestBuilder.execute(handler);
+    asyncHttpRequestBuilder.execute(handler);
     return result;
   }
 
@@ -281,11 +281,11 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public <T> ComposableFuture<TypedResponse<T>> asTypedResponse(final Type type) {
 
-    final ComposableFuture<com.ning.http.client.Response> responseFuture = executeAndTransformRequest();
+    final ComposableFuture<org.asynchttpclient.Response> responseFuture = executeAndTransformRequest();
 
     return responseFuture.flatMap(ningResponse -> {
       try {
-        final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
+        final TypedResponse<T> response = new AsyncHttpResponse<>(ningResponse, type, marshallingStrategy);
         return fromValue(response);
       } catch (final IOException e) {
         return fromError(e);
@@ -308,7 +308,7 @@ public class NingRequestBuilder implements RequestBuilder {
     final NingHttpTypedStreamHandler<T> handler = new NingHttpTypedStreamHandler<>(responseMaxSize, result,
             marshallingStrategy, type);
 
-    ningRequestBuilder.execute(handler);
+    asyncHttpRequestBuilder.execute(handler);
     return result;
   }
 
@@ -352,7 +352,7 @@ public class NingRequestBuilder implements RequestBuilder {
     });
   }
 
-  private ComposableFuture<com.ning.http.client.Response> executeAndTransformRequest() {
+  private ComposableFuture<org.asynchttpclient.Response> executeAndTransformRequest() {
 
     try {
       prepareRequestBody();
@@ -360,7 +360,7 @@ public class NingRequestBuilder implements RequestBuilder {
       return fromError(e);
     }
 
-    final Request ningRequest = ningRequestBuilder.build();
+    final Request ningRequest = asyncHttpRequestBuilder.build();
 
     if (log.isTraceEnabled()) {
       final String body = ningRequest.getByteData() == null
@@ -370,15 +370,15 @@ public class NingRequestBuilder implements RequestBuilder {
       log.trace("Sending HTTP call to {}: headers=[{}], body=[{}]", ningRequest.getUrl(), ningRequest.getHeaders(), body);
     }
 
-    final Provider<com.ning.http.client.Response> provider = new Provider<com.ning.http.client.Response>() {
+    final Provider<org.asynchttpclient.Response> provider = new Provider<org.asynchttpclient.Response>() {
       private boolean aborted = false;
       private long size;
 
       @Override
-      public ListenableFuture<com.ning.http.client.Response> provide() {
-        return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<com.ning.http.client.Response>() {
+      public ListenableFuture<org.asynchttpclient.Response> provide() {
+        return asyncHttpClient.executeRequest(ningRequest, new AsyncCompletionHandler<org.asynchttpclient.Response>() {
           @Override
-          public com.ning.http.client.Response onCompleted(final com.ning.http.client.Response response) throws Exception {
+          public org.asynchttpclient.Response onCompleted(final org.asynchttpclient.Response response) {
             if (aborted) {
               throw new RuntimeException("Response size is bigger than the limit: " + responseMaxSize);
             }
@@ -386,12 +386,12 @@ public class NingRequestBuilder implements RequestBuilder {
           }
 
           @Override
-          public STATE onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
+          public State onBodyPartReceived(final HttpResponseBodyPart content) throws Exception {
             if (responseMaxSize > 0) {
               size += content.length();
               if (size > responseMaxSize) {
                 aborted = true;
-                return STATE.ABORT;
+                return State.ABORT;
               }
             }
             return super.onBodyPartReceived(content);
@@ -403,11 +403,14 @@ public class NingRequestBuilder implements RequestBuilder {
     return fromListenableFuture(provider);
   }
 
-  private com.ning.http.client.cookie.Cookie transformToNingCookie(final Cookie cookie) {
-
-    return com.ning.http.client.cookie.Cookie.newValidCookie(cookie.getName(), cookie.getValue(), false,
-      cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(),
-      cookie.isSecure(), cookie.isHttpOnly());
+  private io.netty.handler.codec.http.cookie.Cookie transformToNettyCookie(final Cookie cookie) {
+    DefaultCookie c = new DefaultCookie(cookie.getName(), cookie.getValue());
+    c.setDomain(cookie.getDomain());
+    c.setPath(cookie.getPath());
+    c.setMaxAge(cookie.getMaxAge());
+    c.setSecure(cookie.isSecure());
+    c.setHttpOnly(cookie.isHttpOnly());
+    return c;
   }
 
   /**
@@ -430,22 +433,16 @@ public class NingRequestBuilder implements RequestBuilder {
   private void setTypedBody() throws IOException {
 
     final byte[] body = marshallingStrategy.marshall(bodyObject);
-    ningRequestBuilder.setBody(body);
-    ningRequestBuilder.setContentLength(body.length);
-    ningRequestBuilder.setBodyEncoding(charset);
+    asyncHttpRequestBuilder.setBody(body);
   }
 
   private void setStringBody() throws UnsupportedEncodingException {
 
-    ningRequestBuilder.setBody(bodyString);
-    ningRequestBuilder.setContentLength(bodyString.getBytes(charset).length);
-    ningRequestBuilder.setBodyEncoding(charset);
+    asyncHttpRequestBuilder.setBody(bodyString);
   }
 
   private void setByteArrayBody() {
 
-    ningRequestBuilder.setBody(bodyByteArray);
-    ningRequestBuilder.setContentLength(bodyByteArray.length);
-    ningRequestBuilder.setBodyEncoding(charset);
+    asyncHttpRequestBuilder.setBody(bodyByteArray);
   }
 }

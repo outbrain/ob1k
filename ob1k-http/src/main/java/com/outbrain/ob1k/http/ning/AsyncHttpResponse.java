@@ -4,8 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Lists.transform;
 
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import com.ning.http.client.Response;
+import com.google.common.collect.ImmutableList;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
@@ -17,22 +16,27 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.asynchttpclient.Response;
 
 /**
  * @author marenzon
  */
-public class NingResponse<T> implements TypedResponse<T> {
+public class AsyncHttpResponse<T> implements TypedResponse<T> {
 
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
-  private final Response ningResponse;
+  private final Response asyncHttpResponse;
   private volatile T typedBody;
 
-  public NingResponse(final Response ningResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
+  public AsyncHttpResponse(final Response asyncHttpResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
 
-    this.ningResponse = checkNotNull(ningResponse, "ningResponse may not be null");
+    this.asyncHttpResponse = checkNotNull(asyncHttpResponse, "asyncHttpResponse may not be null");
     this.marshallingStrategy = marshallingStrategy;
     this.type = type;
   }
@@ -40,31 +44,31 @@ public class NingResponse<T> implements TypedResponse<T> {
   @Override
   public int getStatusCode() {
 
-    return ningResponse.getStatusCode();
+    return asyncHttpResponse.getStatusCode();
   }
 
   @Override
   public String getStatusText() {
 
-    return ningResponse.getStatusText();
+    return asyncHttpResponse.getStatusText();
   }
 
   @Override
   public URI getUri() throws URISyntaxException {
 
-    return ningResponse.getUri().toJavaNetURI();
+    return asyncHttpResponse.getUri().toJavaNetURI();
   }
 
   @Override
   public String getUrl() {
 
-    return ningResponse.getUri().toUrl();
+    return asyncHttpResponse.getUri().toUrl();
   }
 
   @Override
   public String getContentType() {
 
-    return ningResponse.getContentType();
+    return asyncHttpResponse.getContentType();
   }
 
   @Override
@@ -84,81 +88,87 @@ public class NingResponse<T> implements TypedResponse<T> {
   @Override
   public String getResponseBody() throws IOException {
 
-    return ningResponse.getResponseBody();
+    return asyncHttpResponse.getResponseBody();
   }
 
   @Override
   public byte[] getResponseBodyAsBytes() throws IOException {
 
-    return ningResponse.getResponseBodyAsBytes();
+    return asyncHttpResponse.getResponseBodyAsBytes();
   }
 
   @Override
   public InputStream getResponseBodyAsStream() throws IOException {
 
-    return ningResponse.getResponseBodyAsStream();
+    return asyncHttpResponse.getResponseBodyAsStream();
   }
 
   @Override
   public ByteBuffer getResponseBodyAsByteBuffer() throws IOException {
 
-    return ningResponse.getResponseBodyAsByteBuffer();
+    return asyncHttpResponse.getResponseBodyAsByteBuffer();
   }
 
   @Override
   public List<Cookie> getCookies() {
 
-    return transformNingResponseCookies(ningResponse.getCookies());
+    return transformNettyResponseCookies(asyncHttpResponse.getCookies());
   }
 
   @Override
   public String getHeader(final String name) {
 
-    return ningResponse.getHeader(name);
+    return asyncHttpResponse.getHeader(name);
   }
 
   @Override
   public List<String> getHeaders(final String name) {
 
-    return ningResponse.getHeaders(name);
+    return asyncHttpResponse.getHeaders(name);
   }
 
   @Override
   public Map<String, List<String>> getHeaders() {
 
-    return ningResponse.getHeaders();
+    final Map<String, List<String>> httpHeaders = new HashMap<>();
+    asyncHttpResponse.getHeaders().forEach(e -> httpHeaders.merge(e.getKey(), Collections.singletonList(e.getValue()), (a, b) -> {
+      List<String> merge = new ArrayList<>(a);
+      merge.addAll(b);
+      return ImmutableList.copyOf(merge);
+    }));
+    return httpHeaders;
   }
 
   @Override
   public boolean isRedirected() {
 
-    return ningResponse.isRedirected();
+    return asyncHttpResponse.isRedirected();
   }
 
   @Override
   public boolean hasResponseBody() {
 
-    return ningResponse.hasResponseBody();
+    return asyncHttpResponse.hasResponseBody();
   }
 
   @Override
   public boolean hasResponseStatus() {
 
-    return ningResponse.hasResponseStatus();
+    return asyncHttpResponse.hasResponseStatus();
   }
 
   @Override
   public boolean hasResponseHeaders() {
 
-    return ningResponse.hasResponseHeaders();
+    return asyncHttpResponse.hasResponseHeaders();
   }
 
-  private List<Cookie> transformNingResponseCookies(final List<com.ning.http.client.cookie.Cookie> cookies) {
+  private List<Cookie> transformNettyResponseCookies(final List<io.netty.handler.codec.http.cookie.Cookie> cookies) {
 
-    final Function<com.ning.http.client.cookie.Cookie, Cookie> transformer = ningCookie ->
-      new Cookie(ningCookie.getName(), ningCookie.getValue(), ningCookie.getDomain(),
-        ningCookie.getPath(), ningCookie.getMaxAge(),
-        ningCookie.isSecure(), ningCookie.isHttpOnly());
+    final Function<io.netty.handler.codec.http.cookie.Cookie, Cookie> transformer = nettyCookie ->
+      new Cookie(nettyCookie.name(), nettyCookie.value(), nettyCookie.domain(),
+        nettyCookie.path(), nettyCookie.maxAge(),
+        nettyCookie.isSecure(), nettyCookie.isHttpOnly());
 
     return transform(cookies, transformer);
   }

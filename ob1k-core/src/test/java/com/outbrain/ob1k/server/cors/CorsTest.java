@@ -7,22 +7,20 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Names.DATE;
 import static io.netty.handler.codec.http.HttpHeaders.Names.ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaders.Names.VARY;
+import static org.asynchttpclient.Dsl.asyncHttpClient;
 
-import java.util.Arrays;
-
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
 import com.outbrain.ob1k.server.services.SimpleTestServiceImpl;
 import io.netty.handler.codec.http.HttpMethod;
 
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.Response;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,7 +46,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader("Origin", "http://blah.com")
                   .addHeader("X-Exposed", "true")
@@ -65,7 +63,6 @@ public class CorsTest {
     Assert.assertEquals("true", r.getHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS));
     Assert.assertNotNull(r.getHeader(DATE));
 
-    c = new AsyncHttpClient();
     r = c.prepareGet(uri)
                   .addHeader("Origin", "http://blah.com")
                   .addHeader("X-Exposed", "true")
@@ -95,7 +92,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader(ORIGIN, "null")
                   .addHeader(ACCESS_CONTROL_REQUEST_METHOD, "POST")
@@ -122,7 +119,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader(ACCESS_CONTROL_ALLOW_METHODS, HttpMethod.POST.name())
                   .execute().get();
@@ -138,7 +135,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader(ACCESS_CONTROL_ALLOW_METHODS, HttpMethod.POST.name())
                   .execute().get();
@@ -155,7 +152,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader(ACCESS_CONTROL_ALLOW_METHODS, HttpMethod.POST.name())
                   .execute().get();
@@ -172,7 +169,7 @@ public class CorsTest {
                             .build();
     final int port = server.start().getPort();
     final String uri = String.format("http://localhost:%s/test/simple/nextRandom", port);
-    AsyncHttpClient c = new AsyncHttpClient();
+    AsyncHttpClient c = asyncHttpClient();
     Response r = c.prepareOptions(uri)
                   .addHeader(ORIGIN, "SomethingSomethingDarkside.com")
                   .addHeader(ACCESS_CONTROL_ALLOW_METHODS, HttpMethod.POST.name())

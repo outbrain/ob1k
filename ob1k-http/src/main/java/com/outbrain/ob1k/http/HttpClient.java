@@ -2,20 +2,25 @@ package com.outbrain.ob1k.http;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
 
+import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.ning.NingRequestBuilder;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.util.HashedWheelTimer;
 
 import java.io.Closeable;
 import java.io.IOException;
+
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.BoundRequestBuilder;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import static org.asynchttpclient.Dsl.asyncHttpClient;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.HashedWheelTimer;
 
 /**
  * Ob1k's Http Client
@@ -67,7 +72,7 @@ public class HttpClient implements Closeable {
   public RequestBuilder get(final String url) {
 
     checkNotNull(url, "url may not be null");
-    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareGet(url);
+    final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareGet(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
@@ -80,7 +85,7 @@ public class HttpClient implements Closeable {
   public RequestBuilder post(final String url) {
 
     checkNotNull(url, "url may not be null");
-    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePost(url);
+    final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePost(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
@@ -93,7 +98,7 @@ public class HttpClient implements Closeable {
   public RequestBuilder put(final String url) {
 
     checkNotNull(url, "url may not be null");
-    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePut(url);
+    final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePut(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
@@ -106,7 +111,7 @@ public class HttpClient implements Closeable {
   public RequestBuilder delete(final String url) {
 
     checkNotNull(url, "url may not be null");
-    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareDelete(url);
+    final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareDelete(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
@@ -119,7 +124,7 @@ public class HttpClient implements Closeable {
   public RequestBuilder head(final String url) {
 
     checkNotNull(url, "url may not be null");
-    final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareHead(url);
+    final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareHead(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
 
@@ -134,7 +139,7 @@ public class HttpClient implements Closeable {
     asyncHttpClient.close();
   }
 
-  private NingRequestBuilder createNewRequestBuilder(final String url, final AsyncHttpClient.BoundRequestBuilder ningRequestBuilder) {
+  private NingRequestBuilder createNewRequestBuilder(final String url, final BoundRequestBuilder ningRequestBuilder) {
 
     return new NingRequestBuilder(asyncHttpClient, ningRequestBuilder, url, responseMaxSize, marshallingStrategy);
   }
@@ -332,24 +337,24 @@ public class HttpClient implements Closeable {
      * @return new HttpClient instance
      */
     public HttpClient build() {
-
-      final AsyncHttpClientConfig.Builder configBuilder = new AsyncHttpClientConfig.Builder().
+      final DefaultAsyncHttpClientConfig.Builder configBuilder = new DefaultAsyncHttpClientConfig.Builder().
         setConnectTimeout(connectionTimeout).
         setMaxRequestRetry(retries).
         setRequestTimeout(requestTimeout).
         setCompressionEnforced(compressionEnforced).
-        setDisableUrlEncodingForBoundedRequests(disableUrlEncoding).
+        setDisableUrlEncodingForBoundRequests(disableUrlEncoding).
+        setEventLoopGroup(NettyConfigHolder.INSTANCE.eventLoopGroup).
+        setNettyTimer(NettyConfigHolder.INSTANCE.timer).
         setMaxConnectionsPerHost(maxConnectionsPerHost).
         setMaxConnections(maxTotalConnections).
-        setAsyncHttpClientProviderConfig(NettyConfigHolder.INSTANCE).
-        setFollowRedirect(followRedirect).
-        setAcceptAnyCertificate(acceptAnySslCertificate);
+        setChunkedFileChunkSize(CHUNKED_FILE_CHUNK_SIZE).
+        setFollowRedirect(followRedirect);
 
       if (readTimeout != null) {
         configBuilder.setReadTimeout(readTimeout);
       }
 
-      return new HttpClient(new AsyncHttpClient(configBuilder.build()), responseMaxSize, marshallingStrategy);
+      return new HttpClient(asyncHttpClient(configBuilder), responseMaxSize, marshallingStrategy);
     }
   }
 
@@ -361,35 +366,31 @@ public class HttpClient implements Closeable {
    */
   private static class NettyConfigHolder {
 
-    private static final NettyAsyncHttpProviderConfig INSTANCE = createConfig();
+    private static final NettyConfigHolder INSTANCE = createConfig();
 
-    private static NettyAsyncHttpProviderConfig createConfig() {
+    private final HashedWheelTimer timer;
+    private final EventLoopGroup eventLoopGroup;
 
-      final NettyAsyncHttpProviderConfig nettyConfig = new NettyAsyncHttpProviderConfig();
-      final NioClientSocketChannelFactory channelFactory = new NioClientSocketChannelFactory();
+    public NettyConfigHolder(HashedWheelTimer timer, EventLoopGroup eventLoopGroup) {
+      this.timer = timer;
+      this.eventLoopGroup = eventLoopGroup;
+    }
 
-      nettyConfig.setSocketChannelFactory(channelFactory);
-      nettyConfig.setChunkedFileChunkSize(CHUNKED_FILE_CHUNK_SIZE);
-
+    private static NettyConfigHolder createConfig() {
       final HashedWheelTimer timer = new HashedWheelTimer();
       timer.start();
-      nettyConfig.setNettyTimer(timer);
-
-      registerShutdownHook(channelFactory, timer);
+      final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(0, ComposableFutures.getExecutor());
+      NettyConfigHolder nettyConfig = new NettyConfigHolder(timer, eventLoopGroup);
+      registerShutdownHook(nettyConfig);
       return nettyConfig;
     }
 
-    private static void registerShutdownHook(final NioClientSocketChannelFactory channelFactory,
-                                             final HashedWheelTimer hashedWheelTimer) {
+    private static void registerShutdownHook(final NettyConfigHolder nettyConfigHolder) {
 
-      Runtime.getRuntime().addShutdownHook(new Thread() {
-        @Override
-        public void run() {
-          channelFactory.shutdown();
-          channelFactory.releaseExternalResources();
-          hashedWheelTimer.stop();
-        }
-      });
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        nettyConfigHolder.eventLoopGroup.shutdownGracefully();
+        nettyConfigHolder.timer.stop();
+      }));
     }
   }
 }

@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -14,6 +13,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -135,7 +135,7 @@ public class HttpBasicAccessAuthenticatorTest {
   private void populateRequestWithCredentials(final String username, final String password) {
     final String authHeader = "Authorization";
     final String credentials = username + ":" + password;
-    final String encodedCredentials = Base64.encode(credentials.getBytes());
+    final String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
     final String headerValue = "Basic " + encodedCredentials;
     when(request.getHeader(authHeader)).thenReturn(headerValue);
   }

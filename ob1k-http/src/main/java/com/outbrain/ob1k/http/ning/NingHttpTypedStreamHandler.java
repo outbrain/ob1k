@@ -3,16 +3,18 @@ package com.outbrain.ob1k.http.ning;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Collections.singletonList;
 
-import com.ning.http.client.AsyncHandler;
-import com.ning.http.client.HttpResponseBodyPart;
-import com.ning.http.client.HttpResponseHeaders;
-import com.ning.http.client.HttpResponseStatus;
-import com.ning.http.client.providers.netty.response.NettyResponse;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
+import io.netty.handler.codec.http.HttpHeaders;
 import rx.Observer;
 
 import java.lang.reflect.Type;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.asynchttpclient.AsyncHandler;
+import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseStatus;
+import org.asynchttpclient.netty.NettyResponse;
 
 /**
  * @author aronen, marenzon
@@ -24,9 +26,9 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
   private final Observer<TypedResponse<T>> target;
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
-  private volatile HttpResponseHeaders headers;
+  private volatile HttpHeaders headers;
   private volatile HttpResponseStatus status;
-  private volatile long responseSizesAggregated;
+  private AtomicLong responseSizesAggregated;
 
   public NingHttpTypedStreamHandler(final long responseMaxSize, final Observer<TypedResponse<T>> target,
                                     final MarshallingStrategy marshallingStrategy, final Type type) {
@@ -38,44 +40,45 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
   }
 
   @Override
-  public STATE onBodyPartReceived(final HttpResponseBodyPart bodyPart) throws Exception {
-
+  public State onBodyPartReceived(final HttpResponseBodyPart bodyPart) throws Exception {
     if (responseMaxSize > 0) {
-      responseSizesAggregated += bodyPart.length();
-      if (responseSizesAggregated > responseMaxSize) {
+      if (responseSizesAggregated.addAndGet(bodyPart.length()) > responseMaxSize) {
         onThrowable(new RuntimeException("Response size is bigger than the limit: " + responseMaxSize));
-        return STATE.ABORT;
+        return State.ABORT;
       }
     }
 
-    final com.ning.http.client.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
-    final TypedResponse<T> response = new NingResponse<>(ningResponse, type, marshallingStrategy);
+    final org.asynchttpclient.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
+    final TypedResponse<T> response = new AsyncHttpResponse<>(ningResponse, type, marshallingStrategy);
 
+    if (bodyPart.isLast()) {
+      return State.CONTINUE;
+    }
     try {
       // making sure that we can unmarshall the response
       response.getTypedBody();
     } catch (final Exception e) {
       // if the unmarshall failed, no reason to continuing the stream
       onThrowable(e);
-      return STATE.ABORT;
+      return State.ABORT;
     }
 
     target.onNext(response);
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override
-  public STATE onStatusReceived(final HttpResponseStatus responseStatus) throws Exception {
+  public State onStatusReceived(final HttpResponseStatus responseStatus) throws Exception {
 
     this.status = responseStatus;
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override
-  public STATE onHeadersReceived(final HttpResponseHeaders headers) throws Exception {
+  public State onHeadersReceived(final HttpHeaders headers) throws Exception {
 
     this.headers = headers;
-    return STATE.CONTINUE;
+    return State.CONTINUE;
   }
 
   @Override

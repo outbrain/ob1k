@@ -1,10 +1,11 @@
 package com.outbrain.ob1k.http.utils;
 
-import com.ning.http.client.ListenableFuture;
+
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
 import com.outbrain.ob1k.concurrent.Try;
 import java.util.concurrent.ExecutionException;
+import org.asynchttpclient.ListenableFuture;
 
 public class ComposableFutureAdapter {
 
