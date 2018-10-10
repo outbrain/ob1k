@@ -3,16 +3,22 @@ package com.outbrain.ob1k.crud
 import com.google.gson.JsonObject
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.concurrent.ComposableFutures
-import com.outbrain.ob1k.crud.dao.*
+import com.outbrain.ob1k.crud.dao.AsyncDaoBridge
+import com.outbrain.ob1k.crud.dao.CrudAsyncDaoDelegate
+import com.outbrain.ob1k.crud.dao.EntityFieldMapper
+import com.outbrain.ob1k.crud.dao.ICrudAsyncDao
+import com.outbrain.ob1k.crud.dao.ICrudDao
+import com.outbrain.ob1k.crud.dao.MySQLCrudDao
+import com.outbrain.ob1k.crud.dao.RefFieldMapper
 import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.crud.model.EntityField
 import com.outbrain.ob1k.crud.model.Model
 import com.outbrain.ob1k.crud.service.CrudDispatcher
 import com.outbrain.ob1k.crud.service.ModelService
-import com.outbrain.ob1k.db.BasicDao
+import com.outbrain.ob1k.db.IBasicDao
 import java.util.concurrent.ExecutorService
 
-class CrudApplication(private val dao: BasicDao? = null,
+class CrudApplication(private val dao: IBasicDao? = null,
                       commaDelimitedTables: String = "") {
     private val tables = commaDelimitedTables.split(",").filter { it.isNotEmpty() }
     var model = Model()
@@ -26,15 +32,15 @@ class CrudApplication(private val dao: BasicDao? = null,
         }
     }
 
-    private fun withTableInfo(dao: BasicDao, tables: List<String>) = ComposableFutures.foreach(tables, this, { table, _ -> withTableInfo(dao, table) })
+    private fun withTableInfo(dao: IBasicDao, tables: List<String>) = ComposableFutures.foreach(tables, this, { table, _ -> withTableInfo(dao, table) })
 
-    private fun withTableInfo(dao: BasicDao, table: String): ComposableFuture<CrudApplication> {
+    private fun withTableInfo(dao: IBasicDao, table: String): ComposableFuture<CrudApplication> {
         return dao.list("SHOW COLUMNS FROM $table", EntityFieldMapper())
                 .map { EntityDescription(table = table, id = model.total, fields = it) }
                 .map { withEntity(it) }
     }
 
-    private fun updateTableReferences(dao: BasicDao) =
+    private fun updateTableReferences(dao: IBasicDao) =
             dao.list("SELECT TABLE_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME " +
                     "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
                     "WHERE REFERENCED_TABLE_NAME IS NOT NULL AND " +

@@ -7,9 +7,9 @@ import com.outbrain.ob1k.crud.model.EFieldType
 import com.outbrain.ob1k.crud.model.Entities
 import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.crud.model.EntityField
-import com.outbrain.ob1k.db.BasicDao
+import com.outbrain.ob1k.db.IBasicDao
 
-class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: BasicDao) : ICrudAsyncDao<JsonObject> {
+class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IBasicDao) : ICrudAsyncDao<JsonObject> {
 
     override fun list(pagination: IntRange,
                       sort: Pair<String, String>,
@@ -89,7 +89,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: Ba
         return "INSERT INTO $table ($cols) VALUES($values)"
     }
 
-    private fun BasicDao.query(query: String) = list(query, JsonObjectMapper(desc))
+    private fun IBasicDao.query(query: String) = list(query, JsonObjectMapper(desc))
 
     private fun EntityDescription.whereEq(id: String) = "where ${idDBFieldName()}=$id"
 
