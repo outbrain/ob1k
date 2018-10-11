@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 
 import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.PrefixBasedThreadFactory;
 import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.ning.NingRequestBuilder;
@@ -379,7 +380,7 @@ public class HttpClient implements Closeable {
     private static NettyConfigHolder createConfig() {
       final HashedWheelTimer timer = new HashedWheelTimer();
       timer.start();
-      final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(0, ComposableFutures.getExecutor());
+      final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(0, new PrefixBasedThreadFactory("ob1k-http"));
       NettyConfigHolder nettyConfig = new NettyConfigHolder(timer, eventLoopGroup);
       registerShutdownHook(nettyConfig);
       return nettyConfig;
