@@ -2,7 +2,6 @@ package com.outbrain.ob1k.http;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.ning.http.util.Base64;
 import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
@@ -16,6 +15,7 @@ import rx.Observable;
 import rx.observables.BlockingObservable;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -34,7 +34,7 @@ public class ClientBasicFlowsTest {
 
   private static MockWebServer server;
   private static CustomDispatcher dispatcher;
-  
+
   private static class CustomDispatcher extends Dispatcher {
     private final BlockingQueue<Function<RecordedRequest, MockResponse>> responseQueue = new LinkedBlockingQueue<>();
     private volatile RecordedRequest lastRequest;
@@ -48,7 +48,7 @@ public class ClientBasicFlowsTest {
       }
       return responseQueue.take().apply(request);
     }
-    
+
     public void enqueue(final MockResponse response) {
       enqueue(input -> {
         return response.clone();
@@ -80,7 +80,7 @@ public class ClientBasicFlowsTest {
   public void testSimpleRequestResponse() throws Exception {
 
     final String expected = "hello world";
-    
+
     dispatcher.enqueue(new MockResponse().setBody(expected));
 
     final HttpClient httpClient = HttpClient.createDefault();
@@ -211,7 +211,7 @@ public class ClientBasicFlowsTest {
 
     dispatcher.enqueue(input -> {
       final String authHeader = input.getHeader(HttpHeaders.Names.AUTHORIZATION).replace("Basic ", "");
-      final String credentials = new String(Base64.decode(authHeader));
+      final String credentials = new String(Base64.getDecoder().decode((authHeader)));
       return new MockResponse().setBody(credentials);
     });
 

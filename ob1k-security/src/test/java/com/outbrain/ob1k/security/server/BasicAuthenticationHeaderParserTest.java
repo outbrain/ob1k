@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
 import com.outbrain.ob1k.Request;
 import org.junit.After;
 import org.junit.Before;
@@ -11,12 +10,14 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Base64;
+
 public class BasicAuthenticationHeaderParserTest {
 
   private static final String USER = "user";
   private static final String PASSWORD = "password";
   private static final String CREDENTIALS = USER + ":" + PASSWORD;
-  private static final String ENCODED_CREDENTIALS = Base64.encode(CREDENTIALS.getBytes());
+  private static final String ENCODED_CREDENTIALS = new String(Base64.getEncoder().encode(CREDENTIALS.getBytes()));
 
   private BasicAuthenticationHeaderParser parser;
   private Request request;
