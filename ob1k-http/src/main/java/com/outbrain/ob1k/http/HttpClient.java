@@ -3,8 +3,6 @@ package com.outbrain.ob1k.http;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.PrefixBasedThreadFactory;
 import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.ning.NingRequestBuilder;
@@ -22,6 +20,7 @@ import static org.asynchttpclient.Dsl.asyncHttpClient;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timer;
 
 /**
  * Ob1k's Http Client
@@ -39,6 +38,7 @@ public class HttpClient implements Closeable {
   public static final int RETRIES = 3;
   public static final int CONNECTION_TIMEOUT = 200;
   public static final int REQUEST_TIMEOUT = 500;
+  public static final int READ_TIMEOUT = 500;
   public static final int MAX_CONNECTIONS_PER_HOST = 100;
   public static final int MAX_TOTAL_CONNECTIONS = MAX_CONNECTIONS_PER_HOST * 2;
 
@@ -159,18 +159,18 @@ public class HttpClient implements Closeable {
    */
   public static class Builder {
 
-    private MarshallingStrategy marshallingStrategy = new JacksonMarshallingStrategy();
+    private MarshallingStrategy marshallingStrategy = JacksonMarshallingStrategy.INSTANCE;
     private MetricFactory metricFactory;
-    private int connectionTimeout = HttpClient.CONNECTION_TIMEOUT;
-    private int requestTimeout = HttpClient.REQUEST_TIMEOUT;
-    private Integer readTimeout = null;
-    private int retries = HttpClient.RETRIES;
-    private int maxConnectionsPerHost = HttpClient.MAX_CONNECTIONS_PER_HOST;
-    private int maxTotalConnections = HttpClient.MAX_TOTAL_CONNECTIONS;
+    private int connectionTimeout = CONNECTION_TIMEOUT;
+    private int requestTimeout = REQUEST_TIMEOUT;
+    private int readTimeout = READ_TIMEOUT;
+    private int retries = RETRIES;
+    private int maxConnectionsPerHost = MAX_CONNECTIONS_PER_HOST;
+    private int maxTotalConnections = MAX_TOTAL_CONNECTIONS;
+    private int chunkedFileChunkSize = CHUNKED_FILE_CHUNK_SIZE;
     private boolean compressionEnforced;
     private boolean disableUrlEncoding;
     private boolean followRedirect;
-    private boolean acceptAnySslCertificate;
     private long responseMaxSize;
 
     /**
@@ -218,20 +218,6 @@ public class HttpClient implements Closeable {
     public Builder setMaxTotalConnections(final int maxTotalConnections) {
 
       this.maxTotalConnections = maxTotalConnections;
-      return this;
-    }
-
-    /**
-     * Accepting all SSL certificates, even if they invalid
-     * Note: NOT recommended to use, since it's may cause potential security issue.
-     *
-     * @param acceptAnySslCertificate accept any ssl certificate boolean
-     * @see <a href="http://security.stackexchange.com/questions/22965/what-is-the-potential-impact-of-these-ssl-certificate-validation-vulnerabilities">ssl cetificate validation vulnerabilities</a>
-     * @return builder
-     */
-    public Builder setAcceptAnySslCertificate(final boolean acceptAnySslCertificate) {
-
-      this.acceptAnySslCertificate = acceptAnySslCertificate;
       return this;
     }
 
@@ -333,65 +319,47 @@ public class HttpClient implements Closeable {
     }
 
     /**
+     * Set chunked file chunk size
+     *
+     * @param chunkedFileChunkSize chunked file chunk size
+     * @return builder
+     */
+    public Builder setChuckedFileChuckSize(final int chunkedFileChunkSize) {
+
+      this.chunkedFileChunkSize = chunkedFileChunkSize;
+      return this;
+    }
+
+    /**
      * Creates new HttpClient from the configuration set
      *
      * @return new HttpClient instance
      */
     public HttpClient build() {
+
       final DefaultAsyncHttpClientConfig.Builder configBuilder = new DefaultAsyncHttpClientConfig.Builder().
         setConnectTimeout(connectionTimeout).
         setMaxRequestRetry(retries).
         setRequestTimeout(requestTimeout).
+        setReadTimeout(readTimeout).
         setCompressionEnforced(compressionEnforced).
         setDisableUrlEncodingForBoundRequests(disableUrlEncoding).
-        setEventLoopGroup(NettyConfigHolder.INSTANCE.eventLoopGroup).
-        setNettyTimer(NettyConfigHolder.INSTANCE.timer).
+        setEventLoopGroup(EventLoopGroupHolder.GROUP).
+        setNettyTimer(NettyTimerHolder.TIMER).
         setMaxConnectionsPerHost(maxConnectionsPerHost).
         setMaxConnections(maxTotalConnections).
-        setChunkedFileChunkSize(CHUNKED_FILE_CHUNK_SIZE).
+        setChunkedFileChunkSize(chunkedFileChunkSize).
         setFollowRedirect(followRedirect);
-
-      if (readTimeout != null) {
-        configBuilder.setReadTimeout(readTimeout);
-      }
 
       return new HttpClient(asyncHttpClient(configBuilder), responseMaxSize, marshallingStrategy);
     }
   }
 
-  /**
-   * A singleton of Netty's httpProvider config, so all the clients
-   * will share the same thread pool for all the executions.
-   *
-   * @author aronen
-   */
-  private static class NettyConfigHolder {
+  private static class NettyTimerHolder {
+    private static final Timer TIMER = new HashedWheelTimer();
+  }
 
-    private static final NettyConfigHolder INSTANCE = createConfig();
-
-    private final HashedWheelTimer timer;
-    private final EventLoopGroup eventLoopGroup;
-
-    public NettyConfigHolder(HashedWheelTimer timer, EventLoopGroup eventLoopGroup) {
-      this.timer = timer;
-      this.eventLoopGroup = eventLoopGroup;
-    }
-
-    private static NettyConfigHolder createConfig() {
-      final HashedWheelTimer timer = new HashedWheelTimer();
-      timer.start();
-      final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(0, new PrefixBasedThreadFactory("ob1k-http"));
-      NettyConfigHolder nettyConfig = new NettyConfigHolder(timer, eventLoopGroup);
-      registerShutdownHook(nettyConfig);
-      return nettyConfig;
-    }
-
-    private static void registerShutdownHook(final NettyConfigHolder nettyConfigHolder) {
-
-      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-        nettyConfigHolder.eventLoopGroup.shutdownGracefully();
-        nettyConfigHolder.timer.stop();
-      }));
-    }
+  private static class EventLoopGroupHolder {
+    private static final EventLoopGroup GROUP = new NioEventLoopGroup();
   }
 }

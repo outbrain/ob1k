@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Lists.transform;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
@@ -16,9 +15,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -128,15 +125,8 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
   }
 
   @Override
-  public Map<String, List<String>> getHeaders() {
-
-    final Map<String, List<String>> httpHeaders = new HashMap<>();
-    asyncHttpResponse.getHeaders().forEach(e -> httpHeaders.merge(e.getKey(), Collections.singletonList(e.getValue()), (a, b) -> {
-      List<String> merge = new ArrayList<>(a);
-      merge.addAll(b);
-      return ImmutableList.copyOf(merge);
-    }));
-    return httpHeaders;
+  public Iterator<Map.Entry<String, String>> getHeaders() {
+    return asyncHttpResponse.getHeaders().iteratorAsString();
   }
 
   @Override

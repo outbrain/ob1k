@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +43,7 @@ public interface Response {
 
   List<String> getHeaders(String name);
 
-  Map<String, List<String>> getHeaders();
+  Iterator<Map.Entry<String, String>> getHeaders();
 
   boolean isRedirected();
 
