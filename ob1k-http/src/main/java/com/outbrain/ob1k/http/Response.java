@@ -1,15 +1,14 @@
 package com.outbrain.ob1k.http;
 
-import com.outbrain.ob1k.http.common.Cookie;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import com.outbrain.ob1k.http.common.Cookie;
 
 /**
  * Represents the http response of request execution
@@ -43,7 +42,7 @@ public interface Response {
 
   List<String> getHeaders(String name);
 
-  Iterator<Map.Entry<String, String>> getHeaders();
+  Map<String, List<String>> getHeaders();
 
   boolean isRedirected();
 
