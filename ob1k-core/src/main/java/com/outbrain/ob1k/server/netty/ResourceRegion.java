@@ -52,7 +52,6 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
     }
   }
 
-  @Override
   public long transferred() {
     return transfered();
   }
@@ -99,12 +98,10 @@ public class ResourceRegion extends AbstractReferenceCounted implements FileRegi
     return this;
   }
 
-  @Override
   public FileRegion touch() {
     return this;
   }
 
-  @Override
   public FileRegion touch(Object hint) {
     return this;
   }
