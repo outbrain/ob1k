@@ -24,15 +24,33 @@
     </dependency>
 
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>com.github.mauricio</groupId>
       <artifactId>mysql-async_2.10</artifactId>
       <version>0.2.18</version>
+       <exclusions>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
       <groupId>com.github.jasync-sql</groupId>
       <artifactId>jasync-mysql</artifactId>
       <version>0.8.34</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
