@@ -106,6 +106,15 @@
 
   <profiles>
     <profile>
+      <id>netty4.1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <netty.version>4.1.30.Final</netty.version>
+      </properties>
+    </profile>
+    <profile>
       <id>JDK 8 Build</id>
       <activation>
         <jdk>[1.8,)</jdk>

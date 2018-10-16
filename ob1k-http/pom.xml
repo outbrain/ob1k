@@ -27,14 +27,9 @@
       <exclusions>
         <exclusion>
           <groupId>io.netty</groupId>
-          <artifactId>netty-all</artifactId>
+          <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>com.outbrain.swinfra</groupId>
-      <artifactId>util-metrics</artifactId>
     </dependency>
 
     <dependency>
@@ -43,15 +38,20 @@
     </dependency>
 
     <dependency>
+      <groupId>com.outbrain.swinfra</groupId>
+      <artifactId>util-metrics</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.2.2</version>
+      <version>2.9.6</version>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>2.2.2</version>
+      <version>2.9.6</version>
     </dependency>
 
     <dependency>
