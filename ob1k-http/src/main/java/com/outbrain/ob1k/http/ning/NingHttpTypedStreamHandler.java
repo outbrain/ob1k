@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.netty.NettyResponse;
 
@@ -74,7 +75,10 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
     return State.CONTINUE;
   }
 
-  @Override
+  public State onHeadersReceived(HttpResponseHeaders httpResponseHeaders) throws Exception {
+    return null;
+  }
+
   public State onHeadersReceived(final HttpHeaders headers) throws Exception {
 
     this.headers = headers;
