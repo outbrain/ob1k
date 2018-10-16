@@ -17,7 +17,7 @@ public class BasicAuthenticationHeaderParserTest {
   private static final String USER = "user";
   private static final String PASSWORD = "password";
   private static final String CREDENTIALS = USER + ":" + PASSWORD;
-  private static final String ENCODED_CREDENTIALS = Base64.getEncoder().encodeToString(CREDENTIALS.getBytes());
+  private static final String ENCODED_CREDENTIALS = new String(Base64.getEncoder().encode(CREDENTIALS.getBytes()));
 
   private BasicAuthenticationHeaderParser parser;
   private Request request;

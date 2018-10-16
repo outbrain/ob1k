@@ -135,7 +135,7 @@ public class HttpBasicAccessAuthenticatorTest {
   private void populateRequestWithCredentials(final String username, final String password) {
     final String authHeader = "Authorization";
     final String credentials = username + ":" + password;
-    final String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+    final String encodedCredentials = new String(Base64.getEncoder().encode(credentials.getBytes()));
     final String headerValue = "Basic " + encodedCredentials;
     when(request.getHeader(authHeader)).thenReturn(headerValue);
   }

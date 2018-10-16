@@ -6,7 +6,6 @@ import com.squareup.okhttp.mockwebserver.Dispatcher;
 import com.squareup.okhttp.mockwebserver.MockResponse;
 import com.squareup.okhttp.mockwebserver.MockWebServer;
 import com.squareup.okhttp.mockwebserver.RecordedRequest;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -212,7 +211,7 @@ public class ClientBasicFlowsTest {
 
     dispatcher.enqueue(input -> {
       final String authHeader = input.getHeader(HttpHeaders.Names.AUTHORIZATION).replace("Basic ", "");
-      final String credentials = new String(Base64.getDecoder().decode(authHeader));
+      final String credentials = new String(Base64.getDecoder().decode((authHeader)));
       return new MockResponse().setBody(credentials);
     });
 
