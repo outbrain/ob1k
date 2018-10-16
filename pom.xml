@@ -108,7 +108,7 @@
     <profile>
       <id>netty4.1</id>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
         <netty.version>4.1.30.Final</netty.version>
