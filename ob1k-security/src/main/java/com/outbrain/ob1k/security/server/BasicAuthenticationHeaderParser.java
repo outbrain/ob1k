@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.security.server;
 
-import com.ning.http.util.Base64;
+import java.util.Base64;
+
 import com.outbrain.ob1k.Request;
 import io.netty.util.CharsetUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -73,7 +74,7 @@ public class BasicAuthenticationHeaderParser {
 
   private String decode(final String encodedCredentials) {
     try {
-      return new String(Base64.decode(encodedCredentials), CharsetUtil.UTF_8);
+      return new String(Base64.getDecoder().decode(encodedCredentials), CharsetUtil.UTF_8);
     } catch (final Exception e) {
       logger.error("Error decoding credentials " + encodedCredentials, e);
       return null;
