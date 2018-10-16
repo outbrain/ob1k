@@ -24,17 +24,12 @@
       <groupId>com.ning</groupId>
       <artifactId>async-http-client</artifactId>
       <version>1.9.31</version>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-all</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${netty.version}</version>
     </dependency>
 
     <dependency>
