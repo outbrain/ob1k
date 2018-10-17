@@ -1,8 +1,11 @@
 package com.outbrain.ob1k.example.hello.server;
 
+import com.codahale.metrics.MetricRegistry;
 import com.outbrain.ob1k.example.hello.server.services.HelloServiceImpl;
 import com.outbrain.ob1k.server.Server;
 import com.outbrain.ob1k.server.builder.ServerBuilder;
+import com.outbrain.swinfra.metrics.codahale3.CodahaleMetricsFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +56,7 @@ public class HelloServer {
         usePort(port).
         requestTimeout(50, TimeUnit.MILLISECONDS).
         acceptKeepAlive(true).
-        idleTimeout(1, TimeUnit.SECONDS)
+        idleTimeout(1, TimeUnit.SECONDS).useMetricFactory(new CodahaleMetricsFactory(new MetricRegistry()))
       ).
       service(builder -> builder.register(new HelloServiceImpl(0), HELLO_SERVICE_PATH)).
       build();
