@@ -37,10 +37,17 @@
       <artifactId>spymemcached</artifactId>
       <version>2.10.0</version>
     </dependency>
+
     <dependency>
       <groupId>com.spotify</groupId>
       <artifactId>folsom</artifactId>
       <version>0.7.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
