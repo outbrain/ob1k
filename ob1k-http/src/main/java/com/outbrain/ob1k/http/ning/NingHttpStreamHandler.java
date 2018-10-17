@@ -9,6 +9,7 @@ import java.util.Collections;
 
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.HttpResponseBodyPart;
+import org.asynchttpclient.HttpResponseHeaders;
 import org.asynchttpclient.HttpResponseStatus;
 import org.asynchttpclient.netty.NettyResponse;
 
@@ -20,6 +21,7 @@ public class NingHttpStreamHandler implements AsyncHandler<Response> {
   private final long responseMaxSize;
   private final Observer<Response> target;
   private volatile HttpHeaders headers;
+  private volatile HttpResponseHeaders httpResponseHeaders;
   private volatile HttpResponseStatus status;
   private volatile long responseSizesAggregated;
 
@@ -40,7 +42,7 @@ public class NingHttpStreamHandler implements AsyncHandler<Response> {
       }
     }
 
-    final org.asynchttpclient.Response ningResponse = new NettyResponse(status, headers, Collections.singletonList(bodyPart));
+    final org.asynchttpclient.Response ningResponse = new NettyResponse(status, httpResponseHeaders, Collections.singletonList(bodyPart));
     final Response response = new AsyncHttpResponse<>(ningResponse, null, null);
 
     target.onNext(response);
@@ -54,10 +56,15 @@ public class NingHttpStreamHandler implements AsyncHandler<Response> {
     return State.CONTINUE;
   }
 
-  @Override
   public State onHeadersReceived(final HttpHeaders headers) throws Exception {
 
     this.headers = headers;
+    return State.CONTINUE;
+  }
+
+  public State onHeadersReceived(final HttpResponseHeaders headers) throws Exception {
+
+    this.httpResponseHeaders = headers;
     return State.CONTINUE;
   }
 

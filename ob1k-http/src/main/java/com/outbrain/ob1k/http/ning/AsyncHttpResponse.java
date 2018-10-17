@@ -164,11 +164,11 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
     return asyncHttpResponse.hasResponseHeaders();
   }
 
-  private List<Cookie> transformNettyResponseCookies(final List<io.netty.handler.codec.http.cookie.Cookie> cookies) {
+  private List<Cookie> transformNettyResponseCookies(final List<org.asynchttpclient.cookie.Cookie> cookies) {
 
-    final Function<io.netty.handler.codec.http.cookie.Cookie, Cookie> transformer = nettyCookie ->
-      new Cookie(nettyCookie.name(), nettyCookie.value(), nettyCookie.domain(),
-        nettyCookie.path(), nettyCookie.maxAge(),
+    final Function<org.asynchttpclient.cookie.Cookie, Cookie> transformer = nettyCookie ->
+      new Cookie(nettyCookie.getName(), nettyCookie.getValue(), nettyCookie.getDomain(),
+        nettyCookie.getPath(), nettyCookie.getMaxAge(),
         nettyCookie.isSecure(), nettyCookie.isHttpOnly());
 
     return transform(cookies, transformer);

@@ -14,7 +14,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 
 public class ParamsService implements Service {
   public ComposableFuture<Map<String, String>> handle(final HttpRequest request) {
-    final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+    final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
     final Map<String, List<String>> params = queryStringDecoder.parameters();
     final Map<String, String> res = new HashMap<>();
     for (final String key: params.keySet()) {

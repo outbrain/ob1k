@@ -403,14 +403,10 @@ public class NingRequestBuilder implements RequestBuilder {
     return fromListenableFuture(provider);
   }
 
-  private io.netty.handler.codec.http.cookie.Cookie transformToNettyCookie(final Cookie cookie) {
-    DefaultCookie c = new DefaultCookie(cookie.getName(), cookie.getValue());
-    c.setDomain(cookie.getDomain());
-    c.setPath(cookie.getPath());
-    c.setMaxAge(cookie.getMaxAge());
-    c.setSecure(cookie.isSecure());
-    c.setHttpOnly(cookie.isHttpOnly());
-    return c;
+  private org.asynchttpclient.cookie.Cookie transformToNettyCookie(final Cookie cookie) {
+    return org.asynchttpclient.cookie.Cookie.newValidCookie(cookie.getName(), cookie.getValue(), false,
+      cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(),
+      cookie.isSecure(), cookie.isHttpOnly());
   }
 
   /**

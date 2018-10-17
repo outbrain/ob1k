@@ -28,6 +28,7 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
   private volatile HttpHeaders headers;
+  private volatile HttpResponseHeaders httpResponseHeaders;
   private volatile HttpResponseStatus status;
   private AtomicLong responseSizesAggregated;
 
@@ -49,7 +50,7 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
       }
     }
 
-    final org.asynchttpclient.Response ningResponse = new NettyResponse(status, headers, singletonList(bodyPart));
+    final org.asynchttpclient.Response ningResponse = new NettyResponse(status, httpResponseHeaders, singletonList(bodyPart));
     final TypedResponse<T> response = new AsyncHttpResponse<>(ningResponse, type, marshallingStrategy);
 
     if (bodyPart.isLast()) {
@@ -76,7 +77,9 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
   }
 
   public State onHeadersReceived(HttpResponseHeaders httpResponseHeaders) throws Exception {
-    return null;
+
+    this.httpResponseHeaders = httpResponseHeaders;
+    return State.CONTINUE;
   }
 
   public State onHeadersReceived(final HttpHeaders headers) throws Exception {
