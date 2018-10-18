@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.276-SNAPSHOT</version>
+    <version>0.276.N41-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-cache</artifactId>
@@ -41,11 +41,15 @@
     <dependency>
       <groupId>com.spotify</groupId>
       <artifactId>folsom</artifactId>
-      <version>0.7.2</version>
+      <version>0.8.1</version>
       <exclusions>
         <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

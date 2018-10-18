@@ -17,6 +17,7 @@ import io.netty.handler.codec.http.cors.CorsHandler;
  *
  * @author Doug Chimento &lt;dchimento@outbrain.com&gt;
  */
+@SuppressWarnings({"deprecation"})
 public final class CorsWrapperHandler extends CorsHandler {
   private static final Logger logger = LoggerFactory.getLogger(CorsWrapperHandler.class);
 

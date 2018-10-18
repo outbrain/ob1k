@@ -6,12 +6,12 @@ import com.outbrain.ob1k.Request;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.Cookie;
-import io.netty.handler.codec.http.CookieDecoder;
+import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.io.InputStream;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 
 /**
  * User: aronen
@@ -60,7 +60,7 @@ public class NettyRequest implements Request {
 
   @Override
   public String getUri() {
-    return inner.getUri();
+    return inner.uri();
   }
 
   @Override
@@ -207,19 +207,20 @@ public class NettyRequest implements Request {
     }
 
     final Cookie cookie = cookies.get(cookieName);
-    return cookie != null ? cookie.getValue() : null;
+    return cookie != null ? cookie.value() : null;
   }
 
   private void populateCookies() {
     cookies = Maps.newHashMap();
 
     final String cookieHeaderValue = inner.headers().get("Cookie");
-    if (cookieHeaderValue == null) return;
+    if (cookieHeaderValue == null)
+      return;
 
-    final Set<Cookie> cookiesSet = CookieDecoder.decode(cookieHeaderValue, false);
+    final Set<Cookie> cookiesSet = ServerCookieDecoder.LAX.decode(cookieHeaderValue);
 
     for (final Cookie cookie : cookiesSet) {
-      cookies.put(cookie.getName(), cookie);
+      cookies.put(cookie.name(), cookie);
     }
   }
 

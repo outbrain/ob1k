@@ -3,7 +3,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.outbrain.swinfra</groupId>
-  <version>0.276-SNAPSHOT</version>
+  <version>0.276.N41-SNAPSHOT</version>
   <artifactId>ob1k</artifactId>
   <name>Ob1k - The RPC Framework</name>
   <packaging>pom</packaging>
@@ -101,19 +101,10 @@
     <kotlin.version>1.2.60</kotlin.version>
     <kotlin-logging.version>1.5.9</kotlin-logging.version>
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
-    <netty.version>4.0.56.Final</netty.version>
+    <netty.version>4.1.30.Final</netty.version>
   </properties>
 
   <profiles>
-    <profile>
-      <id>netty4.1</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <netty.version>4.1.30.Final</netty.version>
-      </properties>
-    </profile>
     <profile>
       <id>JDK 8 Build</id>
       <activation>
@@ -392,6 +383,24 @@
       </dependency>
 
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-resolver-dns</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler-proxy</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-socks</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-core</artifactId>
         <version>${org.springframework.version}</version>
@@ -419,7 +428,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>16.0.1</version>
+        <version>20.0</version>
       </dependency>
 
       <dependency>

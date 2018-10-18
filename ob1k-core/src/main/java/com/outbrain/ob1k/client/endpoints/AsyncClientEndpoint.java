@@ -62,7 +62,7 @@ public class AsyncClientEndpoint extends AbstractClientEndpoint {
 
       try {
         requestBuilder = buildEndpointRequestBuilder(ctx, marshallingStrategy);
-      } catch (final EncoderException | IOException e) {
+      } catch (final EncoderException e) {
         return fromError(e);
       }
 

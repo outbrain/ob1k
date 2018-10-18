@@ -6,20 +6,20 @@ import com.outbrain.ob1k.http.HttpClient;
 import com.outbrain.ob1k.http.RequestBuilder;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.utils.UrlUtils;
-import org.apache.commons.codec.EncoderException;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.commons.codec.EncoderException;
 
 /**
  * @author marenzon
  */
 class ClientEndpointRequestBuilder {
 
-  public static RequestBuilder build(final HttpClient httpClient, final EndpointDescription endpointDescription, final ClientRequestContext ctx,
-                                     final MarshallingStrategy marshallingStrategy) throws IOException, EncoderException {
+  public static RequestBuilder build(final HttpClient httpClient, final EndpointDescription endpointDescription,
+                                     final ClientRequestContext ctx,
+                                     final MarshallingStrategy marshallingStrategy) throws EncoderException  {
 
     final RequestBuilder requestBuilder = getRequestBuilder(endpointDescription, httpClient, ctx);
     final Object[] requestValues = setPathParamsFromValues(requestBuilder, ctx);
@@ -51,7 +51,8 @@ class ClientEndpointRequestBuilder {
     return requestValues.toArray();
   }
 
-  private static RequestBuilder getRequestBuilder(final EndpointDescription endpointDescription, final HttpClient httpClient,
+  private static RequestBuilder getRequestBuilder(final EndpointDescription endpointDescription,
+                                                  final HttpClient httpClient,
                                                   final ClientRequestContext ctx) {
 
     final RequestBuilder requestBuilder;

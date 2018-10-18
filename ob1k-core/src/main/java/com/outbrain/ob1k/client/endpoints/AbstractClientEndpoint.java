@@ -41,7 +41,7 @@ public abstract class AbstractClientEndpoint {
 
   protected RequestBuilder buildEndpointRequestBuilder(final ClientRequestContext ctx,
                                                        final MarshallingStrategy marshallingStrategy)
-                                                       throws IOException,EncoderException {
+                                                       throws EncoderException {
     return ClientEndpointRequestBuilder.build(httpClient, endpointDescription, ctx, marshallingStrategy);
   }
 

@@ -1,5 +1,8 @@
 package com.outbrain.ob1k.server.cors;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.DATE;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -10,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.internal.StringUtil;
 
@@ -478,8 +480,8 @@ public final class CorsConfig {
      */
     public CorsConfig build() {
       if (preflightHeaders.isEmpty() && !noPreflightHeaders) {
-        preflightHeaders.put(Names.DATE, new DateValueGenerator());
-        preflightHeaders.put(Names.CONTENT_LENGTH, new ConstantValueGenerator("0"));
+        preflightHeaders.put(DATE, new DateValueGenerator());
+        preflightHeaders.put(CONTENT_LENGTH, new ConstantValueGenerator("0"));
       }
       return new CorsConfig(this);
     }
