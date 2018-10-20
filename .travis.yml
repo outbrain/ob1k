@@ -12,4 +12,4 @@ before_script:
 
 script:
   - ./consul agent -dev -advertise=127.0.0.1 &
-  - mvn clean package && mvn -Pnetty4.1 clean package  
+  - mvn clean package
