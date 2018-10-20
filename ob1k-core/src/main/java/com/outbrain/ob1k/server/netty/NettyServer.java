@@ -16,6 +16,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -116,7 +117,7 @@ public class NettyServer implements Server {
       b.childOption(ChannelOption.WRITE_SPIN_COUNT, 1024);
       b.childOption(ChannelOption.TCP_NODELAY, true);
       b.group(nioGroup)
-          .channel(NioServerSocketChannel.class)
+          .channel(Epoll.isAvailable() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
           .childHandler(new RPCServerInitializer(maxContentLength));
 
       channel = b.bind(port).sync().channel();
