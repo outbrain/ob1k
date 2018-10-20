@@ -123,7 +123,7 @@
       <url>https://api.bintray.com/maven/outbrain/OutbrainOSS/OB1K/</url>
     </repository>
     <snapshotRepository>
-      <id>ob1k_snapshots</id>
+      <id>${id.snapshots}</id>
       <url>${repo.snapshots}</url>
     </snapshotRepository>
   </distributionManagement>

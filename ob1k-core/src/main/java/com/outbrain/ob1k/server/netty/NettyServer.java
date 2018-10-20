@@ -14,6 +14,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -67,11 +69,17 @@ public class NettyServer implements Server {
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
   private final CorsConfig corsConfig;
 
-  public NettyServer(final int port, final ServiceRegistry registry,
-                     final StaticPathResolver staticResolver,
+  static {
+    if (Epoll.isAvailable()) {
+      logger.info("Using Native EpollEventLoopGroup");
+    }
+  }
+
+  public NettyServer(final int port, final ServiceRegistry registry, final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
-                     final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
-                     final int maxContentLength, final long requestTimeoutMs, final CorsConfig corsConfig) {
+                     final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip,
+                     final MetricFactory metricFactory, final int maxContentLength, final long requestTimeoutMs,
+                     final CorsConfig corsConfig) {
     System.setProperty("com.outbrain.web.context.path", contextPath);
     this.port = port;
     this.staticResolver = staticResolver;
@@ -80,7 +88,7 @@ public class NettyServer implements Server {
     this.applicationName = applicationName;
     this.marshallerRegistry = registry.getMarshallerRegistry();
     this.dispatcher = new ServiceDispatcher(registry, marshallerRegistry);
-    this.nioGroup = new NioEventLoopGroup();
+    this.nioGroup = Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
     this.acceptKeepAlive = acceptKeepAlive;
     this.supportZip = supportZip;
     this.maxContentLength = maxContentLength;

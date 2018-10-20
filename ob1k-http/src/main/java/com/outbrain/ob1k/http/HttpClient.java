@@ -18,6 +18,8 @@ import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
@@ -360,6 +362,6 @@ public class HttpClient implements Closeable {
   }
 
   private static class EventLoopGroupHolder {
-    private static final EventLoopGroup GROUP = new NioEventLoopGroup();
+    private static final EventLoopGroup GROUP = Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
   }
 }
