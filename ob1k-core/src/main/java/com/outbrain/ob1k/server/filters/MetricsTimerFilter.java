@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.server.filters;
 
-import com.google.common.base.Preconditions;
+import java.util.Objects;
+
 import com.outbrain.ob1k.AsyncRequestContext;
 import com.outbrain.ob1k.RequestContext;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
@@ -18,7 +19,7 @@ public class MetricsTimerFilter<T> implements AsyncFilter<T, AsyncRequestContext
   private final MetricFactory metricFactory;
 
   public MetricsTimerFilter(final MetricFactory metricFactory) {
-    this.metricFactory = Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
+    this.metricFactory = Objects.requireNonNull(metricFactory, "metricFactory must not be null");
   }
 
   @Override

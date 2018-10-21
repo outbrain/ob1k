@@ -8,9 +8,10 @@ import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
 
 /**
  * A decorator adding metric monitoring to TypedCache.
@@ -44,8 +45,8 @@ public class MonitoringCacheDelegate<K, V> implements TypedCache<K, V> {
   };
 
   public MonitoringCacheDelegate(final TypedCache<K, V> delegate, final String cacheName, final MetricFactory metricFactory) {
-    checkNotNull(metricFactory, "metricFactory may not be null");
-    this.delegate = checkNotNull(delegate, "delegate may not be null");
+    Objects.requireNonNull(metricFactory, "metricFactory may not be null");
+    this.delegate = Objects.requireNonNull(delegate, "delegate may not be null");
     final String component = delegate.getClass().getSimpleName() + "." + cacheName;
 
     getAsyncMetrics = new AsyncOperationMetrics<>(metricFactory, component + ".getAsync");

@@ -1,11 +1,12 @@
 package com.outbrain.ob1k.http.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
 
 import com.outbrain.ob1k.http.Response;
 import io.netty.handler.codec.http.HttpHeaders;
 import rx.Observer;
 import java.util.Collections;
+import java.util.Objects;
 
 import org.asynchttpclient.AsyncHandler;
 import org.asynchttpclient.HttpResponseBodyPart;
@@ -26,7 +27,7 @@ public class NingHttpStreamHandler implements AsyncHandler<Response> {
   public NingHttpStreamHandler(final long responseMaxSize, final Observer<Response> target) {
 
     this.responseMaxSize = responseMaxSize;
-    this.target = checkNotNull(target, "target may not be null");
+    this.target = Objects.requireNonNull(target, "target may not be null");
   }
 
   @Override

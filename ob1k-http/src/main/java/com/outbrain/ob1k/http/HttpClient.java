@@ -1,8 +1,5 @@
 package com.outbrain.ob1k.http;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-
 import com.outbrain.ob1k.http.marshalling.JacksonMarshallingStrategy;
 import com.outbrain.ob1k.http.marshalling.MarshallingStrategy;
 import com.outbrain.ob1k.http.ning.NingRequestBuilder;
@@ -11,6 +8,7 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Objects;
 
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.BoundRequestBuilder;
@@ -74,7 +72,7 @@ public class HttpClient implements Closeable {
    */
   public RequestBuilder get(final String url) {
 
-    checkNotNull(url, "url may not be null");
+    Objects.requireNonNull(url, "url may not be null");
     final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareGet(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
@@ -87,7 +85,7 @@ public class HttpClient implements Closeable {
    */
   public RequestBuilder post(final String url) {
 
-    checkNotNull(url, "url may not be null");
+    Objects.requireNonNull(url, "url may not be null");
     final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePost(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
@@ -100,7 +98,7 @@ public class HttpClient implements Closeable {
    */
   public RequestBuilder put(final String url) {
 
-    checkNotNull(url, "url may not be null");
+    Objects.requireNonNull(url, "url may not be null");
     final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.preparePut(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
@@ -113,7 +111,7 @@ public class HttpClient implements Closeable {
    */
   public RequestBuilder delete(final String url) {
 
-    checkNotNull(url, "url may not be null");
+    Objects.requireNonNull(url, "url may not be null");
     final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareDelete(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
@@ -126,7 +124,7 @@ public class HttpClient implements Closeable {
    */
   public RequestBuilder head(final String url) {
 
-    checkNotNull(url, "url may not be null");
+    Objects.requireNonNull(url, "url may not be null");
     final BoundRequestBuilder ningRequestBuilder = asyncHttpClient.prepareHead(url);
     return createNewRequestBuilder(url, ningRequestBuilder);
   }
@@ -316,7 +314,7 @@ public class HttpClient implements Closeable {
      */
     public Builder setMarshallingStrategy(final MarshallingStrategy marshallingStrategy) {
 
-      this.marshallingStrategy = checkNotNull(marshallingStrategy, "marshallingStrategy may not be null");
+      this.marshallingStrategy = Objects.requireNonNull(marshallingStrategy, "marshallingStrategy may not be null");
       return this;
     }
 
@@ -349,7 +347,7 @@ public class HttpClient implements Closeable {
         setEventLoopGroup(EventLoopGroupHolder.GROUP).
         setNettyTimer(NettyTimerHolder.TIMER).
         setMaxConnectionsPerHost(maxConnectionsPerHost).
-        setMaxConnections(maxTotalConnections).
+        setMaxConnections(maxTotalConnections).setSoReuseAddress(true).setTcpNoDelay(true).
         setChunkedFileChunkSize(chunkedFileChunkSize).
         setFollowRedirect(followRedirect);
 

@@ -1,6 +1,7 @@
 package com.outbrain.cqllib;
 
-import com.google.common.base.Preconditions;
+import java.util.Objects;
+
 import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
@@ -20,7 +21,7 @@ public class TagMetrics {
   final Timer timer;
 
   TagMetrics(final MetricFactory metricFactory, final String tag) {
-    this.tag = Preconditions.checkNotNull(tag);
+    this.tag = Objects.requireNonNull(tag);
     readTimeouts = metricFactory.createCounter("CQL", tag + ".readTimeouts");
     writeTimeouts = metricFactory.createCounter("CQL", tag + ".writeTimeouts");
     unavailableTimeouts = metricFactory.createCounter("CQL", tag + ".unavailableTimeouts");

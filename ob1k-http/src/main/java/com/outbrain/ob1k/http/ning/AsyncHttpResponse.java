@@ -1,10 +1,6 @@
 package com.outbrain.ob1k.http.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Lists.transform;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.ob1k.http.TypedResponse;
 import com.outbrain.ob1k.http.common.Cookie;
@@ -19,9 +15,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.asynchttpclient.Response;
 
@@ -37,7 +34,7 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
 
   public AsyncHttpResponse(final Response asyncHttpResponse, final Type type, final MarshallingStrategy marshallingStrategy) throws IOException {
 
-    this.asyncHttpResponse = checkNotNull(asyncHttpResponse, "asyncHttpResponse may not be null");
+    this.asyncHttpResponse = Objects.requireNonNull(asyncHttpResponse, "asyncHttpResponse may not be null");
     this.marshallingStrategy = marshallingStrategy;
     this.type = type;
   }
@@ -77,8 +74,8 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
 
     if (typedBody == null) {
 
-      checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
-      checkNotNull(type, "class type may not be null");
+      Objects.requireNonNull(marshallingStrategy, "unmarshallingStrategy may not be null");
+      Objects.requireNonNull(type, "class type may not be null");
 
       typedBody = marshallingStrategy.unmarshall(type, this);
     }
@@ -135,7 +132,7 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
     asyncHttpResponse.getHeaders().forEach(e -> httpHeaders.merge(e.getKey(), Collections.singletonList(e.getValue()), (a, b) -> {
       List<String> merge = new ArrayList<>(a);
       merge.addAll(b);
-      return ImmutableList.copyOf(merge);
+      return Collections.unmodifiableList(merge);
     }));
     return httpHeaders;
   }
@@ -166,12 +163,11 @@ public class AsyncHttpResponse<T> implements TypedResponse<T> {
 
   private List<Cookie> transformNettyResponseCookies(final List<io.netty.handler.codec.http.cookie.Cookie> cookies) {
 
-    final Function<io.netty.handler.codec.http.cookie.Cookie, Cookie> transformer = nettyCookie ->
-      new Cookie(nettyCookie.name(), nettyCookie.value(), nettyCookie.domain(),
-        nettyCookie.path(), nettyCookie.maxAge(),
-        nettyCookie.isSecure(), nettyCookie.isHttpOnly());
+    return cookies.stream().map(nettyCookie ->  new Cookie(nettyCookie.name(), nettyCookie.value(), nettyCookie.domain(),
+                                                             nettyCookie.path(), nettyCookie.maxAge(),
+                                                             nettyCookie.isSecure(), nettyCookie.isHttpOnly()))
+                  .collect(Collectors.toList());
 
-    return transform(cookies, transformer);
   }
 
   @Override

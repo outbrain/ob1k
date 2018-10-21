@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.consul;
 
-import com.google.common.base.Preconditions;
 import com.outbrain.ob1k.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -23,7 +23,8 @@ public class ConsulServiceRegistrator implements Server.Listener {
   private final AtomicBoolean v1 = new AtomicBoolean(true);
 
   public ConsulServiceRegistrator(final ServiceRegistrationDataProvider serviceRegistrationDataProvider) {
-    this.serviceRegistrationDataProvider = Preconditions.checkNotNull(serviceRegistrationDataProvider, "serviceRegistrationDataProvider must not be null");
+
+    this.serviceRegistrationDataProvider = Objects.requireNonNull(serviceRegistrationDataProvider, "serviceRegistrationDataProvider must not be null");
   }
 
   @Override

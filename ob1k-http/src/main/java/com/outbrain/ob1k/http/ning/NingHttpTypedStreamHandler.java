@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.http.ning;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
 import static java.util.Collections.singletonList;
 
 import com.outbrain.ob1k.http.TypedResponse;
@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import rx.Observer;
 
 import java.lang.reflect.Type;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.asynchttpclient.AsyncHandler;
@@ -27,16 +28,16 @@ public class NingHttpTypedStreamHandler<T> implements AsyncHandler<T> {
   private final MarshallingStrategy marshallingStrategy;
   private final Type type;
   private volatile HttpHeaders headers;
-    private volatile HttpResponseStatus status;
+  private volatile HttpResponseStatus status;
   private AtomicLong responseSizesAggregated;
 
   public NingHttpTypedStreamHandler(final long responseMaxSize, final Observer<TypedResponse<T>> target,
                                     final MarshallingStrategy marshallingStrategy, final Type type) {
 
     this.responseMaxSize = responseMaxSize;
-    this.target = checkNotNull(target, "target may not be null");
-    this.marshallingStrategy = checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
-    this.type = checkNotNull(type, "type may not be null");
+    this.target = Objects.requireNonNull(target, "target may not be null");
+    this.marshallingStrategy = Objects.requireNonNull(marshallingStrategy, "unmarshallingStrategy may not be null");
+    this.type = Objects.requireNonNull(type, "type may not be null");
   }
 
   @Override

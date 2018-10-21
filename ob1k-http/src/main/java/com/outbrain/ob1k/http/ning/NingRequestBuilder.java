@@ -32,8 +32,9 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
 import static com.outbrain.ob1k.http.utils.ComposableFutureAdapter.fromListenableFuture;
@@ -59,9 +60,9 @@ public class NingRequestBuilder implements RequestBuilder {
   public NingRequestBuilder(final AsyncHttpClient asyncHttpClient, final BoundRequestBuilder asyncHttpRequestBuilder,
                             final String requestUrl, final long responseMaxSize, final MarshallingStrategy marshallingStrategy) {
 
-    this.asyncHttpClient = checkNotNull(asyncHttpClient, "asyncHttpClient may not be null");
-    this.asyncHttpRequestBuilder = checkNotNull(asyncHttpRequestBuilder, "asyncHttpRequestBuilder may not be null");
-    this.requestUrl = checkNotNull(requestUrl, "requestUrl may not be null");
+    this.asyncHttpClient = Objects.requireNonNull(asyncHttpClient, "asyncHttpClient may not be null");
+    this.asyncHttpRequestBuilder = Objects.requireNonNull(asyncHttpRequestBuilder, "asyncHttpRequestBuilder may not be null");
+    this.requestUrl = Objects.requireNonNull(requestUrl, "requestUrl may not be null");
     this.responseMaxSize = responseMaxSize;
     this.marshallingStrategy = marshallingStrategy;
   }
@@ -223,7 +224,7 @@ public class NingRequestBuilder implements RequestBuilder {
   @Override
   public RequestBuilder setMarshallingStrategy(final MarshallingStrategy marshallingStrategy) {
 
-    this.marshallingStrategy = checkNotNull(marshallingStrategy, "unmarshallingStrategy may not be null");
+    this.marshallingStrategy = Objects.requireNonNull(marshallingStrategy, "unmarshallingStrategy may not be null");
     return this;
   }
 

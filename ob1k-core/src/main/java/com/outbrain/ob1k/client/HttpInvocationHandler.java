@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.client;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
 
 import com.outbrain.ob1k.client.dispatch.DispatchStrategy;
 import com.outbrain.ob1k.client.endpoints.AbstractClientEndpoint;
@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author aronen
@@ -29,10 +30,10 @@ class HttpInvocationHandler implements InvocationHandler {
   HttpInvocationHandler(final TargetProvider targetProvider, final HttpClient client,
                         final Map<Method, AbstractClientEndpoint> endpoints, final DispatchStrategy dispatchStrategy) {
 
-    this.client = checkNotNull(client, "client may not be null");
-    this.targetProvider = checkNotNull(targetProvider, "targetProvider may not be null");
-    this.endpoints = checkNotNull(endpoints, "endpoints may not be null");
-    this.dispatchStrategy = checkNotNull(dispatchStrategy, "dispatchStrategy may not be null");
+    this.client = Objects.requireNonNull(client, "client may not be null");
+    this.targetProvider = Objects.requireNonNull(targetProvider, "targetProvider may not be null");
+    this.endpoints = Objects.requireNonNull(endpoints, "endpoints may not be null");
+    this.dispatchStrategy = Objects.requireNonNull(dispatchStrategy, "dispatchStrategy may not be null");
   }
 
   @Override

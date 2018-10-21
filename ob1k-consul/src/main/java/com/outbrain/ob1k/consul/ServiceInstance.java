@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.consul;
 
-import com.google.common.base.Objects;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
@@ -34,25 +35,34 @@ public class ServiceInstance {
   }
 
   @Override
-  public int hashCode() {
-    return Objects.hashCode(Node, ServicePort, Address, ServiceAddress, ServiceID, ServiceName, ServiceTags);
+  public boolean equals(Object o) {
+    if (this == o) return true;
+
+    if (!(o instanceof ServiceInstance)) return false;
+
+    ServiceInstance that = (ServiceInstance) o;
+
+    return new EqualsBuilder()
+             .append(ServicePort, that.ServicePort)
+             .append(Node, that.Node)
+             .append(Address, that.Address)
+             .append(ServiceAddress, that.ServiceAddress)
+             .append(ServiceID, that.ServiceID)
+             .append(ServiceName, that.ServiceName)
+             .append(ServiceTags, that.ServiceTags)
+             .isEquals();
   }
 
   @Override
-  public boolean equals(final Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null || getClass() != obj.getClass()) {
-      return false;
-    }
-    final ServiceInstance other = (ServiceInstance) obj;
-    return Objects.equal(this.Node, other.Node)
-            && Objects.equal(this.ServicePort, other.ServicePort)
-            && Objects.equal(this.Address, other.Address)
-            && Objects.equal(this.ServiceAddress, other.ServiceAddress)
-            && Objects.equal(this.ServiceID, other.ServiceID)
-            && Objects.equal(this.ServiceName, other.ServiceName)
-            && Objects.equal(this.ServiceTags, other.ServiceTags);
+  public int hashCode() {
+    return new HashCodeBuilder(17, 37)
+             .append(Node)
+             .append(ServicePort)
+             .append(Address)
+             .append(ServiceAddress)
+             .append(ServiceID)
+             .append(ServiceName)
+             .append(ServiceTags)
+             .toHashCode();
   }
 }

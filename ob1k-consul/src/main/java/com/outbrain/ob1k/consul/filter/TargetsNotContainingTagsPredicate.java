@@ -1,11 +1,11 @@
 package com.outbrain.ob1k.consul.filter;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.outbrain.ob1k.consul.HealthInfoInstance;
-
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
+
+import com.google.common.base.Predicate;
+import com.outbrain.ob1k.consul.HealthInfoInstance;
 
 /**
  * @author marenzon
@@ -23,7 +23,7 @@ public class TargetsNotContainingTagsPredicate implements Predicate<HealthInfoIn
   }
 
   public TargetsNotContainingTagsPredicate(final Collection<String> tags) {
-    this.tags = Preconditions.checkNotNull(tags, "tags must not be null");
+    this.tags = Objects.requireNonNull(tags, "tags must not be null");
   }
 
   @Override

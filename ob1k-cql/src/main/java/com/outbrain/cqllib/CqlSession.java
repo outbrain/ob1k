@@ -1,5 +1,18 @@
 package com.outbrain.cqllib;
 
+import static com.outbrain.ob1k.concurrent.ComposableFutures.fromTry;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.ResultSet;
@@ -11,25 +24,15 @@ import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.outbrain.ob1k.concurrent.*;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Try;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 import com.outbrain.swinfra.metrics.api.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import rx.exceptions.Exceptions;
-
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromTry;
 
 /**
  * Created by guyk on 7/9/14
@@ -71,8 +74,8 @@ public class CqlSession {
                     addContactPoints(nodesArr).build();
     //cluster.init();
     this.session = cluster.connect(keyspace);
-    this.retryPolicy = Preconditions.checkNotNull(retryPolicy);
-    this.metricFactory = Preconditions.checkNotNull(metricFactory);
+    this.retryPolicy = Objects.requireNonNull(retryPolicy);
+    this.metricFactory = Objects.requireNonNull(metricFactory);
   }
 
   public CqlStatementFactory newFactory(final String... tags) {

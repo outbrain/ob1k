@@ -1,6 +1,6 @@
 package com.outbrain.ob1k.http.common;
 
-import com.google.common.base.MoreObjects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * @author marenzon
@@ -28,9 +28,9 @@ public class Param {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-                      .add("name", name)
-                      .add("value", value)
-                      .toString();
+    return new ToStringBuilder(this)
+             .append("name", name)
+             .append("value", value)
+             .toString();
   }
 }

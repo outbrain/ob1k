@@ -1,7 +1,9 @@
 package com.outbrain.ob1k.example.rest.api;
 
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
+
+import java.util.Objects;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Simple pojo which describes a User entity for the example
@@ -19,9 +21,9 @@ public class User {
   public User() {}
 
   public User(final String name, final String address, final String profession) {
-    this.name = Preconditions.checkNotNull(name, "name may not be null");
-    this.address = Preconditions.checkNotNull(address, "address may not be null");
-    this.profession = Preconditions.checkNotNull(profession, "profession may not be null");
+    this.name = Objects.requireNonNull(name, "name may not be null");
+    this.address = Objects.requireNonNull(address, "address may not be null");
+    this.profession = Objects.requireNonNull(profession, "profession may not be null");
   }
 
   public int getId() {
@@ -57,7 +59,7 @@ public class User {
   }
 
   public void updateFrom(final User userData) {
-    Preconditions.checkNotNull(userData, "userData may not be null");
+    Objects.requireNonNull(userData, "userData may not be null");
 
     if (userData.getName() != null) {
       setName(userData.getName());
@@ -74,11 +76,11 @@ public class User {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
-            .add("id", id)
-            .add("name", name)
-            .add("address", address)
-            .add("profession", profession)
-            .toString();
+    return new ToStringBuilder(this)
+             .append("id", id)
+             .append("name", name)
+             .append("address", address)
+             .append("profession", profession)
+             .toString();
   }
 }

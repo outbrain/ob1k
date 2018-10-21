@@ -2,6 +2,7 @@ package com.outbrain.ob1k.consul;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -29,10 +30,10 @@ public class ServiceRegistration {
 
   public ServiceRegistration(final String name, final String address, final Integer port, final Set<String> tags,
                              final Check check, final Integer instance) {
-    this.name = Preconditions.checkNotNull(name, "name must not be null");
+    this.name = Objects.requireNonNull(name, "name must not be null");
     this.address = address;
-    this.tags = Preconditions.checkNotNull(tags, "tags must not be null");
-    this.check = Preconditions.checkNotNull(check, "check must not be null");
+    this.tags = Objects.requireNonNull(tags, "tags must not be null");
+    this.check = Objects.requireNonNull(check, "check must not be null");
     this.port = port;
     this.id = (instance == null ? name : name + "_" + instance);
   }
@@ -74,7 +75,7 @@ public class ServiceRegistration {
     }
 
     public Check(final String url, final int intervalSec) {
-      this.http = Preconditions.checkNotNull(url, "url must not be null");
+      this.http = Objects.requireNonNull(url, "url must not be null");
       Preconditions.checkArgument(0 < intervalSec, "intervalSec must be greater than zero");
       this.interval = intervalSec + "s";
       this.timeout = interval;

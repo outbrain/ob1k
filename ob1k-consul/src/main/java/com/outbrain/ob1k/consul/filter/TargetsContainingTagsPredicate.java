@@ -1,11 +1,11 @@
 package com.outbrain.ob1k.consul.filter;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.outbrain.ob1k.consul.HealthInfoInstance;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 
 /**
  * A targets filter that returns true iff the target contains all the tags specified in the constructor.
@@ -24,7 +24,7 @@ public class TargetsContainingTagsPredicate implements Predicate<HealthInfoInsta
   }
 
   public TargetsContainingTagsPredicate(final Collection<String> tags) {
-    this.tags = Preconditions.checkNotNull(tags, "tags must not be null");
+    this.tags = Objects.requireNonNull(tags, "tags must not be null");
   }
 
   @Override

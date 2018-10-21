@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -37,7 +38,7 @@ public class ConsulBasedTargetProvider implements TargetProvider, HealthyTargets
   public ConsulBasedTargetProvider(final HealthyTargetsList healthyTargetsList, final String urlSuffix, final Map<String, Integer> tag2weight, final LoadBalancer loadBalancer) {
     this.urlSuffix = urlSuffix == null ? "" : urlSuffix;
     this.tag2weight = tag2weight == null ? Collections.emptyMap() : new HashMap<>(tag2weight);
-    this.healthyTargetsList = Preconditions.checkNotNull(healthyTargetsList, "healthyTargetsList must not be null");
+    this.healthyTargetsList = Objects.requireNonNull(healthyTargetsList, "healthyTargetsList must not be null");
     this.loadBalancer = loadBalancer;
     healthyTargetsList.addListener(this);
   }

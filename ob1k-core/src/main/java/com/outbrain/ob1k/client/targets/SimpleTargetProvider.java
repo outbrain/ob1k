@@ -1,10 +1,10 @@
 package com.outbrain.ob1k.client.targets;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Collections.nCopies;
 
@@ -17,7 +17,7 @@ public class SimpleTargetProvider implements TargetProvider {
   private final String target;
 
   public SimpleTargetProvider(final String target) {
-    this.target = Preconditions.checkNotNull(target, "target must not be null");
+    this.target = Objects.requireNonNull(target, "target must not be null");
     logger.info("Target url: {}", target);
   }
 

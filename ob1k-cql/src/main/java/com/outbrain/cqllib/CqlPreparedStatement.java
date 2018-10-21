@@ -9,6 +9,7 @@ import com.outbrain.swinfra.metrics.api.MetricFactory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by guyk on 7/10/14.
@@ -22,7 +23,7 @@ public class CqlPreparedStatement {
     if (tags.length == 0) {
       throw new IllegalArgumentException("expecting non empty tags");
     }
-    this.statement = Preconditions.checkNotNull(statement);
+    this.statement = Objects.requireNonNull(statement);
     this.metrics = Lists.newArrayList(Iterables.transform(Arrays.asList(tags), new Function<String, TagMetrics>() {
       @Override
       public TagMetrics apply(String tag) {

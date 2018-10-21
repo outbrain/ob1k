@@ -4,9 +4,9 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.policies.RetryPolicy;
-import com.google.common.base.Preconditions;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by guyk on 7/9/14.
@@ -16,8 +16,8 @@ class RetryPolicyWithMetrics implements RetryPolicy {
   private final List<TagMetrics> tagMetrics;
 
   RetryPolicyWithMetrics(final RetryPolicy delegate, final List<TagMetrics> tagMetrics) {
-    this.delegate = Preconditions.checkNotNull(delegate);
-    this.tagMetrics = Preconditions.checkNotNull(tagMetrics);
+    this.delegate = Objects.requireNonNull(delegate);
+    this.tagMetrics = Objects.requireNonNull(tagMetrics);
   }
 
   @Override

@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.consul;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
 import com.outbrain.ob1k.concurrent.ComposableFutures;
@@ -67,12 +66,12 @@ public class HealthyTargetsList {
   private final ComposablePromise<?> initializationFuture = ComposableFutures.newPromise(false);
 
   public HealthyTargetsList(final ConsulHealth health, final String module, final String envTag, final Predicate<HealthInfoInstance> targetsPredicate, final MetricFactory metricFactory) {
-    this.health = Preconditions.checkNotNull(health, "health must not be null");
-    this.module = Preconditions.checkNotNull(module, "module must not be null");
-    this.envTag = Preconditions.checkNotNull(envTag, "envTag must not be null");
+    this.health = Objects.requireNonNull(health, "health must not be null");
+    this.module = Objects.requireNonNull(module, "module must not be null");
+    this.envTag = Objects.requireNonNull(envTag, "envTag must not be null");
     this.targetsPredicate = (targetsPredicate == null ? AllTargetsPredicate.INSTANCE : targetsPredicate);
 
-    Preconditions.checkNotNull(metricFactory, "metricFactory must not be null");
+    Objects.requireNonNull(metricFactory, "metricFactory must not be null");
     final String component = getClass().getSimpleName() + "." + module;
 
     targetFetchTime = metricFactory.createTimer(component, "targetFetchTime");
