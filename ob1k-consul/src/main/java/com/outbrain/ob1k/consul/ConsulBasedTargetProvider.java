@@ -1,6 +1,5 @@
 package com.outbrain.ob1k.consul;
 
-import com.google.common.base.Preconditions;
 import com.outbrain.ob1k.client.targets.TargetProvider;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
