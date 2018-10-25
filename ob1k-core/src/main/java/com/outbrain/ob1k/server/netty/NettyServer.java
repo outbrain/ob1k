@@ -14,6 +14,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -25,6 +28,8 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,9 +71,16 @@ public class NettyServer implements Server {
   private final int maxContentLength;
   private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
   private final CorsConfig corsConfig;
+  private static final boolean useEpoll;
 
-  public NettyServer(final int port, final ServiceRegistry registry,
-                     final StaticPathResolver staticResolver,
+  static {
+    useEpoll = Epoll.isAvailable() && SystemPropertyUtil.getBoolean("io.netty.transport.noNative", true);
+    if (useEpoll) {
+      logger.info("Using Native EpollEventLoopGroup");
+    }
+  }
+
+  public NettyServer(final int port, final ServiceRegistry registry, final StaticPathResolver staticResolver,
                      final ChannelGroup activeChannels, final String contextPath, final String applicationName,
                      final boolean acceptKeepAlive, final long idleTimeoutMs, final boolean supportZip, final MetricFactory metricFactory,
                      final int maxContentLength, final long requestTimeoutMs, final CorsConfig corsConfig) {
@@ -80,7 +92,7 @@ public class NettyServer implements Server {
     this.applicationName = applicationName;
     this.marshallerRegistry = registry.getMarshallerRegistry();
     this.dispatcher = new ServiceDispatcher(registry, marshallerRegistry);
-    this.nioGroup = new NioEventLoopGroup();
+    this.nioGroup = useEpoll ? new EpollEventLoopGroup() : new NioEventLoopGroup();
     this.acceptKeepAlive = acceptKeepAlive;
     this.supportZip = supportZip;
     this.maxContentLength = maxContentLength;
@@ -108,7 +120,7 @@ public class NettyServer implements Server {
       b.childOption(ChannelOption.WRITE_SPIN_COUNT, 1024);
       b.childOption(ChannelOption.TCP_NODELAY, true);
       b.group(nioGroup)
-          .channel(NioServerSocketChannel.class)
+          .channel(useEpoll ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
           .childHandler(new RPCServerInitializer(maxContentLength));
 
       channel = b.bind(port).sync().channel();

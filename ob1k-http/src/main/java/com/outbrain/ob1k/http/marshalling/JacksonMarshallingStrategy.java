@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.outbrain.ob1k.http.Response;
-import io.netty.handler.codec.http.HttpResponseStatus;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,7 @@ import java.lang.reflect.Type;
 public class JacksonMarshallingStrategy implements MarshallingStrategy {
 
   private static final Logger log = LoggerFactory.getLogger(JacksonMarshallingStrategy.class);
-
+  private static final int NO_CONTENT = 204;
   private final ObjectMapper objectMapper;
 
   public JacksonMarshallingStrategy() {
@@ -46,7 +46,7 @@ public class JacksonMarshallingStrategy implements MarshallingStrategy {
               response.getResponseBody());
     }
 
-    if (HttpResponseStatus.NO_CONTENT.code() == statusCode || !response.hasResponseBody()) {
+    if (NO_CONTENT == statusCode || !response.hasResponseBody()) {
       // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
       return null;
     }

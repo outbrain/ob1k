@@ -1,7 +1,7 @@
 package com.outbrain.ob1k.http.marshalling;
 
 import com.outbrain.ob1k.http.Response;
-import io.netty.handler.codec.http.HttpResponseStatus;
+
 import org.msgpack.MessagePack;
 import org.msgpack.packer.Packer;
 import org.msgpack.template.Template;
@@ -22,7 +22,7 @@ import java.lang.reflect.Type;
 public class MessagePackMarshallingStrategy implements MarshallingStrategy {
 
   private static final Logger log = LoggerFactory.getLogger(MessagePackMarshallingStrategy.class);
-
+  private static final int NO_CONTENT = 204;
   private final MessagePack messagePack;
 
   public MessagePackMarshallingStrategy(final MessagePack messagePack) {
@@ -42,7 +42,7 @@ public class MessagePackMarshallingStrategy implements MarshallingStrategy {
               response.getResponseBody());
     }
 
-    if (HttpResponseStatus.NO_CONTENT.code() == statusCode || !response.hasResponseBody()) {
+    if (NO_CONTENT == statusCode || !response.hasResponseBody()) {
       // on empty body the object mapper throws "JsonMappingException: No content to map due to end-of-input"
       return null;
     }
