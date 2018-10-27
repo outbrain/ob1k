@@ -1,11 +1,14 @@
 package com.outbrain.ob1k.crud.example;
 
+import java.util.List;
+
 public class Person {
   private Integer id;
   private String name;
   private Boolean alive;
   private String email;
   private ELiveness liveness;
+  private List<Address> addresses;
 
   public Integer getId() {
     return id;
@@ -45,5 +48,13 @@ public class Person {
 
   public void setLiveness(ELiveness liveness) {
     this.liveness = liveness;
+  }
+
+  public List<Address> getAddresses() {
+    return addresses;
+  }
+
+  public void setAddresses(List<Address> addresses) {
+    this.addresses = addresses;
   }
 }

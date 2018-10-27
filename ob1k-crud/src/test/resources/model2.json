@@ -1,0 +1,121 @@
+{
+  "total": 1,
+  "data": [
+    {
+      "id": 0,
+      "resourceName": "person",
+      "title": "Person",
+      "endpoint": "../crud",
+      "fields": [
+        {
+          "name": "id",
+          "label": "Id",
+          "type": "NUMBER",
+          "required": true,
+          "readOnly": true,
+          "hidden": false
+        },
+        {
+          "name": "alive",
+          "label": "Alive",
+          "type": "BOOLEAN",
+          "required": false,
+          "readOnly": false,
+          "hidden": false
+        },
+        {
+          "name": "email",
+          "label": "Email",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false,
+          "hidden": false
+        },
+        {
+          "name": "liveness",
+          "label": "Liveness",
+          "type": "SELECT",
+          "required": false,
+          "readOnly": false,
+          "hidden": false,
+          "choices": [
+            "DEAD",
+            "ALIVE"
+          ]
+        },
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "STRING",
+          "required": false,
+          "readOnly": false,
+          "hidden": false
+        },
+        {
+          "name": "jobs",
+          "label": "Jobs",
+          "type": "LIST",
+          "required": false,
+          "readOnly": false,
+          "reference": "job",
+          "target": "person",
+          "display": {
+            "name": "title",
+            "type": "Chip",
+            "optionText": "title"
+          },
+          "hidden": false,
+          "fields": [
+            {
+              "name": "id",
+              "label": "Id",
+              "type": "NUMBER",
+              "required": true,
+              "readOnly": true,
+              "hidden": false
+            },
+            {
+              "name": "company",
+              "label": "Company",
+              "type": "STRING",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            },
+            {
+              "name": "person",
+              "label": "Person",
+              "type": "REFERENCE",
+              "required": true,
+              "readOnly": false,
+              "reference": "person",
+              "display": {
+                "name": "name",
+                "type": "Select",
+                "optionText": "name"
+              },
+              "hidden": true
+            },
+            {
+              "name": "timestamp",
+              "label": "Timestamp",
+              "type": "DATE",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            },
+            {
+              "name": "title",
+              "label": "Title",
+              "type": "STRING",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            }
+          ]
+        }
+      ],
+      "editable": true
+    }
+  ]
+}

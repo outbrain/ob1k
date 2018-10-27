@@ -16,7 +16,8 @@ data class EntityField(@JsonIgnore var dbName: String,
                        var hidden: Boolean = false,
                        var options: EntityFieldOptions? = null,
                        var choices: List<String>? = null,
-                       var rangeStyles: MutableList<RangeStyle>? = null) {
+                       var rangeStyles: MutableList<RangeStyle>? = null,
+                       var fields: MutableList<EntityField>? = null) {
     var className: String? = null
 
     fun withRangeStyle(values: List<String>, style: Map<String, String>) =
@@ -52,7 +53,7 @@ data class EntityField(@JsonIgnore var dbName: String,
     internal fun toMysqlMatchValue(value: String): String {
         return when (type) {
             EFieldType.BOOLEAN -> if (value == "true") "=1" else "=0"
-            EFieldType.STRING, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING -> " LIKE \"%$value%\""
+            EFieldType.STRING, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING, EFieldType.IMAGE -> " LIKE \"%$value%\""
             EFieldType.NUMBER, EFieldType.REFERENCE -> {
                 val cleaned = value.removePrefix("[").removeSuffix("]").replace("\"", "")
                 val split = cleaned.split(",")
@@ -67,7 +68,7 @@ data class EntityField(@JsonIgnore var dbName: String,
     internal fun toMysqlValue(value: String): String {
         return when (type) {
             EFieldType.BOOLEAN -> if (value == "true") "1" else "0"
-            EFieldType.STRING, EFieldType.DATE, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING -> "\"$value\""
+            EFieldType.STRING, EFieldType.DATE, EFieldType.URL, EFieldType.TEXT, EFieldType.SELECT_BY_STRING, EFieldType.IMAGE -> "\"$value\""
             EFieldType.SELECT_BY_IDX -> "${choices!!.indexOf(value)}"
             else -> value
         }

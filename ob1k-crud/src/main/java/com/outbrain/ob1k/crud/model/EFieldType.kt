@@ -14,5 +14,6 @@ enum class EFieldType {
     REFERENCEMANY,
     SELECT_BY_IDX,
     SELECT_BY_STRING,
-    LIST
+    LIST,
+    IMAGE
 }

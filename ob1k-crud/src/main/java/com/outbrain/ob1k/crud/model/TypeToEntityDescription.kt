@@ -6,6 +6,8 @@ fun Class<*>.toDescription(id: Int): EntityDescription {
     val entityFields = EntityFields()
     declaredMethods
             .filter { it.isGetter() }
+            .filter { it.returnType != List::class.java }
+            .filter { it.returnType != Set::class.java }
             .forEach {
                 val retType = it.returnType
                 val type = when (retType) {

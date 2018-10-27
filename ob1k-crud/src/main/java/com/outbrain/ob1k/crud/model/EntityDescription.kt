@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.crud.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.outbrain.ob1k.crud.dao.MySQLRefMeta
 
 data class EntityDescription(@JsonIgnore val table: String,
                              val id: Int,
@@ -52,8 +53,8 @@ data class EntityDescription(@JsonIgnore val table: String,
         val displayField = target("name") ?: target("title") ?: idField()
 
         reverseField.dbName = "_"
-        reverseField.name = "${target.resourceName}s"
-        reverseField.label = "${target.title}s"
+        reverseField.name = target.resourceName.plural()
+        reverseField.label = target.title.plural()
         reverseField.type = EFieldType.REFERENCEMANY
         reverseField.required = false
         reverseField.readOnly = false
@@ -75,7 +76,44 @@ data class EntityDescription(@JsonIgnore val table: String,
         return this
     }
 
+
+    fun fromReferenceManyToList(resourceName: String) {
+        val target = references.find { it.resourceName == resourceName }!!
+        val field = fields.asSequence().filter { it.type == EFieldType.REFERENCEMANY }.find { it.reference == resourceName }!!
+        field.type = EFieldType.LIST
+        field.fields = target.fields.asSequence().map {
+            if (it.reference == this.resourceName) {
+                it.hidden = true
+            }
+            it
+        }.toMutableList()
+    }
+
+    fun withList(name: String, type: Class<*>): EntityDescription {
+        val entityField = EntityFields().with(name, EFieldType.LIST).get()[0]
+        entityField.fields = type.toDescription(0).fields.toMutableList()
+        fields += entityField
+        return this
+    }
+
     fun reindex(name: String, idx: Int) = reindex({ it.name == name }, idx)
 
     fun idFirst() = reindex("id", 0)
+
+    private fun String.plural() = if (endsWith("s")) "${this}es" else "${this}s"
+
+
+    fun deepReferences(): List<MySQLRefMeta> {
+        return references
+                .asSequence()
+                .map { ref -> ref to fields.find { it.type == EFieldType.LIST && it.reference == ref.resourceName } }
+                .filter { (_, field) -> field != null }
+                .toList()
+                .flatMap { (ref, field) ->
+                    val refField = ref.fields.find { it.type == EFieldType.REFERENCE && it.reference == resourceName }!!
+                    val mySQLRef = MySQLRefMeta(this, field!!, ref, refField)
+                    ref.deepReferences() + mySQLRef
+                }
+
+    }
 }

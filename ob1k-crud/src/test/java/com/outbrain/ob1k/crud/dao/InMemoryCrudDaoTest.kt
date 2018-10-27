@@ -1,10 +1,7 @@
 package com.outbrain.ob1k.crud.dao
 
 import com.outbrain.ob1k.crud.CrudApplication
-import com.outbrain.ob1k.crud.example.Job
-import com.outbrain.ob1k.crud.example.JobDao
-import com.outbrain.ob1k.crud.example.Person
-import com.outbrain.ob1k.crud.example.PersonDao
+import com.outbrain.ob1k.crud.example.*
 import java.util.concurrent.Executors
 
 class InMemoryCrudDaoTest : CrudDaoTestBase() {
@@ -16,6 +13,7 @@ class InMemoryCrudDaoTest : CrudDaoTestBase() {
         return CrudApplication()
                 .withEntity(Person::class.java)
                 .withEntity(Job::class.java)
+                .addReferenceCascaded("person","addresses", Address::class.java)
                 .addReference("job", "person")
                 .withCustomDao(jobDao, "yyyy-MM-dd", executor)
                 .withCustomDao(personDao, "yyyy-MM-dd", executor)

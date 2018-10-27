@@ -1,15 +1,13 @@
 package com.outbrain.ob1k.crud.dao
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.outbrain.ob1k.crud.CrudApplication
 import org.junit.After
 import org.junit.Test
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 abstract class CrudDaoTestBase {
     private val application = crudApplication()
@@ -23,8 +21,8 @@ abstract class CrudDaoTestBase {
 
     @After
     fun tearDown() {
-        jobDao.list(filter = JsonObject().with("title", title)).andThen({ it.value.data.forEach { jobDao.delete(it.id()).get() } }).get()
-        personDao.list(filter = JsonObject().with("email", email)).andThen({ it.value.data.forEach { personDao.delete(it.id()).get() } }).get()
+        jobDao.list(filter = JsonObject().with("title", title)).andThen { it.value.data.forEach { jobDao.delete(it.id()).get() } }.get()
+        personDao.list(filter = JsonObject().with("email", email)).andThen { it.value.data.forEach { personDao.delete(it.id()).get() } }.get()
     }
 
     @org.junit.Test
@@ -60,6 +58,51 @@ abstract class CrudDaoTestBase {
     @org.junit.Test
     internal fun `delete person`() {
         val created = personDao.create(person("delete")).get()
+        val id = created.id()
+        personDao.delete(id).get()
+        assertNull(personDao.read(id).get())
+    }
+
+    @org.junit.Test
+    internal fun `create person with addresses`() {
+        val json = person("create").withAddresses(address("LasVegas", "TheStrip", 15))
+        val createdPerson = personDao.create(json).get()
+        assert(createdPerson.id().toInt() > 0)
+        assertNotNull(createdPerson.addressAt(0))
+        assertEqualsJson(json, createdPerson)
+    }
+
+    @org.junit.Test
+    internal fun `update person with addresses`() {
+        val created = personDao.create(person("update").withAddresses(address("DC", "Arlington", 120),
+                address("DC", "Pennsylvania Ave", 1600))).get()
+
+        assertEquals("Arlington", created.addressAt(0).get("street").asString)
+        assertEquals("Pennsylvania Ave", created.addressAt(1).get("street").asString)
+
+        val existingAddress = created.addressAt(0).with("number", 10)
+        val newAddress = address("NY", "47th", 47)
+        created.withAddresses(existingAddress, newAddress)
+
+        val updated = personDao.update(created.id(), created).get()
+
+        assertEquals("Arlington", updated.addressAt(0).get("street").asString)
+        assertEquals(10, updated.addressAt(0).get("number").asInt)
+        assertEquals("47th", updated.addressAt(1).get("street").asString)
+
+    }
+
+    @org.junit.Test
+    internal fun `read person with addresses`() {
+        val created = personDao.create(person("read").withAddresses(address("NY", "5th Avenue", 17))).get()
+        val read = personDao.read(created.get("id").asString).get()
+        assertNotNull(read!!.addressAt(0))
+        assertEqualsJson(created, read)
+    }
+
+    @org.junit.Test
+    internal fun `delete person with addresses`() {
+        val created = personDao.create(person("delete").withAddresses(address("LA", "Hollywood Blvd", 25))).get()
         val id = created.id()
         personDao.delete(id).get()
         assertNull(personDao.read(id).get())
@@ -146,6 +189,19 @@ abstract class CrudDaoTestBase {
             .with("person", personId)
 
 
+    private fun address(city: String, street: String, number: Int) = JsonObject()
+            .with("city", city)
+            .with("street", street)
+            .with("number", number)
+
+
+    private fun JsonObject.withAddresses(vararg addresses: JsonObject): JsonObject {
+        val jsonArray = JsonArray()
+        addresses.forEach { jsonArray.add(it) }
+        return with("addresses", jsonArray)
+    }
+
+
     private fun JsonObject.with(name: String, value: Int): JsonObject {
         addProperty(name, value)
         return this
@@ -161,7 +217,13 @@ abstract class CrudDaoTestBase {
         return this
     }
 
+    private fun JsonObject.with(name: String, value: JsonArray): JsonObject {
+        add(name, value)
+        return this
+    }
+
     private fun JsonObject.id() = value("id")
     private fun JsonObject.int(name: String) = value(name)
     private fun JsonObject.value(name: String) = get(name).asString
+    private fun JsonObject.addressAt(i: Int) = getAsJsonArray("addresses").get(i).asJsonObject
 }

@@ -3,13 +3,7 @@ package com.outbrain.ob1k.crud
 import com.google.gson.JsonObject
 import com.outbrain.ob1k.concurrent.ComposableFuture
 import com.outbrain.ob1k.concurrent.ComposableFutures
-import com.outbrain.ob1k.crud.dao.AsyncDaoBridge
-import com.outbrain.ob1k.crud.dao.CrudAsyncDaoDelegate
-import com.outbrain.ob1k.crud.dao.EntityFieldMapper
-import com.outbrain.ob1k.crud.dao.ICrudAsyncDao
-import com.outbrain.ob1k.crud.dao.ICrudDao
-import com.outbrain.ob1k.crud.dao.MySQLCrudDao
-import com.outbrain.ob1k.crud.dao.RefFieldMapper
+import com.outbrain.ob1k.crud.dao.*
 import com.outbrain.ob1k.crud.model.EntityDescription
 import com.outbrain.ob1k.crud.model.EntityField
 import com.outbrain.ob1k.crud.model.Model
@@ -59,6 +53,17 @@ class CrudApplication(private val dao: IBasicDao? = null,
     }
 
     fun addReference(from: String, to: String) = addReference(from, to, to)
+
+    fun referenceManyAsList(from: String, to: String): CrudApplication {
+        get(from).fromReferenceManyToList(to)
+        model = Model(model.total - 1, model.data.filter { it.resourceName != to })
+        return this
+    }
+
+    fun addReferenceCascaded(from: String, fieldName: String, type: Class<*>): CrudApplication {
+        get(from).withList(fieldName, type)
+        return this
+    }
 
     fun addOneToOneReference(from: String, to: String) = addOneToOneReference(from, to, to)
 
