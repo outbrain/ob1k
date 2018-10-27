@@ -83,20 +83,6 @@
               "hidden": false
             },
             {
-              "name": "person",
-              "label": "Person",
-              "type": "REFERENCE",
-              "required": true,
-              "readOnly": false,
-              "reference": "person",
-              "display": {
-                "name": "name",
-                "type": "Select",
-                "optionText": "name"
-              },
-              "hidden": true
-            },
-            {
               "name": "timestamp",
               "label": "Timestamp",
               "type": "DATE",

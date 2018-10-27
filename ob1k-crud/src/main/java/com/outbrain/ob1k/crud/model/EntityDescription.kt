@@ -81,7 +81,7 @@ data class EntityDescription(@JsonIgnore val table: String,
         val target = references.find { it.resourceName == resourceName }!!
         val field = fields.asSequence().filter { it.type == EFieldType.REFERENCEMANY }.find { it.reference == resourceName }!!
         field.type = EFieldType.LIST
-        field.fields = target.fields.filter { it.type == EFieldType.REFERENCE && it.reference == this.resourceName }.toMutableList()
+        field.fields = target.fields.filter { !(it.type == EFieldType.REFERENCE && it.reference == this.resourceName) }.toMutableList()
     }
 
     fun withList(name: String, type: Class<*>): EntityDescription {
