@@ -12,8 +12,7 @@ data class EntityDescription(@JsonIgnore val table: String,
                              var editable: Boolean = true,
                              var icon: String? = null,
                              var perPageList: Int? = null,
-                             var perPageEdit: Int? = null,
-                             @JsonIgnore var internalFields: List<EntityField> = emptyList()) {
+                             var perPageEdit: Int? = null) {
     @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
@@ -82,16 +81,7 @@ data class EntityDescription(@JsonIgnore val table: String,
         val target = references.find { it.resourceName == resourceName }!!
         val field = fields.asSequence().filter { it.type == EFieldType.REFERENCEMANY }.find { it.reference == resourceName }!!
         field.type = EFieldType.LIST
-        field.fields = target.fields.asSequence().map {
-            if (it.reference == this.resourceName) {
-                it.hidden = true
-            }
-            it
-        }.toMutableList()
-
-        val reverseField = target.fields.find { it.type == EFieldType.REFERENCE && it.reference == this.resourceName }!!
-        target.fields -= reverseField
-        target.internalFields += reverseField
+        field.fields = target.fields.filter { it.type == EFieldType.REFERENCE && it.reference == this.resourceName }.toMutableList()
     }
 
     fun withList(name: String, type: Class<*>): EntityDescription {
@@ -114,7 +104,7 @@ data class EntityDescription(@JsonIgnore val table: String,
                 .filter { (_, field) -> field != null }
                 .toList()
                 .flatMap { (ref, field) ->
-                    val refField = ref.internalFields.find { it.type == EFieldType.REFERENCE && it.reference == resourceName }!!
+                    val refField = ref.fields.find { it.type == EFieldType.REFERENCE && it.reference == resourceName }!!
                     val mySQLRef = MySQLRefMeta(this, field!!, ref, refField)
                     ref.deepReferences() + mySQLRef
                 }

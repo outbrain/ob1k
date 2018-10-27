@@ -34,7 +34,7 @@ class JsonObjectMapper(private val description: EntityDescription) : ResultSetMa
         }
         val key = "${resourceName}_$id"
         val jsonObject = map.getOrPut(key) { JsonObject() }
-        (fields + internalFields).asSequence()
+        fields.asSequence()
                 .filter { it.type != EFieldType.REFERENCEMANY }
                 .filter { it.type != EFieldType.LIST }
                 .forEach { it.fillJsonObject(jsonObject, it.name, row.getRaw(it.dbName)?.toString()) }

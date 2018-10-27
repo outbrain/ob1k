@@ -131,7 +131,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IB
     private fun EntityDescription.read(id: String) = "select * from $table ${leftJoin()} ${whereEq(id)}"
 
     private fun EntityDescription.update(id: Any, jsonObject: JsonObject): String {
-        val keyval = (fields + internalFields).asSequence()
+        val keyval = fields.asSequence()
                 .filter { !it.readOnly }
                 .filter { it.type != EFieldType.REFERENCEMANY }
                 .filter { it.type != EFieldType.LIST }
@@ -144,7 +144,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IB
     }
 
     private fun EntityDescription.insert(jsonObject: JsonObject): String {
-        val jsonValues = (fields + internalFields)
+        val jsonValues = fields
                 .asSequence()
                 .filter { !it.autoGenerate }
                 .filter { it.type != EFieldType.REFERENCEMANY }
