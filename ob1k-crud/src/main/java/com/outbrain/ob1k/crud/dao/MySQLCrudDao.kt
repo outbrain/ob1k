@@ -17,7 +17,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IB
                       filter: JsonObject?): ComposableFuture<Entities<JsonObject>> {
         val filter = filter ?: JsonObject()
         if (filter.filterAll()) return ComposableFutures.fromValue(Entities())
-        val query = "select * from (select * from ${desc.table} ${filter.where()} ${sort.orderBy()} ${pagination.limit()}) as ${desc.table} ${desc.leftJoin()}"
+        val query = "select * from (select * from ${desc.table} ${filter.where()} ${pagination.limit()}) as ${desc.table} ${desc.leftJoin()} ${sort.orderBy()}"
         val count = "select count(*) from ${desc.table} ${filter.where()}"
         val countFuture = basicDao.get(count).map { it.values.first().toString().toInt() }
         val listFuture = basicDao.query(query)
@@ -131,7 +131,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IB
     private fun EntityDescription.read(id: String) = "select * from $table ${leftJoin()} ${whereEq(id)}"
 
     private fun EntityDescription.update(id: Any, jsonObject: JsonObject): String {
-        val keyval = fields.asSequence()
+        val keyval = (fields + internalFields).asSequence()
                 .filter { !it.readOnly }
                 .filter { it.type != EFieldType.REFERENCEMANY }
                 .filter { it.type != EFieldType.LIST }
@@ -144,7 +144,7 @@ class MySQLCrudDao(private val desc: EntityDescription, private val basicDao: IB
     }
 
     private fun EntityDescription.insert(jsonObject: JsonObject): String {
-        val jsonValues = fields
+        val jsonValues = (fields + internalFields)
                 .asSequence()
                 .filter { !it.autoGenerate }
                 .filter { it.type != EFieldType.REFERENCEMANY }

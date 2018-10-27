@@ -12,7 +12,8 @@ data class EntityDescription(@JsonIgnore val table: String,
                              var editable: Boolean = true,
                              var icon: String? = null,
                              var perPageList: Int? = null,
-                             var perPageEdit: Int? = null) {
+                             var perPageEdit: Int? = null,
+                             @JsonIgnore var internalFields: List<EntityField> = emptyList()) {
     @JsonIgnore
     val references = mutableListOf<EntityDescription>()
 
@@ -87,6 +88,10 @@ data class EntityDescription(@JsonIgnore val table: String,
             }
             it
         }.toMutableList()
+
+        val reverseField = target.fields.find { it.type == EFieldType.REFERENCE && it.reference == this.resourceName }!!
+        target.fields -= reverseField
+        target.internalFields += reverseField
     }
 
     fun withList(name: String, type: Class<*>): EntityDescription {
@@ -102,7 +107,6 @@ data class EntityDescription(@JsonIgnore val table: String,
 
     private fun String.plural() = if (endsWith("s")) "${this}es" else "${this}s"
 
-
     fun deepReferences(): List<MySQLRefMeta> {
         return references
                 .asSequence()
@@ -110,7 +114,7 @@ data class EntityDescription(@JsonIgnore val table: String,
                 .filter { (_, field) -> field != null }
                 .toList()
                 .flatMap { (ref, field) ->
-                    val refField = ref.fields.find { it.type == EFieldType.REFERENCE && it.reference == resourceName }!!
+                    val refField = ref.internalFields.find { it.type == EFieldType.REFERENCE && it.reference == resourceName }!!
                     val mySQLRef = MySQLRefMeta(this, field!!, ref, refField)
                     ref.deepReferences() + mySQLRef
                 }
