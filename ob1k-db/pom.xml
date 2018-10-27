@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.277-SNAPSHOT</version>
+    <version>0.279-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-db</artifactId>
@@ -32,7 +32,7 @@
     <dependency>
       <groupId>com.github.jasync-sql</groupId>
       <artifactId>jasync-mysql</artifactId>
-      <version>0.8.40-netty4.0</version>
+      <version>0.8.41-netty4.0</version>
     </dependency>
 
     <dependency>

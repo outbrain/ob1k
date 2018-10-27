@@ -6,8 +6,12 @@ import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory;
 import com.github.mauricio.async.db.pool.AsyncObjectPool;
 import com.github.mauricio.async.db.pool.ConnectionPool;
 import com.github.mauricio.async.db.pool.PoolConfiguration;
-import com.outbrain.ob1k.concurrent.*;
+import com.outbrain.ob1k.concurrent.ComposableFuture;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.Try;
+import com.outbrain.swinfra.metrics.api.Counter;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
+import com.outbrain.swinfra.metrics.api.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConversions;
@@ -17,7 +21,6 @@ import java.util.List;
 
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
 import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-
 /**
  * User: aronen
  * Date: 9/22/13
@@ -27,30 +30,60 @@ class MySqlConnectionPool implements DbConnectionPool {
   private static final Logger logger = LoggerFactory.getLogger(MySqlConnectionPool.class);
 
   private final ConnectionPool<MySQLConnection> _pool;
+  private final MetricFactory metricFactory;
+  private final Counter sendQueryCounter;
+  private final Timer sendQueryTimer;
+  private final Counter preparedStatementCounter;
+  private final Timer preparedStatementTimer;
 
   MySqlConnectionPool(final MySQLConnectionFactory connFactory, final PoolConfiguration poolConfiguration, final MetricFactory metricFactory) {
     _pool = new ConnectionPool<>(connFactory, poolConfiguration, ScalaFutureHelper.ctx);
-    initializeMetrics(metricFactory, _pool);
-  }
-
-
-  private static void initializeMetrics(final MetricFactory metricFactory, final ConnectionPool<MySQLConnection> pool) {
+    this.metricFactory = metricFactory;
     if (metricFactory != null) {
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "available", () -> pool.availables().size());
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "waiting", () -> pool.queued().size());
-      metricFactory.registerGauge("MysqlAsyncConnectionPool", "inUse", () -> pool.inUse().size());
+      metricFactory.registerGauge("old_MysqlAsyncConnectionPool", "available", () -> _pool.availables().size());
+      metricFactory.registerGauge("old_MysqlAsyncConnectionPool", "waiting", () -> _pool.queued().size());
+      metricFactory.registerGauge("old_MysqlAsyncConnectionPool", "inUse", () -> _pool.inUse().size());
+      sendQueryCounter = metricFactory.createCounter("old_MysqlAsyncConnectionPool", "sendQueryCounter");
+      sendQueryTimer = metricFactory.createTimer("old_MysqlAsyncConnectionPool", "sendQueryTimer");
+      preparedStatementCounter = metricFactory.createCounter("old_MysqlAsyncConnectionPool", "preparedStatementCounter");
+      preparedStatementTimer = metricFactory.createTimer("old_MysqlAsyncConnectionPool", "preparedStatementTimer");
+    } else {
+      sendQueryCounter = null;
+      sendQueryTimer = null;
+      preparedStatementCounter = null;
+      preparedStatementTimer = null;
     }
   }
 
+  private <T> ComposableFuture<T> withMetricsSendQuery(ComposableFuture<T> future) {
+    if (metricFactory != null) {
+      sendQueryCounter.inc();
+      final Timer.Context timer = sendQueryTimer.time();
+      future.andThen(tried -> {
+        timer.stop();
+      });
+    }
+    return future;
+  }
+  private <T> ComposableFuture<T> withMetricsPreparedStatement(ComposableFuture<T> future) {
+    if (metricFactory != null) {
+      preparedStatementCounter.inc();
+      final Timer.Context timer = preparedStatementTimer.time();
+      future.andThen(tried -> {
+        timer.stop();
+      });
+    }
+    return future;
+  }
   @Override
   public ComposableFuture<QueryResult> sendQuery(final String query) {
-    return ScalaFutureHelper.from(() -> _pool.sendQuery(query));
+    return withMetricsSendQuery(ScalaFutureHelper.from(() -> _pool.sendQuery(query)));
   }
 
   @Override
   public ComposableFuture<QueryResult> sendPreparedStatement(final String query, final List<Object> values) {
     final Buffer<Object> scalaValues = JavaConversions.asScalaBuffer(values);
-    return ScalaFutureHelper.from(() -> _pool.sendPreparedStatement(query, scalaValues));
+    return withMetricsPreparedStatement(ScalaFutureHelper.from(() -> _pool.sendPreparedStatement(query, scalaValues)));
   }
 
   private ComposableFuture<MySqlAsyncConnection> take() {
