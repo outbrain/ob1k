@@ -3,7 +3,6 @@ package com.outbrain.ob1k.crud.model
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.outbrain.ob1k.crud.CrudApplication
-import com.outbrain.ob1k.crud.example.Address
 import com.outbrain.ob1k.crud.example.Job
 import com.outbrain.ob1k.crud.example.Person
 import org.junit.Test
@@ -40,20 +39,6 @@ class ModelTest {
 
         val modelJson = ObjectMapper().dontWriteNulls().writeValueAsString(model)
         val modelJsonFromFile = "model2.json".resource()
-
-        JSONAssert.assertEquals("actual: $modelJson", modelJsonFromFile, modelJson, true)
-    }
-
-    @Test
-    internal fun `adding list consistent format`() {
-        val model = CrudApplication()
-                .withEntity(Person::class.java)
-                .withEntity(Job::class.java)
-                .addReferenceCascaded("person", "addresses", Address::class.java)
-                .addReference("job", "person").model
-
-        val modelJson = ObjectMapper().dontWriteNulls().writeValueAsString(model)
-        val modelJsonFromFile = "model3.json".resource()
 
         JSONAssert.assertEquals("actual: $modelJson", modelJsonFromFile, modelJson, true)
     }

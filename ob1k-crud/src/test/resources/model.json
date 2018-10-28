@@ -38,6 +38,40 @@
           ]
         },
         {
+          "name": "addresses",
+          "label": "Addresses",
+          "type": "LIST",
+          "required": false,
+          "readOnly": false,
+          "hidden": false,
+          "fields": [
+            {
+              "name": "city",
+              "label": "City",
+              "type": "STRING",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            },
+            {
+              "name": "number",
+              "label": "Number",
+              "type": "NUMBER",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            },
+            {
+              "name": "street",
+              "label": "Street",
+              "type": "STRING",
+              "required": false,
+              "readOnly": false,
+              "hidden": false
+            }
+          ]
+        },
+        {
           "name": "alive",
           "label": "Alive",
           "type": "BOOLEAN",
@@ -66,13 +100,13 @@
           ]
         },
         {
+          "className": "xyz",
           "name": "name",
           "label": "Name",
           "type": "STRING",
           "required": false,
           "readOnly": false,
           "hidden": false,
-          "className" : "xyz",
           "rangeStyles": [
             {
               "style": {

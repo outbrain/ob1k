@@ -1,5 +1,7 @@
 package com.outbrain.ob1k.crud.example;
 
+import com.outbrain.ob1k.crud.model.CollectionOf;
+
 import java.util.List;
 
 public class Person {
@@ -8,6 +10,7 @@ public class Person {
   private Boolean alive;
   private String email;
   private ELiveness liveness;
+  @CollectionOf(Address.class)
   private List<Address> addresses;
 
   public Integer getId() {

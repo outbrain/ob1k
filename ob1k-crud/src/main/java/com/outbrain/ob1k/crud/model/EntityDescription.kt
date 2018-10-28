@@ -81,14 +81,9 @@ data class EntityDescription(@JsonIgnore val table: String,
         val target = references.find { it.resourceName == resourceName }!!
         val field = fields.asSequence().filter { it.type == EFieldType.REFERENCEMANY }.find { it.reference == resourceName }!!
         field.type = EFieldType.LIST
-        field.fields = target.fields.filter { !(it.type == EFieldType.REFERENCE && it.reference == this.resourceName) }.toMutableList()
-    }
-
-    fun withList(name: String, type: Class<*>): EntityDescription {
-        val entityField = EntityFields().with(name, EFieldType.LIST).get()[0]
-        entityField.fields = type.toDescription(0).fields.toMutableList()
-        fields += entityField
-        return this
+        field.fields = target.fields.asSequence()
+                .filter { !(it.type == EFieldType.REFERENCE && it.reference == this.resourceName) }
+                .toMutableList()
     }
 
     fun reindex(name: String, idx: Int) = reindex({ it.name == name }, idx)
