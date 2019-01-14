@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.outbrain.swinfra</groupId>
     <artifactId>ob1k</artifactId>
-    <version>0.289</version>
+    <version>0.290-SNAPSHOT</version>
   </parent>
 
   <artifactId>ob1k-cache</artifactId>
