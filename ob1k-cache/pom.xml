@@ -56,6 +56,11 @@
     </dependency>
 
     <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
     </dependency>
@@ -82,5 +87,11 @@
       <groupId>net.jpountz.lz4</groupId>
       <artifactId>lz4</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib-jdk8</artifactId>
+    </dependency>
+
   </dependencies>
 </project>

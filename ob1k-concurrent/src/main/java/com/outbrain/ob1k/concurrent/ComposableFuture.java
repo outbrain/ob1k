@@ -1,24 +1,15 @@
 package com.outbrain.ob1k.concurrent;
 
-import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.google.common.base.Throwables;
+import com.outbrain.ob1k.concurrent.handlers.*;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.schedule;
+import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
 
 /**
  * <p>A base interface for all future implementation in the system.</p>
@@ -196,6 +187,19 @@ public interface ComposableFuture<T> {
     });
   }
 
+  default CompletableFuture<T> toCompletableFuture() {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+    consume(aTry -> {
+      if (aTry.isSuccess()) {
+        future.complete(aTry.getValue());
+      } else {
+        future.completeExceptionally(aTry.getError());
+      }
+    });
+
+    return future;
+  }
+
   /**
    * Consumes the value(or error) of the future into a consumer.
    * if the future is lazy the value will be reproduced on each consumption.
@@ -274,6 +278,28 @@ public interface ComposableFuture<T> {
 
     throw new TimeoutException("Timeout occurred while waiting for a value");
   }
+
+  /**
+   * Blocks until a value is available for consumption and then return it.
+   * checked exceptions are wrapped in an UncheckedExecutionException and thrown.
+   * <p>
+   * DO NOT use in non-blocking environment.
+   *
+   * @return the future value if successful
+   * @throws UncheckedExecutionException if the thread has been interrupted or the future threw a checked exception
+   */
+  default T getUnchecked() {
+    try {
+      return get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new UncheckedExecutionException(e);
+    } catch (ExecutionException e) {
+      Throwables.propagateIfPossible(e.getCause());
+      throw new UncheckedExecutionException(e.getCause());
+    }
+  }
+
 
   /**
    * Turns the current future into an eager one.

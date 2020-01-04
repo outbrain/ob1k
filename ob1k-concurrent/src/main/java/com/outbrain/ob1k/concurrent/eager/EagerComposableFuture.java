@@ -1,29 +1,12 @@
 package com.outbrain.ob1k.concurrent.eager;
 
-import com.outbrain.ob1k.concurrent.CancellationToken;
-import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.ComposableFutures;
-import com.outbrain.ob1k.concurrent.Consumer;
-import com.outbrain.ob1k.concurrent.Producer;
-import com.outbrain.ob1k.concurrent.Scheduler;
-import com.outbrain.ob1k.concurrent.Try;
-import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
-import com.outbrain.ob1k.concurrent.handlers.ErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureAction;
-import com.outbrain.ob1k.concurrent.handlers.FutureErrorHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureResultHandler;
-import com.outbrain.ob1k.concurrent.handlers.FutureSuccessHandler;
-import com.outbrain.ob1k.concurrent.handlers.ResultHandler;
-import com.outbrain.ob1k.concurrent.handlers.SuccessHandler;
+import com.outbrain.ob1k.concurrent.*;
+import com.outbrain.ob1k.concurrent.handlers.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -316,6 +299,20 @@ public final class EagerComposableFuture<T> implements ComposableFuture<T>, Comp
 
     return future;
   }
+
+  public static <T> ComposableFuture<T> fromCompletableFuture(final CompletableFuture<T> source) {
+    final EagerComposableFuture<T> future = new EagerComposableFuture<>();
+    source.whenComplete((value, throwable) -> {
+      if (throwable == null) {
+        future.set(value);
+      } else {
+        future.setException(throwable);
+      }
+    });
+
+    return future;
+  }
+
 
   @Override
   public void consume(final Consumer<? super T> consumer) {

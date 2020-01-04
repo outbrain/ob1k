@@ -1,247 +1,146 @@
 package com.outbrain.ob1k.cache;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ExecutionError;
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.collect.Maps;
 import com.outbrain.ob1k.concurrent.ComposableFuture;
-import com.outbrain.ob1k.concurrent.UncheckedExecutionException;
+import com.outbrain.ob1k.concurrent.ComposableFutures;
+import com.outbrain.ob1k.concurrent.eager.EagerComposableFuture;
 import com.outbrain.swinfra.metrics.api.MetricFactory;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
+import java.util.concurrent.*;
 
-import static com.outbrain.ob1k.concurrent.ComposableFutures.all;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromError;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromNull;
-import static com.outbrain.ob1k.concurrent.ComposableFutures.fromValue;
-
+import static com.outbrain.ob1k.concurrent.ComposableFutures.*;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 /**
  * User: aronen
  * Date: 6/30/13
  * Time: 6:08 PM
  */
-public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
-  private final LoadingCache<K, ComposableFuture<V>> loadingCache;
-  private final Cache<K, ComposableFuture<V>> localCache;
-  private final CacheLoader<K, V> loader;
-  private final String cacheName;
-  private final boolean failOnMissingEntries;
+public class LocalAsyncCache<K, V> implements TypedCache<K, V> {
 
-  public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader,
-                         final MetricFactory metricFactory, final String cacheName) {
-    this(maximumSize, ttl, unit, loader, metricFactory, cacheName, false);
+  private final AsyncLoadingCache<K, V> loadingCache;
+  private final AsyncCache<K, V> localCache;
+  private final String cacheName;
+
+  public LocalAsyncCache(final com.outbrain.ob1k.cache.CacheConfiguration<K, V> cacheConfig) {
+    final Caffeine<Object, Object> builder = Caffeine.newBuilder()
+            .maximumSize(cacheConfig.getMaxSize())
+            .expireAfterWrite(cacheConfig.getTtl(), cacheConfig.getTtlTimeUnit())
+            .recordStats();
+
+    cacheName = cacheConfig.getCacheName();
+    if (cacheConfig.getLoader() != null) {
+      this.localCache = null;
+      this.loadingCache = builder.buildAsync(new InternalCacheLoader<>(cacheConfig.getLoader(), cacheName, cacheConfig.getFailOnMissingEntries()));
+    } else {
+      this.loadingCache = null;
+      this.localCache = builder.buildAsync();
+    }
+
+    CaffeineCacheGaugesFactory.createGauges(cacheConfig.getMetricFactory(), cache().synchronous(), cacheName);
   }
 
+  /**
+   * @deprecated Replaced by {@link #LocalAsyncCache(com.outbrain.ob1k.cache.CacheConfiguration)}
+   */
+  @Deprecated
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader,
                          final MetricFactory metricFactory, final String cacheName, final boolean failOnMissingEntries) {
-    this.loader = loader;
-    this.cacheName = cacheName;
-    this.failOnMissingEntries = failOnMissingEntries;
-
-    final boolean collectStats = metricFactory != null;
-    final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-        .maximumSize(maximumSize)
-        .expireAfterWrite(ttl, unit);
-
-    if (collectStats)
-      builder.recordStats();
-
-    this.loadingCache = builder
-        .build(new com.google.common.cache.CacheLoader<K, ComposableFuture<V>>() {
-          public ComposableFuture<V> load(final K key) throws Exception {
-            return loadElement(key);
-          }
-
-          @Override
-          public Map<K, ComposableFuture<V>> loadAll(final Iterable<? extends K> keys) throws Exception {
-            return loadElements(Lists.newArrayList(keys));
-          }
-        });
-
-    if (collectStats) {
-      GuavaCacheGaugesFactory.createGauges(metricFactory, loadingCache, "LocalAsyncCache-" + cacheName);
-    }
-
-    this.localCache = null;
+    this(new com.outbrain.ob1k.cache.CacheConfiguration<K, V>(cacheName)
+            .withMetricFactory(metricFactory)
+            .withMaxSize(maximumSize)
+            .withTtl(ttl, unit)
+            .withLoader(loader)
+            .failOnMissingEntries(failOnMissingEntries));
   }
 
-  public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final CacheLoader<K, V> loader) {
-    this(maximumSize, ttl, unit, loader, null, null);
-  }
 
+
+  /**
+   * @deprecated Replaced by {link: #LocalAsyncCache(CacheConfiguration)}
+   */
+  @Deprecated
   public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit, final MetricFactory metricFactory, final String cacheName) {
-    this.loader = null;
-    this.loadingCache = null;
-    this.failOnMissingEntries = true; // fake value, not in use.
-    this.cacheName = cacheName;
-
-    final boolean collectStats = metricFactory != null;
-    final CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-        .maximumSize(maximumSize)
-        .expireAfterWrite(ttl, unit);
-
-    if (collectStats) {
-      builder.recordStats();
-    }
-
-    this.localCache = builder.build();
-    if (collectStats) {
-      GuavaCacheGaugesFactory.createGauges(metricFactory, localCache, "LocalAsyncCache-" + cacheName);
-    }
-  }
-
-  public LocalAsyncCache(final int maximumSize, final int ttl, final TimeUnit unit) {
-    this(maximumSize, ttl, unit, null, null);
-  }
-
-  // for testing purposes only!
-  public LocalAsyncCache() {
-    this(1000, 20, TimeUnit.SECONDS);
-  }
-
-  private ComposableFuture<V> loadElement(final K key) {
-    return loader.load(cacheName, key).materialize();
-  }
-
-  private Function<Map<K, V>, ComposableFuture<V>> extractLoaderResultEntry(final K key) {
-    return loaderResults -> {
-    final V res = loaderResults.get(key);
-    if (res != null) {
-      return fromValue(res);
-    } else {
-      if (failOnMissingEntries) {
-        return fromError(new RuntimeException(key + " is missing from" + (cacheName == null ? "" : " " + cacheName) + " loader response."));
-      } else {
-        return fromNull();
-      }
-    }
-  };
-  }
-
-  private Map<K, ComposableFuture<V>> loadElements(final Iterable<? extends K> keys) {
-    final ComposableFuture<Map<K, V>> loaded = loader.load(cacheName, keys).materialize();
-    final Map<K, ComposableFuture<V>> result = new HashMap<>();
-    for (final K key : keys) {
-      result.put(key, loaded.flatMap(extractLoaderResultEntry(key)));
-    }
-    return result;
+    this(new com.outbrain.ob1k.cache.CacheConfiguration<K, V>(cacheName)
+            .withMetricFactory(metricFactory)
+            .withMaxSize(maximumSize)
+            .withTtl(ttl, unit));
   }
 
   @Override
   public ComposableFuture<V> getAsync(final K key) {
-    try {
-      if (loadingCache != null) {
-        final ComposableFuture<V> res = loadingCache.get(key);
-        if (res == null) {
-          return fromNull();
-        }
-        return res.recoverWith(error -> {
-          loadingCache.asMap().remove(key, res);
-          return fromError(error);
-        });
-      } else {
-        final ComposableFuture<V> res = localCache.getIfPresent(key);
-        if (res == null) {
-          return fromNull();
-        }
-        return res;
-      }
-    } catch (final com.google.common.util.concurrent.UncheckedExecutionException e) {
-      return fromError(e.getCause());
-    } catch (final ExecutionException | UncheckedExecutionException | ExecutionError e) {
-      return fromError(e.getCause());
-    }
-  }
 
-  private void unloadErrorsFromCache(final ImmutableMap<K, ComposableFuture<V>> innerMap, final Iterable<? extends K> keys) {
-    for (final K key : keys) {
-      innerMap.get(key).consume(result -> {
-        if (!result.isSuccess() || result.getValue() == null) {
-          loadingCache.asMap().remove(key);
+      try {
+        if (loadingCache != null) {
+          return EagerComposableFuture.
+                  fromCompletableFuture(loadingCache.get(key)).
+                  recoverWith(CompletionException.class, e -> ComposableFutures.fromError(e.getCause()));
+        } else {
+          final CompletableFuture<V> res = localCache.getIfPresent(key);
+          if (res == null) {
+            return fromNull();
+          }
+          return EagerComposableFuture.fromCompletableFuture(res);
         }
-      });
-    }
+      } catch (final Exception e) {
+        return fromError(e);
+      }
   }
 
   @Override
   public ComposableFuture<Map<K, V>> getBulkAsync(final Iterable<? extends K> keys) {
-    try {
-      final ImmutableMap<K, ComposableFuture<V>> innerMap;
-      if (loadingCache != null) {
-        innerMap = loadingCache.getAll(keys);
-        unloadErrorsFromCache(innerMap, keys);
-      } else {
-        innerMap = localCache.getAllPresent(keys);
-      }
+    return getAll(keys);
+  }
 
-      final Map<K, ComposableFuture<V>> result = new HashMap<>();
-      for (final K key : innerMap.keySet()) {
-        final ComposableFuture<V> value = innerMap.get(key);
-        result.put(key, value);
-      }
-
-      return all(true, result);
-    } catch (final com.google.common.util.concurrent.UncheckedExecutionException e) {
-      return fromError(e.getCause());
-    } catch (final ExecutionException | UncheckedExecutionException | ExecutionError e) {
-      return fromError(e.getCause());
-    }
+  private ComposableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
+    return loadingCache == null ?
+            fromValue(localCache.synchronous().getAllPresent(keys)) :
+            EagerComposableFuture.fromCompletableFuture(loadingCache.getAll(keys)).
+                    recoverWith(CompletionException.class, e -> ComposableFutures.fromError(e.getCause()));
   }
 
   @Override
   public ComposableFuture<Boolean> deleteAsync(final K key) {
-    if (loadingCache != null) {
-      loadingCache.invalidate(key);
-    } else {
-      localCache.invalidate(key);
-    }
+    cache().synchronous().invalidate(key);
 
     return fromValue(true);
   }
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final V value) {
-    if (loadingCache != null) {
-      loadingCache.put(key, fromValue(value));
-    } else {
-      localCache.put(key, fromValue(value));
-    }
+    cache().put(key, completedFuture(value));
 
     return fromValue(true);
   }
 
   @Override
   public ComposableFuture<Boolean> setIfAbsentAsync(final K key, final V value) {
-    final Cache<K, ComposableFuture<V>> cache = loadingCache == null ? localCache : loadingCache;
-    return fromValue(cache.asMap().putIfAbsent(key, fromValue(value)) == null);
+    return fromValue(cache().asMap().putIfAbsent(key, completedFuture(value)) == null);
   }
 
   @Override
   public ComposableFuture<Boolean> setAsync(final K key, final EntryMapper<K, V> mapper, final int maxIterations) {
-    final ConcurrentMap<K, ComposableFuture<V>> map = loadingCache != null ? loadingCache.asMap() : localCache.asMap();
+    final ConcurrentMap<K, CompletableFuture<V>> map = cache().asMap();
     try {
       if (maxIterations == 0) {
         return fromValue(false);
       }
 
-      final ComposableFuture<V> currentFuture = map.get(key);
+      final CompletableFuture<V> currentFuture = map.get(key);
       if (currentFuture != null) {
-        return currentFuture.flatMap(currentValue -> {
+        return EagerComposableFuture.fromCompletableFuture(currentFuture).flatMap(currentValue -> {
           try {
             final V newValue = mapper.map(key, currentValue);
             if (newValue == null) {
               return fromValue(false);
             }
 
-            final boolean success = map.replace(key, currentFuture, fromValue(newValue));
+            final boolean success = map.replace(key, currentFuture, completedFuture(newValue));
             if (success) {
               return fromValue(true);
             } else {
@@ -255,7 +154,7 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
       } else {
         final V newValue = mapper.map(key, null);
         if (newValue != null) {
-          final ComposableFuture<V> prev = map.putIfAbsent(key, fromValue(newValue));
+          final CompletableFuture<V> prev = map.putIfAbsent(key, completedFuture(newValue));
           if (prev == null) {
             return fromValue(true);
           } else {
@@ -271,14 +170,47 @@ public class LocalAsyncCache<K,V> implements TypedCache<K,V> {
     }
   }
 
+  private AsyncCache<K, V> cache() {
+    return loadingCache == null ? localCache : loadingCache;
+  }
+
   @Override
   public ComposableFuture<Map<K, Boolean>> setBulkAsync(final Map<? extends K, ? extends V> entries) {
-    final Map<K, ComposableFuture<Boolean>> result = new HashMap<>();
-    for (final K key : entries.keySet()) {
-      result.put(key, setAsync(key, entries.get(key)));
-    }
+    final Map<K, ComposableFuture<Boolean>> result = Maps.newHashMapWithExpectedSize(entries.size());
+    entries.forEach((k, v) -> result.put(k, setAsync(k, v)));
 
     return all(false, result);
   }
 
+  private static class InternalCacheLoader<K, V> implements AsyncCacheLoader<K, V> {
+
+    private final CacheLoader<K, V> loader;
+    private final String cacheName;
+    private final boolean failOnMissingEntries;
+
+    private InternalCacheLoader(final CacheLoader<K, V> loader, final String cacheName, final boolean failOnMissingEntries) {
+      this.loader = loader;
+      this.cacheName = cacheName;
+      this.failOnMissingEntries = failOnMissingEntries;
+    }
+
+    @Override
+    public CompletableFuture<V> asyncLoad(final K key, final Executor executor) {
+      return loader.load(cacheName, key).toCompletableFuture();
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> asyncLoadAll(final Iterable<? extends K> keys, final Executor executor) {
+      if (failOnMissingEntries) {
+        return loader.load(cacheName, keys).peek(map ->
+                keys.forEach(key -> {
+                  if (!map.containsKey(key)) {
+                    throw new RuntimeException(key + " is missing from " + cacheName + " loader response.");
+                  }
+                })).toCompletableFuture();
+      } else {
+        return loader.load(cacheName, keys).toCompletableFuture();
+      }
+    }
+  }
 }

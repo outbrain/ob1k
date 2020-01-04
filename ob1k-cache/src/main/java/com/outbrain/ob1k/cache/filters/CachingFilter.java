@@ -1,6 +1,7 @@
 package com.outbrain.ob1k.cache.filters;
 
 import com.outbrain.ob1k.AsyncRequestContext;
+import com.outbrain.ob1k.cache.CacheConfiguration;
 import com.outbrain.ob1k.cache.LocalAsyncCache;
 import com.outbrain.ob1k.cache.TypedCache;
 import com.outbrain.ob1k.common.filters.AsyncFilter;
@@ -18,8 +19,16 @@ public class CachingFilter<K, V> implements AsyncFilter<V, AsyncRequestContext> 
   private final TypedCache<K, V> cache;
   private final CacheKeyGenerator<K> generator;
 
+  /**
+   * @deprecated Replaced by {link: #CachingFilter(CacheKeyGenerator, CacheConfiguration)}
+   */
   public CachingFilter(final CacheKeyGenerator<K> generator, int cacheSize, int ttl, TimeUnit timeUnit) {
-    this.cache = new LocalAsyncCache<>(cacheSize, ttl, timeUnit);
+    this.cache = new LocalAsyncCache<>(cacheSize, ttl, timeUnit, null, "default");
+    this.generator = generator;
+  }
+
+  public CachingFilter(final CacheKeyGenerator<K> generator, final CacheConfiguration cacheConfiguration) {
+    this.cache = new LocalAsyncCache<>(cacheConfiguration);
     this.generator = generator;
   }
 
