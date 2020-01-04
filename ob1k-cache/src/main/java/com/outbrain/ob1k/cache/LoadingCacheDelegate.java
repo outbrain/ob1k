@@ -64,6 +64,7 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
     this(cache, loader, cacheName, metricFactory, duration, timeUnit, false);
   }
 
+  @Deprecated
   public LoadingCacheDelegate(final TypedCache<K, V> cache, final CacheLoader<K, V> loader, final String cacheName,
                               final MetricFactory metricFactory, final long duration, final TimeUnit timeUnit,
                               final boolean failOnError) {
@@ -95,6 +96,38 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       loaderTimeouts = null;
     }
   }
+
+  public LoadingCacheDelegate(TypedCache<K, V> cache, CacheConfiguration<K, V> cacheConfig) {
+    this.cache = cache;
+    this.loader = cacheConfig.getLoader();
+    this.cacheName = cacheConfig.getCacheName();
+    this.futureValues = new ConcurrentHashMap<>();
+    this.failOnError = cacheConfig.getFailOnMissingEntries();
+
+    this.duration = cacheConfig.getLoadTimeout();
+    this.timeUnit = cacheConfig.getLoadTimeUnit();
+
+    final MetricFactory metricFactory = cacheConfig.getMetricFactory();
+    if (metricFactory != null) {
+      metricFactory.registerGauge("LoadingCacheDelegate." + cacheName, "mapSize", futureValues::size);
+
+      cacheHits = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "hits");
+      cacheMiss = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "miss");
+      cacheErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheErrors");
+      loaderErrors = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderErrors");
+      cacheTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "cacheTimeouts");
+      loaderTimeouts = metricFactory.createCounter("LoadingCacheDelegate." + cacheName, "loaderTimeouts");
+
+    } else {
+      cacheHits = null;
+      cacheMiss = null;
+      cacheErrors = null;
+      loaderErrors = null;
+      cacheTimeouts = null;
+      loaderTimeouts = null;
+    }
+  }
+
 
   @Override
   public ComposableFuture<V> getAsync(final K key) {
@@ -148,7 +181,12 @@ public class LoadingCacheDelegate<K, V> implements TypedCache<K, V> {
       loadedResult.consume(loadedRes -> {
         if (loadedRes.isSuccess()) {
           promise.set(loadedRes.getValue());
-          cacheLoadedValue(key, loadedRes);
+          // we are not adding null value into a cache
+          if (loadedRes.getValue() != null) {
+            cacheLoadedValue(key, loadedRes);
+          } else {
+            futureValues.remove(key);
+          }
         } else {
           final Throwable error = loadedRes.getError();
           if (loaderErrors != null) {

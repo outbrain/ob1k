@@ -17,6 +17,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 /**
  * emulate a loader that takes a while and test to se that values are loaded only once.
  *
@@ -40,7 +44,21 @@ public class TestLoadingCacheDelegate {
     }
   };
 
-  private static final TypedCache<String, String> SLOW_CACHE = new LocalAsyncCache<String, String>() {
+  private static final CacheLoader<String, String> CACHE_LOADER_RETURNS_NULL = new CacheLoader<String, String>() {
+
+    @Override
+    public ComposableFuture<String> load(final String cacheName, final String key) {
+      return ComposableFutures.fromNull();
+    }
+
+    @Override
+    public ComposableFuture<Map<String, String>> load(final String cacheName, final Iterable<? extends String> keys) {
+      return ComposableFutures.fromError(new RuntimeException("Not related"));
+    }
+  };
+
+
+  private final TypedCache<String, String> SLOW_CACHE = new LocalAsyncCache<String, String>(new CacheConfiguration<String, String>("slow").withMetricFactory(metricFactory)) {
     @Override
     public ComposableFuture<String> getAsync(final String key) {
       return slowResponse(100);
@@ -53,7 +71,8 @@ public class TestLoadingCacheDelegate {
 
   @Test
   public void testCacheTimeoutHandling() throws InterruptedException {
-    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(SLOW_CACHE, SLOW_CACHE_LOADER, "meh", metricFactory, 1, TimeUnit.MILLISECONDS);
+    final TypedCache<String, String> loadingCache =
+            new LoadingCacheDelegate<>(SLOW_CACHE, new CacheConfiguration<String, String>("meh").withLoader(SLOW_CACHE_LOADER).withMetricFactory(metricFactory).withLoadTimeout( 1, TimeUnit.MILLISECONDS));
 
     try {
       loadingCache.getAsync("key").get();
@@ -62,10 +81,25 @@ public class TestLoadingCacheDelegate {
     }
   }
 
+
+  @Test
+  public void loaderReturnsNullNotAddingNullIntoCache() throws InterruptedException, ExecutionException {
+    final TypedCache<String, String> cache = Mockito.mock(TypedCache.class);
+
+    when(cache.getAsync("key")).thenReturn(ComposableFutures.fromNull());
+    final TypedCache<String, String> loadingCache =
+            new LoadingCacheDelegate<>(cache, new CacheConfiguration<String, String>("local").withLoader(CACHE_LOADER_RETURNS_NULL));
+
+    final String val = loadingCache.getAsync("key").get();
+    Assert.assertNull("returned value should be null" ,val);
+    verify(cache, never()).setAsync("key", null);
+  }
+
   @Test
   public void testLoaderTimeoutHandling() throws InterruptedException {
-    final TypedCache<String, String> cache = new LocalAsyncCache<>();
-    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, SLOW_CACHE_LOADER, "meh", metricFactory, 1, TimeUnit.MILLISECONDS);
+    final TypedCache<String, String> cache = new LocalAsyncCache<>(new CacheConfiguration<String, String>("local").withMetricFactory(metricFactory));
+    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache,
+            new CacheConfiguration<String, String>("meh").withLoader(SLOW_CACHE_LOADER).withMetricFactory(metricFactory).withLoadTimeout(1, TimeUnit.MILLISECONDS));
 
     try {
       loadingCache.getAsync("key").get();
@@ -81,23 +115,24 @@ public class TestLoadingCacheDelegate {
     final String value = "value";
     final String cacheName = "meh";
     final TypedCache<String, String> mockCache = Mockito.mock(TypedCache.class);
-    Mockito.when(mockCache.getAsync(key)).thenReturn(ComposableFutures.fromNull());
-    Mockito.when(mockCache.setAsync(key, value)).thenReturn(ComposableFutures.fromError(new RuntimeException("MOCK failure")));
+    when(mockCache.getAsync(key)).thenReturn(ComposableFutures.fromNull());
+    when(mockCache.setAsync(key, value)).thenReturn(ComposableFutures.fromError(new RuntimeException("MOCK failure")));
 
     final CacheLoader<String,String> mockLoader = Mockito.mock(CacheLoader.class);
-    Mockito.when(mockLoader.load(cacheName, key)).thenReturn(ComposableFutures.fromValue(value));
+    when(mockLoader.load(cacheName, key)).thenReturn(ComposableFutures.fromValue(value));
 
-    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(mockCache, mockLoader, cacheName, metricFactory, 1, TimeUnit.HOURS);
+    final TypedCache<String, String> loadingCache =
+            new LoadingCacheDelegate<>(mockCache, new CacheConfiguration<String, String>(cacheName).withLoader(mockLoader).withMetricFactory(metricFactory).withLoadTimeout(1, TimeUnit.HOURS));
     loadingCache.getAsync(key).get();
 
-    Assert.assertEquals("expected errros", 1, registry.getCounters().get("LoadingCacheDelegate.meh.cacheErrors").getCount());
+    Assert.assertEquals("expected errors", 1, registry.getCounters().get("LoadingCacheDelegate.meh.cacheErrors").getCount());
   }
 
   @Test
   public void testPartialLoading() throws ExecutionException, InterruptedException {
     final AtomicInteger loaderCounter = new AtomicInteger();
-    final TypedCache<String, String> cache = new LocalAsyncCache<>();
-    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, new CacheLoader<String, String>() {
+    final TypedCache<String, String> cache = new LocalAsyncCache<>(new CacheConfiguration<String, String>("local").withMetricFactory(metricFactory));
+    final TypedCache<String, String> loadingCache = new LoadingCacheDelegate<>(cache, new CacheConfiguration<String, String>("default").withMetricFactory(metricFactory).withLoader(new CacheLoader<String, String>() {
       ThreadLocalRandom random = ThreadLocalRandom.current();
 
       @Override
@@ -116,7 +151,7 @@ public class TestLoadingCacheDelegate {
 
         return ComposableFutures.all(true, res);
       }
-    }, "default");
+    }));
 
     for (int i=0;i < 100; i++) {
       final ComposableFuture<String> res1 = loadingCache.getAsync("1");
@@ -135,8 +170,6 @@ public class TestLoadingCacheDelegate {
       loadingCache.deleteAsync("3").get();
       loadingCache.deleteAsync("4").get();
       loadingCache.deleteAsync("5").get();
-
-//      Thread.sleep(200L);
       loaderCounter.set(0);
     }
 
